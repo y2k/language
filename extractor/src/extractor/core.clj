@@ -2,50 +2,48 @@
     (:require [clojure.data.json :as json]))
 
 (comment
+  (reset! global {})
   (let [home (java.lang.System/getenv "HOME")]
-       (loadAndScanJar
-        (java.io.File. (str home "/Projects/language/extractor/__data/android.jar"))
-        (str home "/out.json")))
+    (loadAndScanJar
+     (java.io.File. (str home "/Projects/language/extractor/__data/android.jar"))
+     (str home "/out.json")
+     10))
 ;
   )
 
-(defn loadAndScanJar [jarFile outFile]
+(defn loadAndScanJar [jarFile outFile limit]
   (let [jar (java.util.jar.JarFile. jarFile)]
     (->>
      (.entries jar)
      (enumeration-seq)
-     (filter (fn [x] (and (.endsWith (.getName x) ".class") (not= (.getName x) "java/lang/Object.class"))))
-     (map #(visitClassFile (.getInputStream jar %1)))
-     (filter #(not= {} %1))
-     (json/write-str)
+     (filter #(and (.endsWith (.getName %1) ".class") (not= (.getName %1) "java/lang/Object.class")))
+     (map #(extractClassFromStream (.getInputStream jar %1)))
+     (take limit)
+     (pprint)
      (spit outFile))))
 
-(defn visitClassFile [stream]
+(def global (atom {}))
+
+(defn extractClassFromStream [stream]
   (let [cr (org.objectweb.asm.ClassReader. stream)
-        skip (atom false)
-        lastClassName (atom "")
-        classes (atom {})]
+        className (atom "")
+        methods (atom [])]
     (.accept
      cr
      (proxy [org.objectweb.asm.ClassVisitor]
             [org.objectweb.asm.Opcodes/ASM6]
        (visit [version access name signature superName interfaces]
-         (if (or (.contains name "$")
-                 (= (and access org.objectweb.asm.Opcodes/ACC_PUBLIC) 0)
-                 (= (toClsName superName) "java.lang.Object"))
-           (reset! skip true)
-           (do
-             (reset! skip false)
-             (reset! lastClassName (toClsName name)))))
+         (reset! className (toClsName name)))
        (visitMethod [access name descriptor signature exceptions]
-         (if (not @skip)
-           (swap! classes #(let [methods (conj (or (:methods %1) []) name)
-                                 class (or (:class %1) @lastClassName)]
-                             (assoc %1 :class class :methods methods))))
+        ;  (reset! global {:access access :name name :descriptor descriptor :signature signature})
+         (if (not= "<clinit>" name)
+           (swap! methods #(conj %1 {:name name :static (isStatic access)})))
          nil))
      org.objectweb.asm.ClassReader/SKIP_DEBUG)
-    @classes))
+    {:name @className :methods @methods}))
 
+(defn isStatic [x] (not= 0 (bit-and org.objectweb.asm.Opcodes/ACC_STATIC x)))
 (defn toClsName [x] = (.replace x \/ \.))
+(defn pprint [x] (with-out-str (json/pprint x)))
 
 (defn -main [& args] (println "Hello, World!"))
