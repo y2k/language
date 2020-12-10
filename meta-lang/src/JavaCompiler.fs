@@ -58,14 +58,44 @@ let rec compile program =
 
         sprintf "%s\n%s" localProps body
     | Call (name, argNodes) ->
-        let args =
-            argNodes
-            |> List.map compile
-            |> List.reduceString (sprintf "%s, %s")
+        if name = "intrinsic_new" then
+            let clsName =
+                match argNodes.[0] with
+                | String x -> x
+                | _ -> failwith "Invalid argument"
 
-        sprintf "((Function)%s).apply(new Object[] {%s})" name args
+            let args =
+                argNodes
+                |> List.skip 1
+                |> List.map compile
+                |> List.reduceString (sprintf "%s, %s")
+
+            sprintf "new %s(%s)" clsName args
+        elif name = "intrinsic_invoke" then
+            let methodName =
+                match argNodes.[0] with
+                | String x -> x
+                | _ -> failwith "Invalid argument"
+
+            let instance = compile argNodes.[1]
+
+            let args =
+                argNodes
+                |> List.skip 2
+                |> List.map compile
+                |> List.reduceString (sprintf "%s, %s")
+
+            sprintf "%s.%s(%s)" instance methodName args
+        else
+            let args =
+                argNodes
+                |> List.map compile
+                |> List.reduceString (sprintf "%s, %s")
+
+            sprintf "((Function)%s).apply(new Object[] {%s})" name args
     | Def (name, node) ->
         let value = compile node
+
         sprintf """
 public static final Object %s;
 static {
@@ -74,7 +104,9 @@ static {
     %s = result;
 }
 """
-            name value name
+            name
+            value
+            name
     | Defn (name, args, nodes) ->
         // env
         // := Environment.register !env (Environment.Func(name, args))
