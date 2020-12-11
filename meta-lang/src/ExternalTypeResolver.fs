@@ -1,3 +1,20 @@
 module ExternalTypeResolver
 
-type private t = unit
+type t =
+    private
+        { methods: Map<string, string> }
+
+let private makeKey cls method pc pi = sprintf "%s-%s-%i-%i" cls method pc pi
+
+let loadDefault (): t =
+    { methods =
+          Map.ofList [ (makeKey "android.widget.TextView" "<init>" 1 0), "android.content.Context"
+                       (makeKey "android.widget.TextView" "setText" 1 0), "String" ] }
+
+let resolve (t: t) (cls: string) (method: string) (pc: int) (pi: int): string =
+    let key = makeKey cls method pc pi
+
+    Map.tryFind key t.methods
+    |> Option.defaultWith (fun _ -> failwithf "Can't resolve type '%s'" key)
+
+let resolveConstructorType (t: t) (cls: string) (pc: int) (pi: int): string = resolve t cls "<init>" pc pi
