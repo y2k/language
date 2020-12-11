@@ -1,7 +1,5 @@
 module JavaCompiler
 
-open MetaLang
-
 module List =
     let reduceString f xs =
         match xs with
@@ -14,9 +12,13 @@ module List =
         | x :: [] -> f true x :: []
         | x :: xs -> f false x :: mapCheck f xs
 
-let rec compile program =
+open MetaLang
+module R = ExternalTypeResolver
+
+let rec compile program r =
     // let env = ref env
     // let compile node = compile node !env
+    let compile node = compile node r
 
     match program with
     | Cond bindNodes ->
