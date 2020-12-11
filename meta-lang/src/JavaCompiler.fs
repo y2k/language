@@ -15,10 +15,10 @@ module List =
 open MetaLang
 module R = ExternalTypeResolver
 
-let rec compile program r =
+let rec compile r program =
     // let env = ref env
     // let compile node = compile node !env
-    let compile node = compile node r
+    let compile = compile r
 
     match program with
     | Cond bindNodes ->
@@ -32,6 +32,7 @@ let rec compile program r =
                 else sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
         |> List.reduceString (sprintf "%s\n%s")
     | Bool b -> if b then "true" else "false"
+    | Int x -> string x
     | IsNull node ->
         let body = compile node
         sprintf "%s == null" body
@@ -66,28 +67,59 @@ let rec compile program r =
                 | String x -> x
                 | _ -> failwith "Invalid argument"
 
+            let resolve =
+                R.resolveConstructorType r clsName (argNodes.Length - 1)
+
             let args =
                 argNodes
                 |> List.skip 1
                 |> List.map compile
+                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
                 |> List.reduceString (sprintf "%s, %s")
 
             sprintf "new %s(%s)" clsName args
-        elif name = "intrinsic_invoke" then
-            let methodName =
+        elif name = "intrinsic_invoke_static" then
+            let (clsName, methodName) =
                 match argNodes.[0] with
-                | String x -> x
+                | String x ->
+                    match x.Split("/") with
+                    | [| a; b |] -> a, b
+                    | _ -> failwith "Invalid argument"
                 | _ -> failwith "Invalid argument"
 
             let instance = compile argNodes.[1]
+
+            let resolve =
+                R.resolveStatic r clsName methodName (argNodes.Length - 1)
+
+            let args =
+                argNodes
+                |> List.skip 1
+                |> List.map compile
+                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
+                |> List.reduceString (sprintf "%s, %s")
+
+            sprintf "((%s)%s).%s(%s)" clsName instance methodName args
+        elif name = "intrinsic_invoke" then
+            let (clsName, methodName) =
+                match argNodes.[0] with
+                | String x ->
+                    match x.Split("/") with
+                    | [| a; b |] -> a, b
+                    | _ -> failwith "Invalid argument"
+                | _ -> failwith "Invalid argument"
+
+            let resolve =
+                R.resolve r clsName methodName (argNodes.Length - 2)
 
             let args =
                 argNodes
                 |> List.skip 2
                 |> List.map compile
+                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
                 |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "%s.%s(%s)" instance methodName args
+            sprintf "%s.%s(%s)" clsName methodName args
         else
             let args =
                 argNodes
@@ -132,7 +164,7 @@ static {
         // env := backupEnv
 
         sprintf """
-public static Function<Object[], Object> %s;
+public static final Function<Object[], Object> %s;
 static {
     %s = args -> {
         %s
@@ -154,9 +186,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "CastCanBeRemovedNarrowingVariableType", "ConstantConditions", "unused"})
 class Module {
-    private static Function<Object[], Object> intrinsic_set = args -> {
+%s
+
+    private static final Function<Object[], Object> intrinsic_set = args -> {
         Map<String, Object> dic = (Map<String, Object>) args[0];
         dic.put((String) args[1], args[2]);
         return null;
@@ -167,5 +201,4 @@ class Module {
         for (int i = 0; i < xs.length - 1; i += 2) d.put((String) xs[i], xs[i + 1]);
         return d;
     }
-%s
 }"""

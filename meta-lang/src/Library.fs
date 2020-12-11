@@ -2,6 +2,7 @@
 
 type Node =
     | Bool of bool
+    | Int of int
     | String of string
     | Symbol of string
     | Cond of (Node * Node) list
