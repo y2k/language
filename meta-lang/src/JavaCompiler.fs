@@ -87,8 +87,6 @@ let rec compile r program =
                     | _ -> failwith "Invalid argument"
                 | _ -> failwith "Invalid argument"
 
-            let instance = compile argNodes.[1]
-
             let resolve =
                 R.resolveStatic r clsName methodName (argNodes.Length - 1)
 
@@ -99,7 +97,7 @@ let rec compile r program =
                 |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
                 |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "((%s)%s).%s(%s)" clsName instance methodName args
+            sprintf "%s.%s(%s)" clsName methodName args
         elif name = "intrinsic_invoke" then
             let (clsName, methodName) =
                 match argNodes.[0] with
@@ -108,6 +106,8 @@ let rec compile r program =
                     | [| a; b |] -> a, b
                     | _ -> failwith "Invalid argument"
                 | _ -> failwith "Invalid argument"
+
+            let instance = compile argNodes.[1]
 
             let resolve =
                 R.resolve r clsName methodName (argNodes.Length - 2)
@@ -119,7 +119,7 @@ let rec compile r program =
                 |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
                 |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "%s.%s(%s)" clsName methodName args
+            sprintf "((%s)%s).%s(%s)" clsName instance methodName args
         else
             let args =
                 argNodes
