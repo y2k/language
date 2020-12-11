@@ -164,7 +164,7 @@ static {
         // env := backupEnv
 
         sprintf """
-public static final Function<Object[], Object> %s;
+public static Function<Object[], Object> %s;
 static {
     %s = args -> {
         %s
@@ -186,10 +186,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-@SuppressWarnings({"unchecked", "CastCanBeRemovedNarrowingVariableType", "ConstantConditions", "unused"})
+@SuppressWarnings({"unchecked", "CastCanBeRemovedNarrowingVariableType", "ConstantConditions", "unused", "rawtypes", "SillyAssignment", "UnusedAssignment"})
 class Module {
-%s
-
     private static final Function<Object[], Object> intrinsic_set = args -> {
         Map<String, Object> dic = (Map<String, Object>) args[0];
         dic.put((String) args[1], args[2]);
@@ -201,4 +199,5 @@ class Module {
         for (int i = 0; i < xs.length - 1; i += 2) d.put((String) xs[i], xs[i + 1]);
         return d;
     }
+%s
 }"""
