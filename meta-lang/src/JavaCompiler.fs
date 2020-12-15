@@ -46,7 +46,6 @@ let rec compile r program =
     | ReadDic (fname, node) ->
         let self = compile node
         sprintf """((Map<String, Object>) %s).get("%s")""" self fname
-    | List (_) -> failwith "Not Implemented (List)"
     | Bind (binds, nodes) ->
         let localProps =
             binds
@@ -147,7 +146,7 @@ static {
 
         let ps =
             args
-            |> List.mapi (fun i a -> sprintf "Object %s = args[%i];" a i)
+            |> List.mapi (fun i (a, _) -> sprintf "Object %s = args[%i];" a i)
             |> List.reduceString (sprintf "%s\n%s")
 
         // let backupEnv = !env

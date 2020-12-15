@@ -20,6 +20,10 @@ let resolveStatic (t: t) (cls: string) (method: string) (pc: int) (pi: int): str
     Map.tryFind key t.methods
     |> Option.defaultWith (fun _ -> failwithf "Can't resolve type '%s'" key)
 
+let resolveStatic' (t: t) (path: string) (pc: int) (pi: int) =
+    let args = path.Split '/'
+    resolveStatic t args.[0] args.[1] pc pi
+
 let resolve (t: t) (cls: string) (method: string) (pc: int) (pi: int): string =
     let key = makeKey cls method pc pi
 
