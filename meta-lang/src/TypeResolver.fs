@@ -9,6 +9,9 @@ let rec private resolve' (ext: E.t) program: Node * ResolvedInfo =
     let resolve = resolve' ext
 
     match program with
+    | Module (imports, nodes) ->
+        let (nodes, ris) = nodes |> List.map resolve |> List.unzip
+        Module (imports, nodes), ris |> List.last
     | Defn (name, ps, body) ->
         let ri =
             body
@@ -39,7 +42,6 @@ let rec private resolve' (ext: E.t) program: Node * ResolvedInfo =
                 Map.empty
 
         program, ri
-    | Module (_, nodes) -> nodes |> List.map resolve |> List.last
     | other -> other, Map.empty
 
 let resolve ext program = resolve' ext program |> fst
