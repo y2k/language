@@ -1,6 +1,9 @@
 ﻿module MetaLang
 
-type Type = Unknown | Specific of string
+type Type =
+    | Unknown
+    | Specific of string
+    | Dictionary of Map<string, Type>
 
 type Node =
     | Bool of bool

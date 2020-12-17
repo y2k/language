@@ -45,6 +45,7 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                 (fun (x, t) ->
                     match t with
                     | Unknown -> x, Map.tryFind x ri |> Option.defaultValue Unknown
+                    | Dictionary _
                     | Specific _ -> x, t)
 
         Defn(name, nps, body), Map.empty
