@@ -12,7 +12,7 @@ type Node =
     | Symbol of string
     | Cond of (Node * Node) list
     | ReadDic of string * Node
-    | Dic of ((string * Node) list)
+    | Dic of (string * Node) list
     | Bind of ((string * Node) list) * (Node list)
     | Call of string * (Node list)
     | Def of string * Node
@@ -26,7 +26,7 @@ let rdic (a: string) =
 
 let dic (a: (string * Node) list): Node = Dic a
 let lets (a: (string * _) list) (b: Node list): Node = Bind(a, b)
-let call (a: string) (b: Node list): Node = Call(a, b)
+let call (symbolName: string) (b: Node list): Node = Call(symbolName, b)
 let def (a: string) (c: Node): Node = Def(a, c)
 
 let defn (a: string) (params': string list) (c: Node list): Node =

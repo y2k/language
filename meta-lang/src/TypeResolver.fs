@@ -6,6 +6,10 @@ module E = ExternalTypeResolver
 type ResolvedInfo = Map<string, Type>
 type Context = { functions: Map<string, Type list> }
 
+module Map =
+    let addAll newXs xs =
+        Map.fold (fun xs k v -> Map.add k v xs) xs newXs
+
 let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo =
     let resolve = resolve' ext
 
@@ -49,6 +53,32 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                     | Specific _ -> x, t)
 
         Defn(name, nps, body), Map.empty
+    | Dic items ->
+        let ri =
+            items
+            |> List.map snd
+            |> List.fold
+                (fun a n ->
+                    let (_, r) = resolve ctx n
+                    Map.addAll r a)
+                Map.empty
+
+        program, ri
+    | ReadDic (_, Symbol dicName) ->
+        let ri =
+            Map.ofList [ dicName, Dictionary Map.empty ]
+
+        program, ri
+    | Bind (_, nodes) ->
+        let ri =
+            nodes
+            |> List.fold
+                (fun a n ->
+                    let (_, r) = resolve ctx n
+                    Map.addAll r a)
+                Map.empty
+
+        program, ri
     | Call ("intrinsic_invoke_static", (String path) :: args) ->
         let ri =
             args
@@ -61,8 +91,24 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                 Map.empty
 
         program, ri
+    | Call ("intrinsic_invoke", (String path) :: _ :: args) ->
+        let ri =
+            args
+            |> List.mapi (fun i n -> n, E.resolve' ext path (List.length args) i)
+            |> List.fold
+                (fun a (x, type') ->
+                    match x with
+                    | Symbol name -> Map.add name (Specific type') a
+                    | node ->
+                        let (_, r) = resolve ctx node
+                        Map.addAll r a)
+                Map.empty
+
+        program, ri
     | Call (callName, args) ->
-        let funcSign = Map.find callName ctx.functions
+        let funcSign =
+            Map.tryFind callName ctx.functions
+            |> Option.defaultWith (fun _ -> failwithf "can't find function '%s'" callName)
 
         let ri =
             args
@@ -71,7 +117,9 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                 (fun a (x, type') ->
                     match x with
                     | Symbol name -> Map.add name type' a
-                    | _ -> a)
+                    | node ->
+                        let (_, r) = resolve ctx node
+                        Map.addAll r a)
                 Map.empty
 
         program, ri

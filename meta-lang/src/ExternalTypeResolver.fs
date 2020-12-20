@@ -12,7 +12,8 @@ let loadDefault (): t =
                        (makeKey "android.widget.Toast" "makeText" 3 1), "String"
                        (makeKey "android.widget.Toast" "makeText" 3 2), "int"
                        (makeKey "android.widget.TextView" "<init>" 1 0), "android.content.Context"
-                       (makeKey "android.widget.TextView" "setText" 1 0), "String" ] }
+                       (makeKey "android.widget.TextView" "setText" 1 0), "String"
+                       (makeKey "java.lang.String" "valueOf" 1 0), "int" ] }
 
 let resolveStatic (t: t) (cls: string) (method: string) (pc: int) (pi: int): string =
     let key = makeKey cls method pc pi
@@ -29,5 +30,9 @@ let resolve (t: t) (cls: string) (method: string) (pc: int) (pi: int): string =
 
     Map.tryFind key t.methods
     |> Option.defaultWith (fun _ -> failwithf "Can't resolve type '%s'" key)
+
+let resolve' (t: t) (path: string) (pc: int) (pi: int): string =
+    let args = path.Split '/'
+    resolve t args.[0] args.[1] pc pi
 
 let resolveConstructorType (t: t) (cls: string) (pc: int) (pi: int): string = resolve t cls "<init>" pc pi
