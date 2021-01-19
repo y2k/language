@@ -4,7 +4,13 @@ open MetaLang
 module E = ExternalTypeResolver
 
 type ResolvedInfo = Map<string, Type>
-type Context = { functions: Map<string, Type list> }
+
+type Context =
+    { functions: Map<string, Type list>
+      funParams: (string * Type) list }
+    static member empty =
+        { functions = Map.empty
+          funParams = [] }
 
 module Map =
     let addAll newXs xs =
@@ -31,7 +37,9 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                                   | _ -> ctx.functions }
 
                     ctx', nodes @ [ node' ])
-                ({ functions = Map.empty }, [])
+                ({ Context.empty with
+                       functions = ctx.functions },
+                 [])
 
         Module(imports, nodes), Map.empty
     | Defn (name, ps, body) ->
@@ -108,7 +116,7 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
     | Call (callName, args) ->
         let funcSign =
             Map.tryFind callName ctx.functions
-            |> Option.defaultWith (fun _ -> failwithf "can't find function '%s'" callName)
+            |> Option.defaultWith (fun _ -> failwithf "can't find function '%s' (in '%A')" callName ctx.functions)
 
         let ri =
             args
@@ -126,5 +134,13 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
     | other -> other, Map.empty
 
 let resolve ext program =
-    resolve' ext { functions = Map.empty } program
+    resolve'
+        ext
+        { Context.empty with
+              functions =
+                  Map.ofArray [| "intrinsic_set",
+                                 [ (Dictionary Map.empty)
+                                   Specific "String"
+                                   Unknown ] |] }
+        program
     |> fst
