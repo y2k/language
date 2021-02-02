@@ -43,11 +43,12 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
 
         Module(imports, nodes), Map.empty
     | Defn (name, ps, body) ->
+        let funcCtx = { ctx with funParams = ps }
         let ri =
             body
             |> List.fold
                 (fun a node ->
-                    let (_, ri) = resolve ctx node
+                    let (_, ri) = resolve funcCtx node
                     ri |> Map.fold (fun a1 k v -> Map.add k v a1) a)
                 Map.empty
 
@@ -116,7 +117,7 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
     | Call (callName, args) ->
         let funcSign =
             Map.tryFind callName ctx.functions
-            |> Option.defaultWith (fun _ -> failwithf "can't find function '%s' (in '%A')" callName ctx.functions)
+            |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
 
         let ri =
             args
