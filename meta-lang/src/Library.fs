@@ -4,6 +4,7 @@ type Type =
     | Unknown
     | Specific of string
     | Dictionary of Map<string, Type>
+    | Function of Type list * Type
 
 type Node =
     | Bool of bool

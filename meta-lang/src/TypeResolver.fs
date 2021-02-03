@@ -44,6 +44,7 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
         Module(imports, nodes), Map.empty
     | Defn (name, ps, body) ->
         let funcCtx = { ctx with funParams = ps }
+
         let ri =
             body
             |> List.fold
@@ -115,23 +116,35 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
 
         program, ri
     | Call (callName, args) ->
-        let funcSign =
-            Map.tryFind callName ctx.functions
-            |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
+        match List.tryFind (fun (n, _) -> n = callName) ctx.funParams with
+        | Some (_, ftype) ->
+            match ftype with
+            | Unknown ->
+                let ri =
+                    Map.ofList [ callName, Function(args |> List.map (fun _ -> Unknown), Unknown) ]
 
-        let ri =
-            args
-            |> List.mapi (fun i n -> n, funcSign.[i])
-            |> List.fold
-                (fun a (x, type') ->
-                    match x with
-                    | Symbol name -> Map.add name type' a
-                    | node ->
-                        let (_, r) = resolve ctx node
-                        Map.addAll r a)
-                Map.empty
+                program, ri
+            | Specific _
+            | Dictionary _ -> failwithf "Call unsupported type (%O)" ftype
+            | Function _ -> failwith "???"
+        | None ->
+            let funcSign =
+                Map.tryFind callName ctx.functions
+                |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
 
-        program, ri
+            let ri =
+                args
+                |> List.mapi (fun i n -> n, funcSign.[i])
+                |> List.fold
+                    (fun a (x, type') ->
+                        match x with
+                        | Symbol name -> Map.add name type' a
+                        | node ->
+                            let (_, r) = resolve ctx node
+                            Map.addAll r a)
+                    Map.empty
+
+            program, ri
     | other -> other, Map.empty
 
 let resolve ext program =
@@ -142,6 +155,7 @@ let resolve ext program =
                   Map.ofArray [| "intrinsic_set",
                                  [ (Dictionary Map.empty)
                                    Specific "String"
-                                   Unknown ] |] }
+                                   Unknown ]
+                                 "add", [ Specific "Int"; Specific "Int" ] |] }
         program
     |> fst
