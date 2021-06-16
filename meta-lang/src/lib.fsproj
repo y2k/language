@@ -9,6 +9,7 @@
     <Compile Include="ExternalTypeResolver.fs" />
     <Compile Include="TypeResolver.fs" />
     <Compile Include="JavaCompiler.fs" />
+    <Compile Include="LispRenderer.fs" />
   </ItemGroup>
 
 </Project>

@@ -23,7 +23,7 @@ type Node =
 
 let rdic (a: string) =
     let xs = a.Split "."
-    ReadDic(sprintf ":%s" xs.[1], Symbol xs.[0])
+    ReadDic(sprintf "%s" xs.[1], Symbol xs.[0])
 
 let dic (a: (string * Node) list): Node = Dic a
 let lets (a: (string * _) list) (b: Node list): Node = Bind(a, b)
