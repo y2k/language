@@ -25,12 +25,12 @@ let rdic (a: string) =
     let xs = a.Split "."
     ReadDic(sprintf "%s" xs.[1], Symbol xs.[0])
 
-let dic (a: (string * Node) list): Node = Dic a
-let lets (a: (string * _) list) (b: Node list): Node = Bind(a, b)
-let call (symbolName: string) (b: Node list): Node = Call(symbolName, b)
-let def (a: string) (c: Node): Node = Def(a, c)
+let dic (a: (string * Node) list) : Node = Dic a
+let lets (a: (string * _) list) (b: Node list) : Node = Bind(a, b)
+let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
+let def (a: string) (c: Node) : Node = Def(a, c)
 
-let defn (a: string) (params': string list) (c: Node list): Node =
+let defn (a: string) (params': string list) (c: Node list) : Node =
     let paramsWithTypes =
         params' |> List.map (fun p -> p, Unknown)
 
@@ -45,11 +45,11 @@ module Environment =
 
     type private t = SymbolType list
 
-    let init: t = []
+    let init : t = []
 
     let register (t: t) s = s :: t
 
-    let resolve (t: t) (name: string): SymbolType =
+    let resolve (t: t) (name: string) : SymbolType =
         t
         |> List.find
             (fun s ->

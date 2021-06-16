@@ -16,7 +16,7 @@ module Map =
     let addAll newXs xs =
         Map.fold (fun xs k v -> Map.add k v xs) xs newXs
 
-let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo =
+let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
     let resolve = resolve' ext
 
     match program with
@@ -60,7 +60,8 @@ let rec private resolve' (ext: E.t) (ctx: Context) program: Node * ResolvedInfo 
                     match t with
                     | Unknown -> x, Map.tryFind x ri |> Option.defaultValue Unknown
                     | Dictionary _
-                    | Specific _ -> x, t)
+                    | Specific _ -> x, t
+                    | Function _ -> failwith "TODO")
 
         Defn(name, nps, body), Map.empty
     | Dic items ->

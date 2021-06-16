@@ -25,11 +25,12 @@ let rec compile r program =
         bindNodes
         |> List.mapi
             (fun i (c, b) ->
-                if i = 0
-                then sprintf "if (%s) { result = %s; }" (compile c) (compile b)
-                elif c = Bool true
-                then sprintf "else { result = %s; }" (compile b)
-                else sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
+                if i = 0 then
+                    sprintf "if (%s) { result = %s; }" (compile c) (compile b)
+                elif c = Bool true then
+                    sprintf "else { result = %s; }" (compile b)
+                else
+                    sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
         |> List.reduceString (sprintf "%s\n%s")
     | Bool b -> if b then "true" else "false"
     | Int x -> string x
@@ -129,7 +130,8 @@ let rec compile r program =
     | Def (name, node) ->
         let value = compile node
 
-        sprintf """
+        sprintf
+            """
 public static final Object %s;
 static {
     Object result;
@@ -162,7 +164,8 @@ static {
 
         // env := backupEnv
 
-        sprintf """
+        sprintf
+            """
 public static Function<Object[], Object> %s;
 static {
     %s = args -> {
@@ -180,7 +183,8 @@ static {
         nodes
         |> List.map compile
         |> List.reduce (sprintf "%s\n%s")
-        |> sprintf """
+        |> sprintf
+            """
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
