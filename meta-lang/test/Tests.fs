@@ -4,37 +4,39 @@ open Xunit
 open Swensen.Unquote
 open MetaLang
 
+let assetCode exptected actualNode =
+    let extTypes = ExternalTypeResolver.loadDefault ()
+
+    let ctx =
+        TypeResolver.defaultContext
+        |> TypeResolver.registerFunc "dic/get" [ Specific "dic/t"; Specific "string" ]
+
+    let actual =
+        actualNode
+        |> TypeResolver.resolve' extTypes ctx
+        |> LispRenderer.render
+
+    test <@ exptected = actual @>
+
 [<Fact>]
-let ``empty module`` () =
-    let actual = modules [] [] |> LispRenderer.render
-    test <@ "(module)" = actual @>
+let ``empty module`` () = assetCode "(module)" (modules [] [])
 
 [<Fact>]
 let ``function`` () =
-    let actual =
-        modules [] [
-            defn "add" [ "a"; "b" ] [ Symbol "a" ]
-        ]
-        |> (TypeResolver.resolve (ExternalTypeResolver.loadDefault ()))
-        |> LispRenderer.render
-
-    let exptected = """(module
+    assetCode
+        """(module
 ;; ??? -> ??? -> ???
 (defn add [a b] a))"""
-
-    test <@ exptected = actual @>
+        (modules [] [
+            defn "add" [ "a"; "b" ] [ Symbol "a" ]
+         ])
 
 [<Fact>]
 let ``read dictionary`` () =
-    let actual =
-        modules [] [
-            defn "add" [ "a"; "b" ] [ ReadDic("f", Symbol "b") ]
-        ]
-        |> (TypeResolver.resolve (ExternalTypeResolver.loadDefault ()))
-        |> LispRenderer.render
-
-    let exptected = """(module
-;; ??? -> Dictionary -> ???
-(defn add [a b] {:f b}))"""
-
-    test <@ exptected = actual @>
+    modules [] [
+        defn "foo" [ "a"; "b" ] [ rdic "{:f b}" ]
+    ]
+    |> assetCode
+        """(module
+;; ??? -> dic/t -> ???
+(defn foo [a b] (dic/get b "f")))"""

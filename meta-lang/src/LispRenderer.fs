@@ -26,7 +26,7 @@ let rec render =
     function
     | Bool x -> string x
     | Int x -> string x
-    | String x -> x
+    | String x -> $"\"{x}\""
     | Symbol sym -> sym
     | Cond _ -> failwith "Cond"
     | ReadDic (name, dic) -> sprintf "(:%s %s)" name (render dic)

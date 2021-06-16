@@ -21,9 +21,10 @@ type Node =
     | Module of ((string * string) list) * (Node list)
     | IsNull of Node
 
-let rdic (a: string) =
-    let xs = a.Split "."
-    ReadDic(sprintf "%s" xs.[1], Symbol xs.[0])
+let rdic =
+    function
+    | Regex "{:(\w+) (\w+)}" [ k; v ] -> Call("dic/get", [ Symbol v; String k ])
+    | other -> failwithf "Incorrect template: %s" other
 
 let dic (a: (string * Node) list) : Node = Dic a
 let lets (a: (string * _) list) (b: Node list) : Node = Bind(a, b)

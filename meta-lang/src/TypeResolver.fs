@@ -6,8 +6,9 @@ module E = ExternalTypeResolver
 type ResolvedInfo = Map<string, Type>
 
 type Context =
-    { functions: Map<string, Type list>
-      funParams: (string * Type) list }
+    private
+        { functions: Map<string, Type list>
+          funParams: (string * Type) list }
     static member empty =
         { functions = Map.empty
           funParams = [] }
@@ -16,8 +17,8 @@ module Map =
     let addAll newXs xs =
         Map.fold (fun xs k v -> Map.add k v xs) xs newXs
 
-let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
-    let resolve = resolve' ext
+let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
+    let resolve = resolve'' ext
 
     match program with
     | Module (imports, nodes) ->
@@ -148,15 +149,20 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
             program, ri
     | other -> other, Map.empty
 
+let defaultContext =
+    { Context.empty with
+          functions =
+              Map.ofArray [| "intrinsic_set",
+                             [ (Dictionary Map.empty)
+                               Specific "String"
+                               Unknown ]
+                             "add", [ Specific "Int"; Specific "Int" ] |] }
+
 let resolve ext program =
-    resolve'
-        ext
-        { Context.empty with
-              functions =
-                  Map.ofArray [| "intrinsic_set",
-                                 [ (Dictionary Map.empty)
-                                   Specific "String"
-                                   Unknown ]
-                                 "add", [ Specific "Int"; Specific "Int" ] |] }
-        program
-    |> fst
+    resolve'' ext defaultContext program |> fst
+
+let resolve' ext ctx program = resolve'' ext ctx program |> fst
+
+let registerFunc name args (ctx: Context) =
+    { ctx with
+          functions = ctx.functions |> Map.add name args }

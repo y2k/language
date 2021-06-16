@@ -5,11 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="MetaLang.fs" />
     <Compile Include="ExternalTypeResolver.fs" />
     <Compile Include="TypeResolver.fs" />
     <Compile Include="JavaCompiler.fs" />
     <Compile Include="LispRenderer.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="y2k.prelude" Version="0.2.10" />
   </ItemGroup>
 
 </Project>

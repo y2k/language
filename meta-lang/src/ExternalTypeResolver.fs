@@ -15,6 +15,12 @@ let loadDefault () : t =
                        (makeKey "android.widget.TextView" "setText" 1 0), "String"
                        (makeKey "java.lang.String" "valueOf" 1 0), "int" ] }
 
+let add cls method type' (t: t) =
+    { t with
+          methods =
+              t.methods
+              |> Map.add (makeKey cls method 1 0) type' }
+
 let resolveStatic (t: t) (cls: string) (method: string) (pc: int) (pi: int) : string =
     let key = makeKey cls method pc pi
 
