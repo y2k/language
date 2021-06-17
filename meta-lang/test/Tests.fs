@@ -10,6 +10,7 @@ let assetCode exptected actualNode =
     let ctx =
         TypeResolver.defaultContext
         |> TypeResolver.registerFunc "dic/get" [ Specific "dic/t"; Specific "string" ]
+        |> TypeResolver.registerFunc "int/add" [ Specific "int/t"; Specific "int/t" ]
 
     let actual =
         actualNode
@@ -40,3 +41,26 @@ let ``read dictionary`` () =
         """(module
 ;; ??? -> dic/t -> ???
 (defn foo [a b] (dic/get b "f")))"""
+
+[<Fact>]
+let ``function add int`` () =
+    modules [] [
+        defn "foo" [ "a"; "b" ] [ Call("int/add", [ Symbol "a"; Symbol "b" ]) ]
+    ]
+    |> assetCode
+        """(module
+;; int/t -> int/t -> ???
+(defn foo [a b] (int/add a b)))"""
+
+[<Fact>]
+let ``call function`` () =
+    modules [] [
+        defn "foo" [ "a" ] [ Call("int/add", [ Symbol "a"; Symbol "b" ]) ]
+        defn "bar" [ "a" ] [ Call("foo", [ Call("foo", [ Symbol "a" ]) ]) ]
+    ]
+    |> assetCode
+        """(module
+;; int/t -> ???
+(defn foo [a] (int/add a b))
+;; int/t -> ???
+(defn bar [a] (foo (foo a))))"""

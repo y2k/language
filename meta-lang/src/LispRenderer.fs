@@ -67,6 +67,6 @@ let rec render =
     | Module (_, body) ->
         body
         |> List.map render
-        |> reduceSafe (sprintf "%s %s")
+        |> reduceSafe (sprintf "%s%s")
         |> sprintf "(module%s)"
     | IsNull _ -> failwith "IsNull"
