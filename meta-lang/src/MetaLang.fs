@@ -46,7 +46,7 @@ module Environment =
 
     type private t = SymbolType list
 
-    let init : t = []
+    let init: t = []
 
     let register (t: t) s = s :: t
 

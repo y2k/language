@@ -4,7 +4,8 @@ type t =
     private
         { methods: Map<string, string> }
 
-let private makeKey cls method pc pi = sprintf "%s-%s-%i-%i" cls method pc pi
+let private makeKey cls method paramCount paramIndex =
+    sprintf "%s-%s-%i-%i" cls method paramCount paramIndex
 
 let loadDefault () : t =
     { methods =
