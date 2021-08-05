@@ -34,7 +34,6 @@ let rec compile r program =
         let body = compile node
         sprintf "%s == null" body
     | Symbol s -> s
-    | String s -> sprintf "\"%s\"" s
     | Bind (binds, nodes) ->
         let localProps =
             binds
@@ -50,64 +49,65 @@ let rec compile r program =
         sprintf "%s\n%s" localProps body
     | Call (name, argNodes) ->
         if name = "intrinsic_new" then
-            let clsName =
-                match argNodes.[0] with
-                | String x -> x
-                | _ -> failwith "Invalid argument"
+            failwith "not implemented"
+            // let clsName =
+            //     match argNodes.[0] with
+            //     | String x -> x
+            //     | _ -> failwith "Invalid argument"
 
-            let resolve =
-                R.resolveConstructorType r clsName (argNodes.Length - 1)
+            // let resolve =
+            //     R.resolveConstructorType r clsName (argNodes.Length - 1)
 
-            let args =
-                argNodes
-                |> List.skip 1
-                |> List.map compile
-                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
-                |> List.reduceString (sprintf "%s, %s")
+            // let args =
+            //     argNodes
+            //     |> List.skip 1
+            //     |> List.map compile
+            //     |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
+            //     |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "new %s(%s)" clsName args
-        elif name = "intrinsic_invoke_static" then
-            let (clsName, methodName) =
-                match argNodes.[0] with
-                | String x ->
-                    match x.Split("/") with
-                    | [| a; b |] -> a, b
-                    | _ -> failwith "Invalid argument"
-                | _ -> failwith "Invalid argument"
+            // sprintf "new %s(%s)" clsName args
+        // elif name = "intrinsic_invoke_static" then
+        //     let (clsName, methodName) =
+        //         match argNodes.[0] with
+        //         | String x ->
+        //             match x.Split("/") with
+        //             | [| a; b |] -> a, b
+        //             | _ -> failwith "Invalid argument"
+        //         | _ -> failwith "Invalid argument"
 
-            let resolve =
-                R.resolveStatic r clsName methodName (argNodes.Length - 1)
+        //     let resolve =
+        //         R.resolveStatic r clsName methodName (argNodes.Length - 1)
 
-            let args =
-                argNodes
-                |> List.skip 1
-                |> List.map compile
-                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
-                |> List.reduceString (sprintf "%s, %s")
+        //     let args =
+        //         argNodes
+        //         |> List.skip 1
+        //         |> List.map compile
+        //         |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
+        //         |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "%s.%s(%s)" clsName methodName args
-        elif name = "intrinsic_invoke" then
-            let (clsName, methodName) =
-                match argNodes.[0] with
-                | String x ->
-                    match x.Split("/") with
-                    | [| a; b |] -> a, b
-                    | _ -> failwith "Invalid argument"
-                | _ -> failwith "Invalid argument"
+        //     sprintf "%s.%s(%s)" clsName methodName args
+        // elif name = "intrinsic_invoke" then
+        //     let (clsName, methodName) =
+        //         match argNodes.[0] with
+        //         | String x ->
+        //             match x.Split("/") with
+        //             | [| a; b |] -> a, b
+        //             | _ -> failwith "Invalid argument"
+        //         | _ -> failwith "Invalid argument"
 
-            let instance = compile argNodes.[1]
+        //     let instance = compile argNodes.[1]
 
-            let resolve =
-                R.resolve r clsName methodName (argNodes.Length - 2)
+        //     let resolve =
+        //         R.resolve r clsName methodName (argNodes.Length - 2)
 
-            let args =
-                argNodes
-                |> List.skip 2
-                |> List.map compile
-                |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
-                |> List.reduceString (sprintf "%s, %s")
+        //     let args =
+        //         argNodes
+        //         |> List.skip 2
+        //         |> List.map compile
+        //         |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
+        //         |> List.reduceString (sprintf "%s, %s")
 
-            sprintf "((%s)%s).%s(%s)" clsName instance methodName args
+        //     sprintf "((%s)%s).%s(%s)" clsName instance methodName args
         else
             let args =
                 argNodes

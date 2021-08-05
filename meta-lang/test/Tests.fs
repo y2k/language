@@ -33,16 +33,6 @@ let ``function`` () =
          ])
 
 [<Fact>]
-let ``read dictionary`` () =
-    modules [] [
-        defn "foo" [ "a"; "b" ] [ rdic "{:f b}" ]
-    ]
-    |> assetCode
-        """(module
-;; ??? -> dic/t -> ???
-(defn foo [a b] (dic/get b "f")))"""
-
-[<Fact>]
 let ``function add int`` () =
     modules [] [
         defn "foo" [ "a"; "b" ] [ Call("int/add", [ Symbol "a"; Symbol "b" ]) ]

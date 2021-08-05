@@ -9,7 +9,6 @@ type Type =
 
 type Node =
     | Const of string
-    | String of string
     | Symbol of string
     | Cond of (Node * Node) list
     | Bind of ((string * Node) list) * (Node list)
@@ -18,11 +17,6 @@ type Node =
     | Defn of string * ((string * Type) list) * (Node list)
     | Module of ((string * string) list) * (Node list)
     | IsNull of Node
-
-let rdic =
-    function
-    | Regex "{:(\w+) (\w+)}" [ k; v ] -> Call("dic/get", [ Symbol v; String k ])
-    | other -> failwithf "Incorrect template: %s" other
 
 let lets (a: (string * _) list) (b: Node list) : Node = Bind(a, b)
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)

@@ -24,7 +24,6 @@ let rec private renderType =
 
 let rec render =
     function
-    | String x -> $"\"{x}\""
     | Symbol sym -> sym
     | Cond _ -> failwith "Cond"
     | Bind (args, body) ->
