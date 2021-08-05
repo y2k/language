@@ -3,17 +3,15 @@
 type Type =
     | Unknown
     | Specific of string
+    | RawSexp
     | Dictionary of Map<string, Type>
     | Function of Type list * Type
 
 type Node =
-    | Bool of bool
-    | Int of int
+    | Const of string
     | String of string
     | Symbol of string
     | Cond of (Node * Node) list
-    | ReadDic of string * Node
-    | Dic of (string * Node) list
     | Bind of ((string * Node) list) * (Node list)
     | Call of string * (Node list)
     | Def of string * Node
@@ -26,7 +24,6 @@ let rdic =
     | Regex "{:(\w+) (\w+)}" [ k; v ] -> Call("dic/get", [ Symbol v; String k ])
     | other -> failwithf "Incorrect template: %s" other
 
-let dic (a: (string * Node) list) : Node = Dic a
 let lets (a: (string * _) list) (b: Node list) : Node = Bind(a, b)
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
 let def (a: string) (c: Node) : Node = Def(a, c)

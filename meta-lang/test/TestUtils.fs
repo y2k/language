@@ -7,7 +7,13 @@ let resolveTypes (n: Node) =
 
     let ctx =
         TypeResolver.defaultContext
-        |> TypeResolver.registerFunc "+" [ Specific "int"; Specific "int" ]
-        |> TypeResolver.registerFunc "+." [ Specific "float"; Specific "float" ]
+        |> TypeResolver.registerFunc "+" ([ Specific "int"; Specific "int" ], Specific "int")
+        |> TypeResolver.registerFunc "+." ([ Specific "float"; Specific "float" ], Specific "float")
+        |> TypeResolver.registerFunc "int_of_sexp" ([ RawSexp ], Specific "int")
+        |> TypeResolver.registerFunc "float_of_sexp" ([ RawSexp ], Specific "float")
 
     TypeResolver.resolve' env ctx n
+    |> ConstantValidator.validate
+        (TypeResolver.fundFunctionByArgs ctx)
+        (TypeResolver.findFuncArgType ctx)
+        (ConstLevelFunctions.invoke)

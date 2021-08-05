@@ -9,28 +9,28 @@ let test4 () =
     let actual =
         try
             modules [] [
-                defn "foo" [ "a" ] [ call "+" [ Symbol "2.0"; Symbol "a" ] ]
+                defn "foo" [ "a" ] [ call "+" [ Const "2.0"; Symbol "a" ] ]
             ]
             |> TestUtils.resolveTypes
             |> Some
         with
-        | _ -> None
+        | :? System.FormatException -> None
 
     let expected: Node option = None
 
-    test <@ actual = expected @>
+    test <@ expected = actual @>
 
 [<Fact>]
 let test3 () =
     let actual =
         modules [] [
-            defn "foo" [ "a" ] [ call "+" [ Symbol "2"; Symbol "a" ] ]
+            defn "foo" [ "a" ] [ call "+" [ Const "2"; Symbol "a" ] ]
         ]
         |> TestUtils.resolveTypes
 
     let expected =
         modules [] [
-            Defn("foo", [ "a", Specific "int" ], [ call "+" [ Symbol "2"; Symbol "a" ] ])
+            Defn("foo", [ "a", Specific "int" ], [ call "+" [ Const "2"; Symbol "a" ] ])
         ]
 
     test <@ actual = expected @>

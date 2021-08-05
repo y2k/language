@@ -24,17 +24,9 @@ let rec private renderType =
 
 let rec render =
     function
-    | Bool x -> string x
-    | Int x -> string x
     | String x -> $"\"{x}\""
     | Symbol sym -> sym
     | Cond _ -> failwith "Cond"
-    | ReadDic (name, dic) -> sprintf "(:%s %s)" name (render dic)
-    | Dic xs ->
-        xs
-        |> List.map (fun (k, v) -> sprintf ":%s %s" k (render v))
-        |> reduceSafe (sprintf "%s %s")
-        |> sprintf "{%s}"
     | Bind (args, body) ->
         sprintf
             "(let [%s] %s)"

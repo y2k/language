@@ -7,7 +7,7 @@ type ResolvedInfo = Map<string, Type>
 
 type Context =
     private
-        { functions: Map<string, Type list>
+        { functions: Map<string, Type list * Type>
           funParams: (string * Type) list }
     static member empty =
         { functions = Map.empty
@@ -16,6 +16,25 @@ type Context =
 module Map =
     let addAll newXs xs =
         Map.fold (fun xs k v -> Map.add k v xs) xs newXs
+
+let fundFunctionByArgs (ctx: Context) args retType =
+    ctx.functions
+    |> Map.pick
+        (fun name (args', rt) ->
+            match args' with
+            | xs when xs = args && rt = retType -> Some (name, retType)
+            | _ -> None)
+
+let findReturnType (ctx: Context) (inputType: Type) =
+    ctx.functions
+    |> Map.pick
+        (fun _ (args, retType) ->
+            match args with
+            | [ x ] when x = inputType -> Some retType
+            | _ -> None)
+
+let findFuncArgType (ctx: Context) name argIndex =
+    ctx.functions.[name] |> fst |> List.item argIndex
 
 let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
     let resolve = resolve'' ext
@@ -34,7 +53,7 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                                   match node' with
                                   | Defn (name, ps, _) ->
                                       let types = ps |> List.map snd
-                                      Map.add name types ctx.functions
+                                      Map.add name (types, Unknown) ctx.functions
                                   | _ -> ctx.functions }
 
                     ctx', nodes @ [ node' ])
@@ -65,22 +84,22 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                     | Function _ -> failwith "TODO")
 
         Defn(name, nps, body), Map.empty
-    | Dic items ->
-        let ri =
-            items
-            |> List.map snd
-            |> List.fold
-                (fun a n ->
-                    let (_, r) = resolve ctx n
-                    Map.addAll r a)
-                Map.empty
+    // | Dic items ->
+    //     let ri =
+    //         items
+    //         |> List.map snd
+    //         |> List.fold
+    //             (fun a n ->
+    //                 let (_, r) = resolve ctx n
+    //                 Map.addAll r a)
+    //             Map.empty
 
-        program, ri
-    | ReadDic (_, Symbol dicName) ->
-        let ri =
-            Map.ofList [ dicName, Dictionary Map.empty ]
+    //     program, ri
+    // | ReadDic (_, Symbol dicName) ->
+    //     let ri =
+    //         Map.ofList [ dicName, Dictionary Map.empty ]
 
-        program, ri
+    //     program, ri
     | Bind (_, nodes) ->
         let ri =
             nodes
@@ -133,6 +152,7 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
             let funcSign =
                 Map.tryFind callName ctx.functions
                 |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
+                |> fst
 
             let ri =
                 args
@@ -153,10 +173,11 @@ let defaultContext =
     { Context.empty with
           functions =
               Map.ofArray [| "intrinsic_set",
-                             [ (Dictionary Map.empty)
-                               Specific "String"
-                               Unknown ]
-                             "add", [ Specific "Int"; Specific "Int" ] |] }
+                             ([ (Dictionary Map.empty)
+                                Specific "String"
+                                Unknown ],
+                              Unknown)
+                             "add", ([ Specific "Int"; Specific "Int" ], Unknown) |] }
 
 let resolve ext program =
     resolve'' ext defaultContext program |> fst

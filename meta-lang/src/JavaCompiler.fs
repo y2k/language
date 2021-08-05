@@ -27,26 +27,14 @@ let rec compile r program =
             (fun i (c, b) ->
                 if i = 0 then
                     sprintf "if (%s) { result = %s; }" (compile c) (compile b)
-                elif c = Bool true then
-                    sprintf "else { result = %s; }" (compile b)
                 else
                     sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
         |> List.reduceString (sprintf "%s\n%s")
-    | Bool b -> if b then "true" else "false"
-    | Int x -> string x
     | IsNull node ->
         let body = compile node
         sprintf "%s == null" body
     | Symbol s -> s
     | String s -> sprintf "\"%s\"" s
-    | Dic props ->
-        props
-        |> List.map (fun (k, v) -> sprintf "\"%s\", %s" k (compile v))
-        |> List.reduceString (sprintf "%s,\n%s")
-        |> sprintf "result = makeDictionary(\n%s)"
-    | ReadDic (fname, node) ->
-        let self = compile node
-        sprintf """((Map<String, Object>) %s).get("%s")""" self fname
     | Bind (binds, nodes) ->
         let localProps =
             binds

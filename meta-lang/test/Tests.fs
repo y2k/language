@@ -9,8 +9,8 @@ let assetCode exptected actualNode =
 
     let ctx =
         TypeResolver.defaultContext
-        |> TypeResolver.registerFunc "dic/get" [ Specific "dic/t"; Specific "string" ]
-        |> TypeResolver.registerFunc "int/add" [ Specific "int/t"; Specific "int/t" ]
+        |> TypeResolver.registerFunc "dic/get" ([ Specific "dic/t"; Specific "string" ], Unknown)
+        |> TypeResolver.registerFunc "int/add" ([ Specific "int/t"; Specific "int/t" ], Unknown)
 
     let actual =
         actualNode
