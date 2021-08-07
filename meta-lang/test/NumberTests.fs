@@ -5,6 +5,33 @@ open Swensen.Unquote
 open MetaLang
 
 [<Fact>]
+let test5 () =
+    let actual =
+        modules [] [
+            defn "foo" [ "a"; "b" ] [ call "+" [ Symbol "a"; Symbol "b" ] ]
+            defn "main" [ "a"; "b" ] [ call "foo" [ Symbol "a"; Symbol "b" ] ]
+        ]
+        |> TestUtils.resolveTypes
+
+    let expected =
+        modules [] [
+            Defn(
+                "foo",
+                [ "a", Specific "int"
+                  "b", Specific "int" ],
+                [ call "+" [ Symbol "a"; Symbol "b" ] ]
+            )
+            Defn(
+                "main",
+                [ "a", Specific "int"
+                  "b", Specific "int" ],
+                [ call "foo" [ Symbol "a"; Symbol "b" ] ]
+            )
+        ]
+
+    test <@ actual = expected @>
+
+[<Fact>]
 let test4 () =
     let actual =
         try
