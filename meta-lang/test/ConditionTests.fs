@@ -23,6 +23,5 @@ let test () =
                 [ call "if" [ Symbol "c"; Symbol "a"; Symbol "b" ] ]
             )
         ]
-        |> TestUtils.resolveTypes
 
     test <@ expected = actual @>

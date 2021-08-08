@@ -11,7 +11,9 @@ let resolveTypes (n: Node) =
         |> TypeResolver.registerFunc "+." ([ Specific "float"; Specific "float" ], Specific "float")
         |> TypeResolver.registerFunc "int_of_sexp" ([ RawSexp ], Specific "int")
         |> TypeResolver.registerFunc "float_of_sexp" ([ RawSexp ], Specific "float")
+        |> TypeResolver.registerFunc "string_of_sexp" ([ RawSexp ], Specific "string")
         |> TypeResolver.registerFunc "if" ([ Specific "bool"; Unknown; Unknown ], Unknown)
+        |> TypeResolver.registerFunc "dic-get" ([ Specific "dic"; Specific "string" ], Unknown)
 
     TypeResolver.resolve' env ctx n
     |> ConstantValidator.validate

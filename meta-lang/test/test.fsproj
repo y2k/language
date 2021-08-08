@@ -11,7 +11,7 @@
     <Compile Include="TestUtils.fs" />
     <Compile Include="ConditionTests.fs" />
     <Compile Include="NumberTests.fs" />
-    <Compile Include="Tests.fs" />
+    <Compile Include="DictionaryTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
