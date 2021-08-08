@@ -10,13 +10,11 @@ type Type =
 type Node =
     | Const of string
     | Symbol of string
-    | Cond of (Node * Node) list
     | Bind of ((string * Node) list) * (Node list)
     | Call of string * (Node list)
     | Def of string * Node
-    | Defn of string * ((string * Type) list) * (Node list)
+    | Defn of string * ((string * Type) list) * Type * (Node list)
     | Module of ((string * string) list) * (Node list)
-    | IsNull of Node
 
 let lets (a: (string * _) list) (b: Node list) : Node = Bind(a, b)
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
@@ -26,7 +24,7 @@ let defn (a: string) (params': string list) (c: Node list) : Node =
     let paramsWithTypes =
         params' |> List.map (fun p -> p, Unknown)
 
-    Defn(a, paramsWithTypes, c)
+    Defn(a, paramsWithTypes, Unknown, c)
 
 let modules (a: (string * string) list) (b: Node list) = Module(a, b)
 

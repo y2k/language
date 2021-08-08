@@ -8,11 +8,9 @@ let rec callRecursive f node =
     match node with
     | Call (_, args) -> args |> List.iter (callRecursive f)
     | Module (_, funcs) -> funcs |> List.iter (callRecursive f)
-    | Defn (_, _, body) -> body |> List.iter (callRecursive f)
+    | Defn (_, _, _, body) -> body |> List.iter (callRecursive f)
     | Const _
-    | Symbol _
-    | IsNull _ -> ()
-    | Cond _
+    | Symbol _ -> ()
     | Def _
     | Bind _ -> failwith "not implemented"
 
@@ -32,12 +30,10 @@ let validate fundFunctionByArgs findFuncArgType invokeFunc node =
                         | _ -> ())
             | Const _
             | Symbol _
-            | Cond _
             | Bind _
             | Def _
             | Defn _
-            | Module _
-            | IsNull _ -> ())
+            | Module _ -> ())
         node
 
     node

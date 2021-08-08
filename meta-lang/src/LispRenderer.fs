@@ -25,7 +25,6 @@ let rec private renderType =
 let rec render =
     function
     | Symbol sym -> sym
-    | Cond _ -> failwith "Cond"
     | Bind (args, body) ->
         sprintf
             "(let [%s] %s)"
@@ -43,7 +42,7 @@ let rec render =
              |> List.map render
              |> reduceSafe (sprintf "%s %s"))
     | Def (name, body) -> sprintf "(def %s %s)" name (render body)
-    | Defn (name, ps, body) ->
+    | Defn (name, ps, _, body) ->
         sprintf
             "\n;; %s -> ???\n(defn %s [%s] %s)"
             (ps
@@ -60,4 +59,3 @@ let rec render =
         |> List.map render
         |> reduceSafe (sprintf "%s%s")
         |> sprintf "(module%s)"
-    | IsNull _ -> failwith "IsNull"

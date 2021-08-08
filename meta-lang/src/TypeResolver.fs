@@ -22,7 +22,7 @@ let fundFunctionByArgs (ctx: Context) args retType =
     |> Map.pick
         (fun name (args', rt) ->
             match args' with
-            | xs when xs = args && rt = retType -> Some (name, retType)
+            | xs when xs = args && rt = retType -> Some(name, retType)
             | _ -> None)
 
 let findReturnType (ctx: Context) (inputType: Type) =
@@ -51,7 +51,7 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                         { ctx with
                               functions =
                                   match node' with
-                                  | Defn (name, ps, _) ->
+                                  | Defn (name, ps, _, _) ->
                                       let types = ps |> List.map snd
                                       Map.add name (types, Unknown) ctx.functions
                                   | _ -> ctx.functions }
@@ -62,7 +62,7 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                  [])
 
         Module(imports, nodes), Map.empty
-    | Defn (name, ps, body) ->
+    | Defn (name, ps, _, body) ->
         let funcCtx = { ctx with funParams = ps }
 
         let ri =
@@ -83,7 +83,7 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                     | Specific _ -> x, t
                     | Function _ -> failwith "TODO")
 
-        Defn(name, nps, body), Map.empty
+        Defn(name, nps, Unknown, body), Map.empty
     // | Dic items ->
     //     let ri =
     //         items

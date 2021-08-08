@@ -19,12 +19,14 @@ let test5 () =
                 "foo",
                 [ "a", Specific "int"
                   "b", Specific "int" ],
+                Unknown,
                 [ call "+" [ Symbol "a"; Symbol "b" ] ]
             )
             Defn(
                 "main",
                 [ "a", Specific "int"
                   "b", Specific "int" ],
+                Unknown,
                 [ call "foo" [ Symbol "a"; Symbol "b" ] ]
             )
         ]
@@ -57,7 +59,7 @@ let test3 () =
 
     let expected =
         modules [] [
-            Defn("foo", [ "a", Specific "int" ], [ call "+" [ Const "2"; Symbol "a" ] ])
+            Defn("foo", [ "a", Specific "int" ], Unknown, [ call "+" [ Const "2"; Symbol "a" ] ])
         ]
 
     test <@ actual = expected @>
@@ -76,6 +78,7 @@ let test2 () =
                 "foo",
                 [ "a", Specific "float"
                   "b", Specific "float" ],
+                Unknown,
                 [ call "+." [ Symbol "a"; Symbol "b" ] ]
             )
         ]
@@ -96,6 +99,7 @@ let test1 () =
                 "foo",
                 [ "a", Specific "int"
                   "b", Specific "int" ],
+                Unknown,
                 [ call "+" [ Symbol "a"; Symbol "b" ] ]
             )
         ]

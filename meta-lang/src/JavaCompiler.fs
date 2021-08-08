@@ -21,18 +21,18 @@ let rec compile r program =
     let compile = compile r
 
     match program with
-    | Cond bindNodes ->
-        bindNodes
-        |> List.mapi
-            (fun i (c, b) ->
-                if i = 0 then
-                    sprintf "if (%s) { result = %s; }" (compile c) (compile b)
-                else
-                    sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
-        |> List.reduceString (sprintf "%s\n%s")
-    | IsNull node ->
-        let body = compile node
-        sprintf "%s == null" body
+    // | Cond bindNodes ->
+    //     bindNodes
+    //     |> List.mapi
+    //         (fun i (c, b) ->
+    //             if i = 0 then
+    //                 sprintf "if (%s) { result = %s; }" (compile c) (compile b)
+    //             else
+    //                 sprintf "else if (%s) { result = %s; }" (compile c) (compile b))
+    //     |> List.reduceString (sprintf "%s\n%s")
+    // | IsNull node ->
+    //     let body = compile node
+    //     sprintf "%s == null" body
     | Symbol s -> s
     | Bind (binds, nodes) ->
         let localProps =
@@ -50,22 +50,22 @@ let rec compile r program =
     | Call (name, argNodes) ->
         if name = "intrinsic_new" then
             failwith "not implemented"
-            // let clsName =
-            //     match argNodes.[0] with
-            //     | String x -> x
-            //     | _ -> failwith "Invalid argument"
+        // let clsName =
+        //     match argNodes.[0] with
+        //     | String x -> x
+        //     | _ -> failwith "Invalid argument"
 
-            // let resolve =
-            //     R.resolveConstructorType r clsName (argNodes.Length - 1)
+        // let resolve =
+        //     R.resolveConstructorType r clsName (argNodes.Length - 1)
 
-            // let args =
-            //     argNodes
-            //     |> List.skip 1
-            //     |> List.map compile
-            //     |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
-            //     |> List.reduceString (sprintf "%s, %s")
+        // let args =
+        //     argNodes
+        //     |> List.skip 1
+        //     |> List.map compile
+        //     |> List.mapi (fun i p -> sprintf "(%s)%s" (resolve i) p)
+        //     |> List.reduceString (sprintf "%s, %s")
 
-            // sprintf "new %s(%s)" clsName args
+        // sprintf "new %s(%s)" clsName args
         // elif name = "intrinsic_invoke_static" then
         //     let (clsName, methodName) =
         //         match argNodes.[0] with
@@ -130,7 +130,7 @@ static {
             name
             value
             name
-    | Defn (name, args, nodes) ->
+    | Defn (name, args, _, nodes) ->
         // env
         // := Environment.register !env (Environment.Func(name, args))
 
