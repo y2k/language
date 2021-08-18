@@ -34,8 +34,8 @@
     (ref-set model (dic-add (ref-get model) "text" ""))
     (dispatch-render))
 
-  (defn render-item [x]
-    (ui-text (dic-add dic-nil "text" x)))
+  (defn render-item [text]
+    (ui-text (dic-add dic-nil "text" text)))
 
   (defn view [model]
     (ui-column dic-nil
