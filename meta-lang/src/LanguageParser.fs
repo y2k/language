@@ -2,12 +2,12 @@ module LanguageParser
 
 open FParsec
 
-let module': Parser<_, unit> = pstring "module"
-let lbracket = pstring "("
+let lbracket: Parser<string, unit> = pstring "("
 let rbracket = pstring ")"
 
 let def _ = pstring "def"
 let a _ = pipe2
 let defn _ = pstring "defn"
 
-let moduleWithBracket = lbracket >>. module' >>. rbracket
+let module' =
+    lbracket >>. pstring "module" >>. rbracket
