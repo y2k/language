@@ -100,16 +100,16 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
     //         Map.ofList [ dicName, Dictionary Map.empty ]
 
     //     program, ri
-    | Bind (_, nodes) ->
-        let ri =
-            nodes
-            |> List.fold
-                (fun a n ->
-                    let (_, r) = resolve ctx n
-                    Map.addAll r a)
-                Map.empty
+    // | Bind (_, nodes) ->
+    //     let ri =
+    //         nodes
+    //         |> List.fold
+    //             (fun a n ->
+    //                 let (_, r) = resolve ctx n
+    //                 Map.addAll r a)
+    //             Map.empty
 
-        program, ri
+    //     program, ri
     // | Call ("intrinsic_invoke_static", (String path) :: args) ->
     //     let ri =
     //         args

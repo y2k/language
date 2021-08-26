@@ -25,15 +25,15 @@ let rec private renderType =
 let rec render =
     function
     | Symbol sym -> sym
-    | Bind (args, body) ->
-        sprintf
-            "(let [%s] %s)"
-            (args
-             |> List.map (fun (k, v) -> sprintf "%s %s" k (render v))
-             |> reduceSafe (sprintf "%s %s"))
-            (body
-             |> List.map render
-             |> reduceSafe (sprintf "%s %s"))
+    // | Bind (args, body) ->
+    //     sprintf
+    //         "(let [%s] %s)"
+    //         (args
+    //          |> List.map (fun (k, v) -> sprintf "%s %s" k (render v))
+    //          |> reduceSafe (sprintf "%s %s"))
+    //         (body
+    //          |> List.map render
+    //          |> reduceSafe (sprintf "%s %s"))
     | Call (name, args) ->
         sprintf
             "(%s %s)"

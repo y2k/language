@@ -1,6 +1,6 @@
 module LanguageParser
 
-type sexp =
+type private sexp =
     | Atom of string
     | List of sexp list
 
@@ -23,11 +23,20 @@ module private SexpParser =
 
         expr
 
+    let parse str =
+        match run psexp str with
+        | Success (x, _, _) -> x
+        | Failure _ -> failwith "invalid"
+
 open MetaLang
 
-let compileFuncBody sexp = failwith "???"
+let rec private compileFuncBody sexp =
+    match sexp with
+    | List (Atom fname :: args) -> ExtCall(fname, args |> List.map compileFuncBody)
+    | Atom sym -> ExtSymbol sym
+    | _ -> failwithf "invalid node %O" sexp
 
-let compileDefn sexp =
+let private compileDefn sexp =
     match sexp with
     | List (Atom "defn" :: Atom funcName :: List argsSexp :: body) ->
         let args =
@@ -35,12 +44,12 @@ let compileDefn sexp =
             |> List.map
                 (function
                 | Atom argName -> argName, Unknown
-                | n -> failwithf "invalide node %O" n)
+                | n -> failwithf "invalid node %O" n)
 
-        ExtDefn(funcName, args, Unknown, compileFuncBody body)
-    | _ -> failwithf "invalide node %O" sexp
+        ExtDefn(funcName, args, Unknown, body |> List.map compileFuncBody)
+    | _ -> failwithf "invalid node %O" sexp
 
-let compile (sexp: sexp) =
-    match sexp with
+let compile str =
+    match SexpParser.parse str with
     | List (Atom "module" :: methods) -> ExtModule(methods |> List.map compileDefn)
-    | _ -> failwith "invalide nodes"
+    | _ -> failwith "invalid nodes"

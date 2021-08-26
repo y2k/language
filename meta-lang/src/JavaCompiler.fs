@@ -34,19 +34,19 @@ let rec compile r program =
     //     let body = compile node
     //     sprintf "%s == null" body
     | Symbol s -> s
-    | Bind (binds, nodes) ->
-        let localProps =
-            binds
-            |> List.map (fun (k, v) -> sprintf "Object %s = %s;" k (compile v))
-            |> List.reduceString (sprintf "%s\n%s")
+    // | Bind (binds, nodes) ->
+    //     let localProps =
+    //         binds
+    //         |> List.map (fun (k, v) -> sprintf "Object %s = %s;" k (compile v))
+    //         |> List.reduceString (sprintf "%s\n%s")
 
-        let body =
-            nodes
-            |> List.map compile
-            |> List.map (fun x -> x + ";")
-            |> List.reduceString (sprintf "%s\n%s")
+    //     let body =
+    //         nodes
+    //         |> List.map compile
+    //         |> List.map (fun x -> x + ";")
+    //         |> List.reduceString (sprintf "%s\n%s")
 
-        sprintf "%s\n%s" localProps body
+    //     sprintf "%s\n%s" localProps body
     | Call (name, argNodes) ->
         if name = "intrinsic_new" then
             failwith "not implemented"

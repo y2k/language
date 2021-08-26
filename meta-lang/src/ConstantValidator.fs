@@ -11,8 +11,7 @@ let rec callRecursive f node =
     | Defn (_, _, _, body) -> body |> List.iter (callRecursive f)
     | Const _
     | Symbol _ -> ()
-    | Def _
-    | Bind _ -> failwith "not implemented"
+    | Def _ -> failwith "not implemented"
 
 let validate fundFunctionByArgs findFuncArgType invokeFunc node =
     callRecursive
@@ -30,7 +29,6 @@ let validate fundFunctionByArgs findFuncArgType invokeFunc node =
                         | _ -> ())
             | Const _
             | Symbol _
-            | Bind _
             | Def _
             | Defn _
             | Module _ -> ())
