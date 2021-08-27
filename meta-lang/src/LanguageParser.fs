@@ -8,7 +8,8 @@ module private SexpParser =
     open FParsec
 
     let private patom =
-        (many1Satisfy (fun ch -> isLetter ch || isDigit ch)
+        (choice [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"')))
+                  many1Satisfy (fun ch -> isLetter ch || isDigit ch || ch = '-') ]
          |>> (fun name -> Atom name))
 
     let psexp: Parser<_, unit> =
@@ -26,7 +27,7 @@ module private SexpParser =
     let parse str =
         match run psexp str with
         | Success (x, _, _) -> x
-        | Failure _ -> failwith "invalid"
+        | Failure (a, b, _) -> failwithf "could not parse (%O %O)" a b
 
 open MetaLang
 
@@ -52,4 +53,4 @@ let private compileDefn sexp =
 let compile str =
     match SexpParser.parse str with
     | List (Atom "module" :: methods) -> ExtModule(methods |> List.map compileDefn)
-    | _ -> failwith "invalid nodes"
+    | p -> failwithf "invalid program (%O)" p
