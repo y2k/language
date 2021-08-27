@@ -39,6 +39,7 @@ let rec private compileFuncBody sexp =
 
 let private compileDefn sexp =
     match sexp with
+    | List (Atom "def" :: Atom valName :: body :: []) -> ExtDef(valName, compileFuncBody body)
     | List (Atom "defn" :: Atom funcName :: List argsSexp :: body) ->
         let args =
             argsSexp

@@ -16,7 +16,9 @@ type Node =
     | Module of ((string * string) list) * (Node list)
 
 type ExtNode =
+    | ExtConst of string
     | ExtSymbol of string
+    | ExtDef of string * ExtNode
     | ExtCall of string * (ExtNode list)
     | ExtDefn of string * ((string * Type) list) * Type * (ExtNode list)
     | ExtModule of ExtNode list
