@@ -8,11 +8,12 @@ module private SexpParser =
     open FParsec
 
     let private patom =
-        (choice [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"')))
+        (choice [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"'))
+                   |>> (sprintf "\"%s\""))
                   many1Satisfy (fun ch -> isLetter ch || isDigit ch || ch = '-') ]
          |>> (fun name -> Atom name))
 
-    let psexp: Parser<_, unit> =
+    let private psexp: Parser<_, unit> =
         let expr, exprImpl = createParserForwardedToRef ()
 
         exprImpl
@@ -30,11 +31,16 @@ module private SexpParser =
         | Failure (a, b, _) -> failwithf "could not parse (%O %O)" a b
 
 open MetaLang
+open System.Text.RegularExpressions
 
 let rec private compileFuncBody sexp =
     match sexp with
     | List (Atom fname :: args) -> ExtCall(fname, args |> List.map compileFuncBody)
-    | Atom sym -> ExtSymbol sym
+    | Atom sym ->
+        if Regex.IsMatch(sym, "^[a-z].*$") then
+            ExtSymbol sym
+        else
+            ExtConst sym
     | _ -> failwithf "invalid node %O" sexp
 
 let private compileDefn sexp =

@@ -7,6 +7,34 @@ open MetaLang
 module P = LanguageParser
 
 [<Fact>]
+let test5 () =
+    let node =
+        P.compile
+            """
+    (module
+      (defn update-text [new-text]
+        (ref-set model (dic-add (ref-get model) "text" new-text))
+        (dispatch-render)))"""
+
+    test
+        <@ ExtModule [ ExtDefn(
+                           "update-text",
+                           [ ("new-text", Unknown) ],
+                           Unknown,
+                           [ ExtCall(
+                               "ref-set",
+                               [ ExtSymbol "model"
+                                 ExtCall(
+                                     "dic-add",
+                                     [ ExtCall("ref-get", [ ExtSymbol "model" ])
+                                       ExtConst "\"text\""
+                                       ExtSymbol "new-text" ]
+                                 ) ]
+                             )
+                             ExtCall("dispatch-render", []) ]
+                       ) ] = node @>
+
+[<Fact>]
 let test4 () =
     let node =
         P.compile
