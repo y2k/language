@@ -5,6 +5,8 @@ open MetaLang
 let resolveTypes (n: Node) =
     let env = ExternalTypeResolver.loadDefault ()
 
+    let unitType = Specific "unit"
+
     let ctx =
         TypeResolver.defaultContext
         |> TypeResolver.registerFunc "+" ([ Specific "int"; Specific "int" ], Specific "int")
@@ -14,6 +16,7 @@ let resolveTypes (n: Node) =
         |> TypeResolver.registerFunc "string_of_sexp" ([ RawSexp ], Specific "string")
         |> TypeResolver.registerFunc "if" ([ Specific "bool"; Unknown; Unknown ], Unknown)
         |> TypeResolver.registerFunc "dic-get" ([ Specific "dic"; Specific "string" ], Unknown)
+        |> TypeResolver.registerFunc "ui-render" ([ Specific "dic" ], unitType)
 
     TypeResolver.resolve' env ctx n
     |> ConstantValidator.validate

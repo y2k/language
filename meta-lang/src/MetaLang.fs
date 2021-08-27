@@ -18,10 +18,19 @@ type Node =
 type ExtNode =
     | ExtConst of string
     | ExtSymbol of string
-    | ExtDef of string * ExtNode
     | ExtCall of string * (ExtNode list)
+    | ExtDef of string * ExtNode
     | ExtDefn of string * ((string * Type) list) * Type * (ExtNode list)
     | ExtModule of ExtNode list
+
+let rec mapToCoreLang =
+    function
+    | ExtConst x -> Const x
+    | ExtSymbol x -> Symbol x
+    | ExtCall (a, b) -> Call(a, b |> List.map mapToCoreLang)
+    | ExtDef (a, b) -> Def(a, mapToCoreLang b)
+    | ExtDefn (a, b, c, d) -> Defn(a, b, c, d |> List.map mapToCoreLang)
+    | ExtModule a -> Module([], a |> List.map mapToCoreLang)
 
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
 let def (a: string) (c: Node) : Node = Def(a, c)

@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Include="TestUtils.fs" />
+    <Compile Include="TeaRunTests.fs" />
     <Compile Include="ParserTests.fs" />
     <Compile Include="ConditionTests.fs" />
     <Compile Include="NumberTests.fs" />
