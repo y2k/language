@@ -3,25 +3,21 @@ module TeaRunTests
 let code =
     """
 (module
-  (def model (ref-create (dic-add (dic-add dic-nil "items" list-nil) "text" "")))
-
-  (defn dispatch-render [] (ui-render (view (ref-get model))))
+  (defn init []
+    (dic-add (dic-add dic-nil "items" list-nil) "text" ""))
 
   (defn update-text [new-text]
-    (ref-set model (dic-add (ref-get model) "text" new-text))
-    (dispatch-render))
+    (update-model (fn [model] (dic-add model "text" new-text))))
 
   (defn add-item []
-    (ref-set
-      model
-      (dic-add
-        (ref-get model)
-        "items"
-        (list-cons
-          (dic-get (ref-get model) "text")
-          (dic-get (ref-get model) "items"))))
-    (ref-set model (dic-add (ref-get model) "text" ""))
-    (dispatch-render))
+    (update-model
+      (fn [model]
+        (dic-add
+            (dic-add model "text" "")
+            "items"
+            (list-cons
+              (dic-get (ref-get model) "text")
+              (dic-get (ref-get model) "items"))))))
 
   (defn render-item [text]
     (ui-text (dic-add dic-nil "text" text)))
@@ -34,10 +30,7 @@ let code =
           (ui-button (dic-add (dic-add dic-nil "title" "Add") "on-click" add-item)))
           (list-cons
             (ui-column dic-nil (list-map (dic-get model "items") render-item))
-            list-nil))))
-
-  (defn main []
-    (dispatch-render)))
+            list-nil)))))
 """
 
 open Xunit

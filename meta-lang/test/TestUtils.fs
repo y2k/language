@@ -17,6 +17,13 @@ let resolveTypes (n: Node) =
         |> TypeResolver.registerFunc "if" ([ Specific "bool"; Unknown; Unknown ], Unknown)
         |> TypeResolver.registerFunc "dic-get" ([ Specific "dic"; Specific "string" ], Unknown)
         |> TypeResolver.registerFunc "ui-render" ([ Specific "dic" ], unitType)
+        |> TypeResolver.registerFunc
+            "dic-add"
+            ([ Specific "dic"
+               Specific "string"
+               Unknown ],
+             Specific "dic")
+        |> TypeResolver.registerFunc "update-model" ([ Function([ Specific "dic" ], Specific "dic") ], unitType)
 
     TypeResolver.resolve' env ctx n
     |> ConstantValidator.validate
