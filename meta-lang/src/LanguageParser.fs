@@ -10,7 +10,7 @@ module private SexpParser =
     let private patom =
         (choice [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"'))
                    |>> (sprintf "\"%s\""))
-                  many1Satisfy (fun ch -> isLetter ch || isDigit ch || ch = '-') ]
+                  many1Satisfy (fun ch -> isLetter ch || isDigit ch || ch = '-' || ch = '+') ]
          |>> (fun name -> Atom name))
 
     let private psexp: Parser<_, unit> =

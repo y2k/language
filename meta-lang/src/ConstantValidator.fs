@@ -10,8 +10,8 @@ let rec callRecursive f node =
     | Module (_, funcs) -> funcs |> List.iter (callRecursive f)
     | Defn (_, _, _, body) -> body |> List.iter (callRecursive f)
     | Const _
-    | Symbol _ -> ()
-    | Def _ -> failwith "not implemented"
+    | Symbol _
+    | Def _ -> ()
 
 let validate fundFunctionByArgs findFuncArgType invokeFunc node =
     callRecursive

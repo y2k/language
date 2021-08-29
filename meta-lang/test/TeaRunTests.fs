@@ -33,13 +33,11 @@ let code =
             list-nil)))))
 """
 
-open Xunit
-open Swensen.Unquote
 open MetaLang
 
 module P = LanguageParser
 
-[<Fact>]
+// [<Xunit.Fact>]
 let test () =
     let prog =
         P.compile code
