@@ -1,6 +1,50 @@
 module InterpreterTests
 
+module TestInterpreter =
+    let run =
+        Map.ofList [ "+",
+                     (fun (args: obj list) ->
+                         (unbox<int> args.[0]) + (unbox<int> args.[1])
+                         |> box) ]
+        |> Interpreter.run
+
 open Swensen.Unquote
+
+[<Xunit.Fact>]
+let test7 () =
+    """
+    (module (def foo 42) (defn main [] foo))
+    """
+    |> LanguageParser.compile
+    |> MetaLang.mapToCoreLang
+    |> TestInterpreter.run "main" []
+    |> fun actual ->
+        let actual = unbox actual
+        test <@ "42" = actual @>
+
+[<Xunit.Fact>]
+let test6 () =
+    """
+    (module (defn main [] 42))
+    """
+    |> LanguageParser.compile
+    |> MetaLang.mapToCoreLang
+    |> TestInterpreter.run "main" []
+    |> fun actual ->
+        let actual = unbox actual
+        test <@ "42" = actual @>
+
+[<Xunit.Fact>]
+let test5 () =
+    """
+    (module (defn main [] "hello_world"))
+    """
+    |> LanguageParser.compile
+    |> MetaLang.mapToCoreLang
+    |> TestInterpreter.run "main" []
+    |> fun actual ->
+        let actual = unbox actual
+        test <@ "\"hello_world\"" = actual @>
 
 [<Xunit.Fact>]
 let test4 () =
@@ -9,7 +53,7 @@ let test4 () =
     """
     |> LanguageParser.compile
     |> MetaLang.mapToCoreLang
-    |> Interpreter.run "main" [ box 1; box 2 ]
+    |> TestInterpreter.run "main" [ box 1; box 2 ]
     |> fun actual ->
         let actual = unbox actual
         test <@ 3 = actual @>
@@ -21,7 +65,7 @@ let test3 () =
     """
     |> LanguageParser.compile
     |> MetaLang.mapToCoreLang
-    |> Interpreter.run "main" [ box 1; box 2 ]
+    |> TestInterpreter.run "main" [ box 1; box 2 ]
     |> fun actual ->
         let actual = unbox actual
         test <@ 1 = actual @>
@@ -33,7 +77,7 @@ let test2 () =
     """
     |> LanguageParser.compile
     |> MetaLang.mapToCoreLang
-    |> Interpreter.run "main" [ box 1; box 2 ]
+    |> TestInterpreter.run "main" [ box 1; box 2 ]
     |> fun actual ->
         let actual = unbox actual
         test <@ 2 = actual @>
@@ -45,7 +89,7 @@ let test () =
     """
     |> LanguageParser.compile
     |> MetaLang.mapToCoreLang
-    |> Interpreter.run "main" [ box 1; box 2 ]
+    |> TestInterpreter.run "main" [ box 1; box 2 ]
     |> fun actual ->
         let actual = unbox actual
         test <@ 1 = actual @>

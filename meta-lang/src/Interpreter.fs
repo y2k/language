@@ -2,7 +2,7 @@ module Interpreter
 
 open MetaLang
 
-let private findFunction funcs funcName funArgs =
+let private tryFindFunction funcs funcName funArgs =
     funcs
     |> List.tryPick
         (function
@@ -12,11 +12,15 @@ let private findFunction funcs funcName funArgs =
             ->
             Some(argTypes, retType, body)
         | _ -> None)
+
+let private findFunction funcs funcName funArgs =
+    tryFindFunction funcs funcName funArgs
     |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s'" funcName)
 
 type Context =
     private
         { funcs: Node list
+          extFuncs: Map<string, obj list -> obj>
           funArgs: obj list
           argTypes: (string * Type) list }
 
@@ -28,32 +32,40 @@ let findValueInContext (ctx: Context) symName : obj =
 
     ctx.funArgs.[argIndex]
 
-let rec invokeNode (ctx: Context) (body: Node) : obj =
+let rec private invokeNode (ctx: Context) (body: Node) : obj =
     match body with
     | Symbol symName -> findValueInContext ctx symName
     | Call (callFunName, callArgs) ->
-        let (fargTypes, _, fbody) =
-            findFunction ctx.funcs callFunName callArgs
+        match tryFindFunction ctx.funcs callFunName callArgs with
+        | Some (fargTypes, _, fbody) ->
+            let ctx2 =
+                { ctx with
+                      argTypes = fargTypes
+                      funArgs =
+                          callArgs
+                          |> List.map (fun argBody -> invokeNode ctx argBody) }
 
-        let ctx2 =
-            { ctx with
-                  argTypes = fargTypes
-                  funArgs =
-                      callArgs
-                      |> List.map (fun argBody -> invokeNode ctx argBody) }
+            fbody
+            |> List.map (fun b -> invokeNode ctx2 b)
+            |> List.last
+        | None ->
+            let funArgs =
+                callArgs
+                |> List.map (fun argBody -> invokeNode ctx argBody)
 
-        fbody
-        |> List.map (fun b -> invokeNode ctx2 b)
-        |> List.last
-    | _ -> failwith "not implemented"
+            let extFun = ctx.extFuncs.[callFunName]
+            extFun funArgs
+    | Const x -> box x
+    | n -> failwithf "not implemented for node %O" n
 
-let run (funcName: string) (funArgs: obj list) (program: Node) : obj =
+let run extFuncs (funcName: string) (funArgs: obj list) (program: Node) : obj =
     match program with
     | Module (_, funcs) ->
         let (argTypes, _, body) = findFunction funcs funcName funArgs
 
         let ctx =
             { funcs = funcs
+              extFuncs = extFuncs
               funArgs = funArgs
               argTypes = argTypes }
 
