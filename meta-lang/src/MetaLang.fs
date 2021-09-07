@@ -1,5 +1,7 @@
 ﻿module MetaLang
 
+type RSexp = RSexp of string
+
 type Type =
     | Unknown
     | Specific of string
@@ -14,6 +16,7 @@ type Node =
     | Def of string * Node
     | Defn of string * ((string * Type) list) * Type * (Node list)
     | Module of ((string * string) list) * (Node list)
+    | Fn of ((string * Type) list) * Type * (Node list)
 
 type ExtNode =
     | ExtConst of string
@@ -22,6 +25,7 @@ type ExtNode =
     | ExtDef of string * ExtNode
     | ExtDefn of string * ((string * Type) list) * Type * (ExtNode list)
     | ExtModule of ExtNode list
+    | ExtFn of ((string * Type) list) * Type * (ExtNode list)
 
 let rec mapToCoreLang =
     function
@@ -31,6 +35,7 @@ let rec mapToCoreLang =
     | ExtDef (a, b) -> Def(a, mapToCoreLang b)
     | ExtDefn (a, b, c, d) -> Defn(a, b, c, d |> List.map mapToCoreLang)
     | ExtModule a -> Module([], a |> List.map mapToCoreLang)
+    | ExtFn (b, c, d) -> Fn(b, c, d |> List.map mapToCoreLang)
 
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
 let def (a: string) (c: Node) : Node = Def(a, c)

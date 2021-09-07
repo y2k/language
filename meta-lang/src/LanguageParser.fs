@@ -1,10 +1,10 @@
 module LanguageParser
 
-type private sexp =
+type sexp =
     | Atom of string
     | List of sexp list
 
-module private SexpParser =
+module SexpParser =
     open FParsec
 
     let private patom =
@@ -46,6 +46,15 @@ let rec private compileFuncBody sexp =
 let private compileDefn sexp =
     match sexp with
     | List (Atom "def" :: Atom valName :: body :: []) -> ExtDef(valName, compileFuncBody body)
+    | List (Atom "fn" :: List argsSexp :: body) ->
+        let args =
+            argsSexp
+            |> List.map
+                (function
+                | Atom argName -> argName, Unknown
+                | n -> failwithf "invalid node %O" n)
+
+        ExtFn(args, Unknown, body |> List.map compileFuncBody)
     | List (Atom "defn" :: Atom funcName :: List argsSexp :: body) ->
         let args =
             argsSexp

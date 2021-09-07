@@ -1,95 +1,99 @@
 module InterpreterTests
 
-module TestInterpreter =
-    let run =
+open Xunit
+open Swensen.Unquote
+open MetaLang
+
+let asset code args expected =
+    let foregnFunctions =
         Map.ofList [ "+",
                      (fun (args: obj list) ->
-                         (unbox<int> args.[0]) + (unbox<int> args.[1])
-                         |> box) ]
-        |> Interpreter.run
+                         let toInt (arg: obj) =
+                             match arg with
+                             | :? int as x -> x
+                             | :? RSexp as x -> let (RSexp x) = x in int x
+                             | x -> failwithf "Can't parse '%O' to int" x
 
-open Swensen.Unquote
+                         let a = toInt args.[0]
+                         let b = toInt args.[1]
+                         a + b |> box) ]
 
-[<Xunit.Fact>]
+    code
+    |> LanguageParser.compile
+    |> mapToCoreLang
+    |> Interpreter.run foregnFunctions "main" args
+    |> fun actual ->
+        let actual = unbox actual
+        test <@ expected = actual @>
+
+[<Fact>]
+let test13 () =
+    let asset code args expected =
+        let foregnFunctions =
+            Map.ofList [ "+",
+                         (fun (args: obj list) ->
+                             let toInt (arg: obj) =
+                                 match arg with
+                                 | :? int as x -> x
+                                 | :? RSexp as x -> let (RSexp x) = x in int x
+                                 | x -> failwithf "Can't parse '%O' to int" x
+
+                             let a = toInt args.[0]
+                             let b = toInt args.[1]
+                             a + b |> box) ]
+
+        code
+        |> LanguageParser.compile
+        |> mapToCoreLang
+        |> failwithf "%O"
+        |> ignore
+
+    asset "(module (defn foo [f] (f 42)) (defn main [] (foo (fn [a] a))))" [] (RSexp "42")
+
+// [<Fact>]
+let test12 () =
+    asset "(module (defn foo [f] (f 42)) (defn main [] (foo (fn [a] a))))" [] (RSexp "42")
+
+[<Fact>]
+let test11 () =
+    asset "(module (defn foo [f] (f 42)) (defn bar [a] a) (defn main [] (foo bar)))" [] (RSexp "42")
+
+[<Fact>]
+let test10 () =
+    asset "(module (def foo 2) (defn main [a] (+ foo a)))" [ box 2 ] 4
+
+[<Fact>]
+let test9 () =
+    asset "(module (defn main [a] (+ 2 a)))" [ box 2 ] 4
+
+[<Fact>]
+let test8 () =
+    asset "(module (defn main [] (+ 2 2)))" [] 4
+
+[<Fact>]
 let test7 () =
-    """
-    (module (def foo 42) (defn main [] foo))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" []
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ "42" = actual @>
+    asset "(module (def foo 42) (defn main [] foo))" [] (RSexp "42")
 
-[<Xunit.Fact>]
+[<Fact>]
 let test6 () =
-    """
-    (module (defn main [] 42))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" []
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ "42" = actual @>
+    asset "(module (defn main [] 42))" [] (RSexp "42")
 
-[<Xunit.Fact>]
+[<Fact>]
 let test5 () =
-    """
-    (module (defn main [] "hello_world"))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" []
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ "\"hello_world\"" = actual @>
+    asset "(module (defn main [] \"hello_world\"))" [] (RSexp "\"hello_world\"")
 
-[<Xunit.Fact>]
+[<Fact>]
 let test4 () =
-    """
-    (module (defn main [a b] (+ a b)))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" [ box 1; box 2 ]
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ 3 = actual @>
+    asset "(module (defn main [a b] (+ a b)))" [ box 1; box 2 ] 3
 
-[<Xunit.Fact>]
+[<Fact>]
 let test3 () =
-    """
-    (module (defn foo [c d] c) (defn main [a b] (foo a b)))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" [ box 1; box 2 ]
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ 1 = actual @>
+    asset "(module (defn foo [c d] c) (defn main [a b] (foo a b)))" [ box 1; box 2 ] 1
 
-[<Xunit.Fact>]
+[<Fact>]
 let test2 () =
-    """
-    (module (defn main [a b] b))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" [ box 1; box 2 ]
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ 2 = actual @>
+    asset "(module (defn main [a b] b))" [ box 1; box 2 ] 2
 
-[<Xunit.Fact>]
-let test () =
-    """
-    (module (defn main [a b] a))
-    """
-    |> LanguageParser.compile
-    |> MetaLang.mapToCoreLang
-    |> TestInterpreter.run "main" [ box 1; box 2 ]
-    |> fun actual ->
-        let actual = unbox actual
-        test <@ 1 = actual @>
+[<Fact>]
+let test1 () =
+    asset "(module (defn main [a b] a))" [ box 1; box 2 ] 1
