@@ -1,8 +1,8 @@
 (module
-  ;; dic-nil    :: dic
-  ;; dic-add    :: dic -> string -> _ -> dic
+  ;; {}         :: dic
+  ;; assoc      :: dic -> string -> _ -> dic
   ;; dic-get    :: dic -> string -> _
-  ;; list-nil   :: list
+  ;; []         :: list
   ;; list-map   :: list -> (_ -> _) -> list
   ;; list-cons  :: _ -> list -> list
   ;; ref-create :: _ -> ref
@@ -15,30 +15,26 @@
   ;; ui-render  :: widget -> unit
 
   (defn init []
-    (dic-add (dic-add dic-nil "items" list-nil) "text" ""))
+    {:items [] :text ""})
 
   (defn update-text [new-text]
-    (update-model (fn [model] (dic-add model "text" new-text))))
+    (update-model (fn [model] (assoc model "text" new-text))))
 
   (defn add-item []
     (update-model
       (fn [model]
-        (dic-add
-            (dic-add model "text" "")
-            "items"
-            (list-cons
-              (dic-get (ref-get model) "text")
-              (dic-get (ref-get model) "items"))))))
+        (assoc
+          (assoc model "text" "")
+          "items"
+          (list-cons
+            (:text (ref-get model))
+            (:items (ref-get model)))))))
 
   (defn render-item [text]
-    (ui-text (dic-add dic-nil "text" text)))
+    (ui-text {:text text}))
 
   (defn view [model]
-    (ui-column dic-nil
-      (list-cons
-        (ui-edit (dic-add (dic-add dic-nil "on-changed" update-text) "text" (dic-get model "text")))
-        (list-cons
-          (ui-button (dic-add (dic-add dic-nil "title" "Add") "on-click" add-item)))
-          (list-cons
-            (ui-column dic-nil (list-map (dic-get model "items") render-item))
-            list-nil)))))
+    (ui-column {}
+      [ (ui-edit {:on-changed update-text :text (:text model)})
+        (ui-button {:title "Add" :on-click add-item})
+        (ui-column {} (list-map (:items model) render-item))])))

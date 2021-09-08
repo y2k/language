@@ -22,6 +22,7 @@ type Context =
         { funcs: Node list
           extFuncs: Map<string, obj list -> obj>
           funArgs: obj list
+          localVariables: Map<string, obj>
           argTypes: (string * Type) list
           globalValues: Map<string, obj> }
 
@@ -29,6 +30,7 @@ let findValueInContext (ctx: Context) symName : obj =
     ctx.argTypes
     |> List.tryFindIndex (fun (n, _) -> n = symName)
     |> Option.map (fun argIndex -> ctx.funArgs.[argIndex])
+    |> Option.orElseWith (fun _ -> Map.tryFind symName ctx.localVariables)
     |> Option.orElseWith (fun _ -> Map.tryFind symName ctx.globalValues)
     |> Option.defaultWith (fun _ -> failwithf "Can't find value '%s'" symName)
 
@@ -36,11 +38,14 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
     match body with
     | Symbol symName -> findValueInContext ctx symName
     | Call (callFunName, callArgs) ->
-
         let funInArgs =
             ctx.argTypes
             |> List.tryFindIndex (fun (n, _) -> n = callFunName)
-            |> Option.map (fun i -> ctx.funArgs.[i] :?> Node)
+            |> Option.bind
+                (fun i ->
+                    match ctx.funArgs.[i] with
+                    | :? Node as n -> Some n
+                    | _ -> None)
             |> Option.map
                 (function
                 | Defn (_, argTypes, retType, body) -> argTypes, retType, body
@@ -59,29 +64,60 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
             |> List.map (fun b -> invokeNode ctx2 b)
             |> List.last
         | None ->
-            match tryFindFunction ctx.funcs callFunName callArgs with
-            | Some (fargTypes, _, fbody) ->
-                let ctx2 =
-                    { ctx with
-                          argTypes = fargTypes
-                          funArgs =
-                              callArgs
-                              |> List.map (fun argBody -> invokeNode ctx argBody) }
+            let lambda =
+                ctx.argTypes
+                |> List.tryFindIndex (fun (n, _) -> n = callFunName)
+                |> Option.map (fun i -> ctx.funArgs.[i] :?> (obj list -> obj))
 
-                fbody
-                |> List.map (fun b -> invokeNode ctx2 b)
-                |> List.last
+            match lambda with
+            | Some lambda ->
+                let argValues = callArgs |> List.map (invokeNode ctx)
+                lambda argValues
             | None ->
-                let extFun =
-                    Map.tryFind callFunName ctx.extFuncs
-                    |> Option.defaultWith (fun _ -> failwithf "Cant find foreign function '%s'" callFunName)
+                match tryFindFunction ctx.funcs callFunName callArgs with
+                | Some (fargTypes, _, fbody) ->
+                    let ctx2 =
+                        { ctx with
+                              argTypes = fargTypes
+                              funArgs =
+                                  callArgs
+                                  |> List.map (fun argBody -> invokeNode ctx argBody) }
 
-                let funArgs =
-                    callArgs
-                    |> List.map (fun argBody -> invokeNode ctx argBody)
+                    fbody
+                    |> List.map (fun b -> invokeNode ctx2 b)
+                    |> List.last
+                | None ->
+                    if callFunName.StartsWith(':') then
+                        let m: Map<string, obj> = invokeNode ctx callArgs.[0] |> unbox
+                        m.[callFunName.Substring(1)]
+                    else
+                        let extFun =
+                            Map.tryFind callFunName ctx.extFuncs
+                            |> Option.defaultWith (fun _ -> failwithf "Cant find function '%s'" callFunName)
 
-                extFun funArgs
+                        let funArgs =
+                            callArgs
+                            |> List.map (fun argBody -> invokeNode ctx argBody)
+
+                        extFun funArgs
     | Const x -> box (RSexp x)
+    | Fn (argsDesc, _, body) ->
+        box
+            (fun (args: obj list) ->
+                let localCtx =
+                    { ctx with
+                          localVariables =
+                              ctx.argTypes
+                              |> List.mapi (fun i (n, _) -> n, ctx.funArgs.[i])
+                              |> Map.ofList
+                          funArgs = args
+                          argTypes = argsDesc }
+
+                body
+                |> List.map (invokeNode localCtx)
+                |> List.last)
+    | NVector xs -> xs |> List.map (invokeNode ctx) |> box
+    | NMap xs -> xs |> Map.map (fun _ v -> invokeNode ctx v) |> box
     | n -> failwithf "not implemented for node %O" n
 
 let run extFuncs (funcName: string) (funArgs: obj list) (program: Node) : obj =
@@ -101,7 +137,8 @@ let run extFuncs (funcName: string) (funArgs: obj list) (program: Node) : obj =
               extFuncs = extFuncs
               funArgs = funArgs
               argTypes = argTypes
-              globalValues = Map.empty }
+              globalValues = Map.empty
+              localVariables = Map.empty }
 
         let globalValues =
             rootNodes

@@ -23,34 +23,59 @@ let asset code args expected =
     |> mapToCoreLang
     |> Interpreter.run foregnFunctions "main" args
     |> fun actual ->
-        let actual = unbox actual
+        let expected = box expected
         test <@ expected = actual @>
 
 [<Fact>]
+let test23 () =
+    asset "(module (def foo :bar) (defn main [] foo))" [] (RSexp "bar")
+
+[<Fact>]
+let test22 () =
+    asset "(module (def foo :bar) (defn main [] foo 0))" [] (RSexp "0")
+
+[<Fact>]
+let test21 () =
+    asset "(module (defn main [b] (:a {:a b})))" [ 42 ] 42
+
+[<Fact>]
+let test20 () =
+    asset "(module (defn main [] (:a {:a 42})))" [] (RSexp "42")
+
+[<Fact>]
+let test19 () =
+    asset "(module (def foo (:a {:a 1 :b \"2\"})) (defn main [] foo 0))" [] (RSexp "0")
+
+[<Fact>]
+let test18 () =
+    asset "(module (def foo {:a 1 :b \"2\"}) (defn main [] foo 0))" [] (RSexp "0")
+
+[<Fact>]
+let test17 () =
+    asset "(module (defn main [a b c] [a b c]))" [ 1; 2; 3 ] [ box 1; box 2; box 3 ]
+
+[<Fact>]
+let test16 () =
+    asset
+        "(module (defn main [] [1 2 3]))"
+        []
+        [ RSexp "1" |> box
+          RSexp "2" |> box
+          RSexp "3" |> box ]
+
+[<Fact>]
+let test15 () =
+    asset "(module (def c 11) (defn foo [f] (f 5)) (defn main [b] (foo (fn [a] (+ a (+ b c))))))" [ 3 ] 19
+
+[<Fact>]
+let test14 () =
+    asset "(module (defn foo [f] (f 5)) (defn main [b] (foo (fn [a] (+ a b)))))" [ 3 ] 8
+
+[<Fact>]
 let test13 () =
-    let asset code args expected =
-        let foregnFunctions =
-            Map.ofList [ "+",
-                         (fun (args: obj list) ->
-                             let toInt (arg: obj) =
-                                 match arg with
-                                 | :? int as x -> x
-                                 | :? RSexp as x -> let (RSexp x) = x in int x
-                                 | x -> failwithf "Can't parse '%O' to int" x
+    asset "(module (defn foo [f] (f 0)) (defn main [b] (foo (fn [a] b))))" [ 3 ] 3
 
-                             let a = toInt args.[0]
-                             let b = toInt args.[1]
-                             a + b |> box) ]
-
-        code
-        |> LanguageParser.compile
-        |> mapToCoreLang
-        |> failwithf "%O"
-        |> ignore
-
-    asset "(module (defn foo [f] (f 42)) (defn main [] (foo (fn [a] a))))" [] (RSexp "42")
-
-// [<Fact>]
+[<Fact>]
 let test12 () =
     asset "(module (defn foo [f] (f 42)) (defn main [] (foo (fn [a] a))))" [] (RSexp "42")
 
