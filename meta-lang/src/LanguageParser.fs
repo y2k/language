@@ -66,6 +66,8 @@ let rec private compileFuncBody sexp =
     | Atom sym ->
         if sym.StartsWith(':') then
             ExtConst(sym.Substring(1))
+        else if sym = "true" || sym = "false" then
+            ExtConst sym
         else if Regex.IsMatch(sym, "^[a-z].*$") then
             ExtSymbol sym
         else

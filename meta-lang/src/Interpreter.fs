@@ -20,7 +20,7 @@ let private findFunction funcs funcName funArgs =
 type Context =
     private
         { funcs: Node list
-          extFuncs: Map<string, obj list -> obj>
+          extFuncs: Map<string, (unit -> obj) list -> obj>
           funArgs: obj list
           localVariables: Map<string, obj>
           argTypes: (string * Type) list
@@ -97,7 +97,7 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
 
                         let funArgs =
                             callArgs
-                            |> List.map (fun argBody -> invokeNode ctx argBody)
+                            |> List.map (fun argBody () -> invokeNode ctx argBody)
 
                         extFun funArgs
     | Const x -> box (RSexp x)

@@ -6,10 +6,22 @@ open MetaLang
 
 let asset code args expected =
     let foregnFunctions =
-        Map.ofList [ "+",
-                     (fun (args: obj list) ->
-                         let toInt (arg: obj) =
-                             match arg with
+        Map.ofList [ "if",
+                     (fun (args: (unit -> obj) list) ->
+                         let condition =
+                             match args.[0] () with
+                             | :? bool as b -> b
+                             | :? RSexp as x -> let (RSexp x) = x in System.Boolean.Parse(x)
+                             | x -> failwithf "Can't parse '%O' to bool" x
+
+                         if condition then
+                             args.[1] ()
+                         else
+                             args.[2] ())
+                     "+",
+                     (fun (args: (unit -> obj) list) ->
+                         let toInt (arg: (unit -> obj)) =
+                             match arg () with
                              | :? int as x -> x
                              | :? RSexp as x -> let (RSexp x) = x in int x
                              | x -> failwithf "Can't parse '%O' to int" x
@@ -25,6 +37,13 @@ let asset code args expected =
     |> fun actual ->
         let expected = box expected
         test <@ expected = actual @>
+
+[<Fact>]
+let test24 () =
+    asset "(module (defn main [a b] (if true a b)))" [ 3; 5 ] 3
+    asset "(module (defn main [a b] (if false a b)))" [ 3; 5 ] 5
+    asset "(module (defn main [c a b] (if c a b)))" [ true; 3; 5 ] 3
+    asset "(module (defn main [c a b] (if c a b)))" [ false; 3; 5 ] 5
 
 [<Fact>]
 let test23 () =
