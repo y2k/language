@@ -15,8 +15,6 @@ let test () =
   (def add
     (fn [a b] (+ a b))))"""
 
-    ()
-
     LanguageParser.compile code
     |> mapToCoreLang
     |> TestUtils.resolveTypes

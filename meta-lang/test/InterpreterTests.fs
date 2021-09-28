@@ -39,6 +39,10 @@ let asset code args expected =
         test <@ expected = actual @>
 
 [<Fact>]
+let test25 () =
+    asset "(module (defn main [] (let [a 42] a)))" [] 42
+
+[<Fact>]
 let test24 () =
     asset "(module (defn main [a b] (if true a b)))" [ 3; 5 ] 3
     asset "(module (defn main [a b] (if false a b)))" [ 3; 5 ] 5
