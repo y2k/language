@@ -1,9 +1,8 @@
 (module
 
- (defn main2 [env]
+ (defn main [env]
    (->
-    (get-in env [:env :token])
-    (sprintf "https://api.giphy.com/v1/gifs/random?rating=pg&api_key=%s&tag=cat")
+    (str "https://api.giphy.com/v1/gifs/random?rating=pg&api_key=" (get-in env [:env :token]) "&tag=cat")
     (download-json)
     (get-in [:data :image_mp4_url])))
 
