@@ -36,6 +36,16 @@ let findValueInContext (ctx: Context) symName : obj =
 
 let rec private invokeNode (ctx: Context) (body: Node) : obj =
     match body with
+    | Let (letArgs, body) ->
+        let ctx =
+            letArgs
+            |> List.fold
+                (fun ctx (name, letArgBody) ->
+                    { ctx with
+                          localVariables = Map.add name (invokeNode ctx letArgBody) ctx.localVariables })
+                ctx
+
+        body |> List.map (invokeNode ctx) |> List.last
     | Symbol symName -> findValueInContext ctx symName
     | Call (callFunName, callArgs) ->
         let funInArgs =

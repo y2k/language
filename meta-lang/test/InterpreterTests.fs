@@ -40,7 +40,9 @@ let asset code args expected =
 
 [<Fact>]
 let test25 () =
-    asset "(module (defn main [] (let [a 42] a)))" [] 42
+    asset "(module (defn main [] (let [a 42] a)))" [] (RSexp "42")
+    asset "(module (defn main [] (let [a 42 b 3] b)))" [] (RSexp "3")
+    asset "(module (defn foo [a] a) (defn main [x] (let [b (foo x)] b)))" [ 42 ] 42
 
 [<Fact>]
 let test24 () =

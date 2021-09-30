@@ -53,6 +53,16 @@ open System.Text.RegularExpressions
 
 let rec private compileFuncBody sexp =
     match sexp with
+    | List (Atom "let" :: Vector args :: body) ->
+        let letArgs =
+            args
+            |> List.chunkBySize 2
+            |> List.map
+                (function
+                | [ Atom name; sexp ] -> name, compileFuncBody sexp
+                | n -> failwithf "illegal node inside let: %O" n)
+
+        ExtLet(letArgs, body |> List.map compileFuncBody)
     | List (Atom "fn" :: Vector argsSexp :: body) ->
         let args =
             argsSexp

@@ -19,6 +19,7 @@ type Node =
     | Fn of ((string * Type) list) * Type * (Node list)
     | NVector of Node list
     | NMap of Map<string, Node>
+    | Let of (string * Node) list * (Node list)
 
 type ExtNode =
     | ExtConst of string
@@ -30,6 +31,7 @@ type ExtNode =
     | ExtFn of ((string * Type) list) * Type * (ExtNode list)
     | ExtVector of ExtNode list
     | ExtMap of Map<string, ExtNode>
+    | ExtLet of (string * ExtNode) list * (ExtNode list)
 
 let rec mapToCoreLang =
     function
@@ -42,6 +44,7 @@ let rec mapToCoreLang =
     | ExtFn (b, c, d) -> Fn(b, c, d |> List.map mapToCoreLang)
     | ExtVector xs -> NVector(xs |> List.map mapToCoreLang)
     | ExtMap xs -> NMap(xs |> Map.map (fun _ x -> mapToCoreLang x))
+    | ExtLet (xs, body) -> Let(xs |> List.map (fun (k, v) -> k, mapToCoreLang v), body |> List.map mapToCoreLang)
 
 let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
 let def (a: string) (c: Node) : Node = Def(a, c)
