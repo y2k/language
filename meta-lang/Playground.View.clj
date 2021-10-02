@@ -4,11 +4,16 @@
 
  (defn main []
    (reg-event
+    :init []
+    (fn [coeffects _]
+      {:text "" :items []}))
+
+   (reg-event
     :remove-item [:now]
     (fn [coeffects x]
       (let [db (:db coeffects)
             now (:now coeffects)]
-        {:db (assoc db :items (dissoc (:items db) x))})))
+        {:db (assoc db :items (filter (fn [i] (not= x i)) (:items db)))})))
 
    (reg-event
     :add-item []
