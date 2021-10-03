@@ -6,7 +6,37 @@ open MetaLang
 
 let asset code args expected =
     let foregnFunctions =
-        Map.ofList [ "if",
+        Map.ofList [ "get-in",
+                     (fun (args: (unit -> obj) list) ->
+                         let m: Map<string, obj> = args.[0] () |> unbox
+                         let path: obj list = args.[1] () |> unbox
+
+                         path
+                         |> List.fold
+                             (fun ma k' ->
+                                 let m: Map<string, obj> = unbox ma
+
+                                 let k =
+                                     match k' with
+                                     | :? RSexp as x -> let (RSexp x) = x in x
+                                     | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
+
+                                 m.[unbox k])
+                             (box m)
+                         |> box)
+                     "str",
+                     (fun (args: (unit -> obj) list) ->
+                         args
+                         |> List.map
+                             (fun f ->
+                                 match f () with
+                                 | :? string as s -> s
+                                 | :? bool as b -> b.ToString()
+                                 | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
+                                 | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
+                         |> List.fold (sprintf "%O%O") ""
+                         |> box)
+                     "if",
                      (fun (args: (unit -> obj) list) ->
                          let condition =
                              match args.[0] () with
@@ -37,6 +67,31 @@ let asset code args expected =
     |> fun actual ->
         let expected = box expected
         test <@ expected = actual @>
+
+[<Fact>]
+let test29 () =
+    asset "(module (defn main [x] (get-in {:a {:b x}} [:a :b])))" [ 42 ] 42
+
+[<Fact>]
+let test28 () =
+    asset "(module (defn main [] (str \"foo\" 42 \"bar\")))" [] "foo42bar"
+
+[<Fact>]
+let test27 () =
+    asset
+        "(module (defn main [] [:download {:to_url \"g.com\"}]))"
+        []
+        [ box <| RSexp "download"
+          box
+          <| Map.ofList [ "to_url", box <| RSexp "\"g.com\"" ] ]
+
+[<Fact>]
+let test26 () =
+    asset
+        "(module (defn main [] {:a 1 :b \"2\"}))"
+        []
+        (Map.ofList [ "a", box <| RSexp "1"
+                      "b", box <| RSexp "\"2\"" ])
 
 [<Fact>]
 let test25 () =

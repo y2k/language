@@ -17,6 +17,7 @@ module SexpParser =
                           isLetter ch
                           || isDigit ch
                           || ch = '-'
+                          || ch = '_'
                           || ch = '+'
                           || ch = ':') ]
          |>> (fun name -> Atom name))

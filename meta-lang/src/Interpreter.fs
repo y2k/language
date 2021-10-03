@@ -99,7 +99,9 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
                 | None ->
                     if callFunName.StartsWith(':') then
                         let m: Map<string, obj> = invokeNode ctx callArgs.[0] |> unbox
-                        m.[callFunName.Substring(1)]
+
+                        Map.tryFind (callFunName.Substring(1)) m
+                        |> Option.defaultWith (fun _ -> failwithf "Cant find value for key %s in %O" callFunName m)
                     else
                         let extFun =
                             Map.tryFind callFunName ctx.extFuncs
