@@ -10,6 +10,8 @@ open System.Text.Json
 
 let rec jsonToMap (doc: JsonElement) : obj =
     match doc.ValueKind with
+    | JsonValueKind.True -> true |> box
+    | JsonValueKind.False -> false |> box
     | JsonValueKind.Number -> doc.GetInt64() |> box
     | JsonValueKind.String -> doc.GetString() |> box
     | JsonValueKind.Object ->
@@ -101,6 +103,43 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
         | _ -> ()
     }
 
+let runCode code funName args =
+    LanguageParser.compile code
+    |> MetaLang.mapToCoreLang
+    |> Interpreter.run
+        (Map.ofList [ "str",
+                      (fun (args: (unit -> obj) list) ->
+                          args
+                          |> List.map
+                              (fun f ->
+                                  match f () with
+                                  | :? string as s -> s
+                                  | :? bool as b -> b.ToString()
+                                  | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
+                                  | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
+                          |> List.fold (sprintf "%O%O") ""
+                          |> box)
+                      "get-in",
+                      (fun (args: (unit -> obj) list) ->
+                          let m: Map<string, obj> = args.[0] () |> unbox
+                          let path: obj list = args.[1] () |> unbox
+
+                          path
+                          |> List.fold
+                              (fun ma k' ->
+                                  let m: Map<string, obj> = unbox ma
+
+                                  let k =
+                                      match k' with
+                                      | :? RSexp as x -> let (RSexp x) = x in x
+                                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
+
+                                  m.[unbox k])
+                              (box m)
+                          |> box) ])
+        funName
+        args
+
 let handleInline (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) =
     async {
         let collection = db.GetCollection("main")
@@ -140,42 +179,7 @@ let handleInline (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) =
         | Some url ->
             let! code = (new WebClient()).AsyncDownloadString(Uri(url))
 
-            let response =
-                LanguageParser.compile code
-                |> MetaLang.mapToCoreLang
-                |> Interpreter.run
-                    (Map.ofList [ "str",
-                                  (fun (args: (unit -> obj) list) ->
-                                      args
-                                      |> List.map
-                                          (fun f ->
-                                              match f () with
-                                              | :? string as s -> s
-                                              | :? bool as b -> b.ToString()
-                                              | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
-                                              | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
-                                      |> List.fold (sprintf "%O%O") ""
-                                      |> box)
-                                  "get-in",
-                                  (fun (args: (unit -> obj) list) ->
-                                      let m: Map<string, obj> = args.[0] () |> unbox
-                                      let path: obj list = args.[1] () |> unbox
-
-                                      path
-                                      |> List.fold
-                                          (fun ma k' ->
-                                              let m: Map<string, obj> = unbox ma
-
-                                              let k =
-                                                  match k' with
-                                                  | :? RSexp as x -> let (RSexp x) = x in x
-                                                  | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
-
-                                              m.[unbox k])
-                                          (box m)
-                                      |> box) ])
-                    "main"
-                    (box env :: args)
+            let response = runCode code "main" (box env :: args)
 
             match response with
             | :? list<obj> as xs ->
@@ -196,53 +200,14 @@ let handleInline (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) =
                         |> fun data -> JsonSerializer.Deserialize<JsonElement>(data)
                         |> jsonToMap
 
-                    let response =
-                        LanguageParser.compile code
-                        |> MetaLang.mapToCoreLang
-                        |> Interpreter.run
-                            (Map.ofList [ "str",
-                                          (fun (args: (unit -> obj) list) ->
-                                              args
-                                              |> List.map
-                                                  (fun f ->
-                                                      match f () with
-                                                      | :? string as s -> s
-                                                      | :? bool as b -> b.ToString()
-                                                      | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
-                                                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
-                                              |> List.fold (sprintf "%O%O") ""
-                                              |> box)
-                                          "get-in",
-                                          (fun (args: (unit -> obj) list) ->
-                                              let m: Map<string, obj> = args.[0] () |> unbox
-                                              let path: obj list = args.[1] () |> unbox
-
-                                              path
-                                              |> List.fold
-                                                  (fun ma k' ->
-                                                      let m: Map<string, obj> = unbox ma
-
-                                                      let k =
-                                                          match k' with
-                                                          | :? RSexp as x -> let (RSexp x) = x in x
-                                                          | x ->
-                                                              failwithf
-                                                                  "Can't parse '%O' (%O) to string"
-                                                                  x
-                                                                  (x.GetType())
-
-                                                      m.[unbox k])
-                                                  (box m)
-                                              |> box) ])
-                            onSuccessFunName
-                            [ json ]
+                    let response = runCode code onSuccessFunName [ json ]
 
                     do!
                         bot.AnswerInlineQueryAsync(
                             update.InlineQuery.Id,
                             [ InlineQueryResults.InlineQueryResultArticle(
                                   Guid().ToString(),
-                                  "Completed",
+                                  response.ToString(),
                                   InlineQueryResults.InputTextMessageContent(response.ToString())
                               ) ]
                         )
