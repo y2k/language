@@ -4,6 +4,7 @@ type RSexp = RSexp of string
 
 type Type =
     | Unknown
+    | Keyword
     | Specific of string
     | RawSexp
     | Dictionary of Map<string, Type>

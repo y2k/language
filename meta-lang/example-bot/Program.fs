@@ -104,8 +104,15 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
     }
 
 let runCode code funName args =
+    let env = ExternalTypeResolver.loadDefault ()
+
+    let ctx =
+        TypeResolver.defaultContext
+        |> TypeResolver.registerFunc "get-in" ([ Dictionary Map.empty; Keyword ], Unknown)
+
     LanguageParser.compile code
     |> MetaLang.mapToCoreLang
+    |> TypeResolver.resolve' env ctx
     |> Interpreter.run
         (Map.ofList [ "str",
                       (fun (args: (unit -> obj) list) ->
