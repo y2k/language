@@ -1,6 +1,21 @@
 ;;
 
 (module
+ (:require "gist:y2k/5cee7ac1210474b3502fa118970f745d/a8d0a391c671234cb424fcb4743e6da47adf5a5a" :as dispatch)
+
+ (defn view [model]
+   [:column
+    [:edit-text {:text (:text model) :on-change (fn [e] (dispatch [:text-changed e]))}]
+    [:button {:text "Add" :on-click (fn [_] (dispatch [:add-item]))}]
+    [:template
+     {:component [:column]
+      :items (:items model)
+      :template (fn [model]
+                  [:column
+                   [:label {:text {:title model}}]
+                   [:button
+                    {:text "Remove"
+                     :on-click (fn [_] (dispatch [:remove-item]))}]])}]])
 
  (defn main []
    (reg-event
