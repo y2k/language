@@ -28,17 +28,16 @@
 
  (defn view []
    [:column
-    [:edit-text {:text :text :on-change [:text-changed]}]
+    [:edit-text {:text [:model :text] :on-change [:text-changed]}]
     [:button {:text "Add" :on-click [:add-item]}]
     [:template
      {:component [:column]
-      :items :items
-      :template
-      [:column
-       [:label {:text :title}]
-       [:button
-        {:text "Remove"
-         :on-click [:remove-item]}]]}]]))
+      :items [:model :items]
+      :template [:column
+                 [:label {:text [:model :title]}]
+                 [:button
+                  {:text "Remove"
+                   :on-click [:remove-item]}]]}]]))
 
 ;;
 
