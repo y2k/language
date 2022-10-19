@@ -1,14 +1,13 @@
 (ns app)
 
+(def baseUrl "https://joyreactor.cc")
 (def storage ::db)
 
-(defn download-next-page [db]
-  [[:download-http {:url (str "https://a.com/t/" (:next (get-in db storage)))
-                    :dispatch :page-loaded}]
-   [:db (update db storage (fn [db] (assoc db :next 2)))]])
+(comment
 
-(defn main {:cofx [:db]} [{db :db}]
-  (download-next-page db))
+  (download-next-page nil)
+
+  ())
 
 (defn page-loaded {:cofx [:db]} [{db :db} page]
   [[:parse-html {:page page
@@ -18,7 +17,14 @@
                                          :body {:type :node :query ".body"}}}
                           :title {:type :node :query "body > div.title"}}
                  :dispatch :render-page}]
-   [:db {}]])
+   [:db (update db storage (fn [db] (assoc db :next 2)))]])
+
+(defn download-next-page [db]
+  [[:download-http {:url (str baseUrl (:next (storage db)))
+                    :callback page-loaded}]])
+
+(defn main {:cofx [:db]} [{db :db}]
+  (download-next-page db))
 
 (defn render-page [_ state]
   [[:ui [:div {}
