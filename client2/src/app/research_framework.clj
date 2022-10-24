@@ -1,33 +1,28 @@
 (ns app.research-framework
   (:require [app.core :as app]
-            [clojure.pprint :as pp]))
+            [clojure.pprint :as pp]
+            [org.httpkit.server :as hk]))
 
 (comment
 
+  (stop)
+
+  (def stop (hk/run-server #'web-handler {:port 8080}))
+
   (run-with-cofx app/main)
-  @db
 
   (require '[clojure.reflect :as r])
   (require '[clojure.pprint :as pp])
   (pp/pprint (r/reflect "hello"))
-  (->>
-   (r/reflect pg)
-   (:members)
-   (filter (fn [x] (not (contains? (:flags x) :static))))
-   (map :name)
-   (pp/pprint))
 
-  (def pg (org.jsoup.Jsoup/parse (slurp "/Users/igor/Downloads/example_html.html")))
-  (count (.select pg "div.postContainer"))
+  (comment))
 
-  (str (.resolve (java.net.URI/create "https://j.com") "//a.b/foo.html"))
-
-  (->>
-   (.select pg "div.postContainer")
-   (map (fn [n]))
-   (pp/pprint))
-
-  ())
+(defn render-to-html [[tag attr & children]]
+  (str "<" (name tag)
+       (clojure.string/join (map (fn [[k v]] (str " " (name k) "=\"" v "\"")) (dissoc attr :innerText)))
+       ">"
+       (:innerText attr) (clojure.string/join (map render-to-html children))
+       "</" (name tag) ">"))
 
 (def db (atom {}))
 
@@ -106,7 +101,7 @@
                          callback (:callback arg)]
                      (run-with-cofx-2 callback page))
     :db (reset! db arg)
-    :ui (pp/pprint arg)
+    :ui (println (render-to-html arg))
     (throw (Exception. (str "Cant'find effect handler for " cmd)))))
 
 (defn run-with-cofx [f]
@@ -114,3 +109,7 @@
         commands (f cofx)]
     (doseq [c commands]
       (execute-command c))))
+
+(defn web-handler [r]
+  {:headers {"Content-Type" "text/html; charset=utf-8"}
+   :body (with-out-str (run-with-cofx app/main))})

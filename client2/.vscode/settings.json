@@ -8,12 +8,6 @@
         "**/Thumbs.db": true,
         "_build/": true,
         "**/bin": true,
-        "**/obj": true,
-        "[!s]*/**": true,
-        "s[!r]*/**": true,
-        "sr[!c]*/**": true,
-        "src/[!a]*/**": true,
-        "src/a[!p]*/**": true,
-        "src/ap[!p]*/**": true
+        "**/obj": true
     }
 }
