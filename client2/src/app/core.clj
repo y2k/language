@@ -29,34 +29,43 @@
           [:style
            {:innerText
             (gc/css
-             [:body {:padding "16px" :font-family "Arial"}]
-             [:.post-list {:display "flex" :flex-direction "column"}]
-             [:.post-list [:* [(gs/& (gs/not (gs/first-child))) {:margin-top "8px"}]]]
-             [:.post {:background "#f0f0f0"
-                      :border-radius "4px"
-                      :padding "8px"
-                      :display "flex"
-                      :flex-direction "column"}]
-             [:.post [:* [(gs/& (gs/not gs/first-child)) {:margin-top "8px"}]]]
-             [:.post__title {:font-size "18px" :font-weight 600}]
-             [:.post__image {:aspect-ratio 1}]
+             [:body {:padding "0px 16px 16px" :font-family "Arial"}]
+             [:.v_divider8 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-top "8px"}]]]]
+             [:.v_divider16 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-top "16px"}]]]]
+             [:.h_divider8 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-left "8px"}]]]]
+             [:.h_divider16 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-left "16px"}]]]]
+             [:.column {:display "flex" :flex-direction "column"}]
+             [:.row {:display "flex" :flex-direction "row"}]
+             [:.col_center {:justify-content "center"}]
+
+             [:.post {:position "relative" :display "flex" :flex-direction "column" :overflow "hidden"}]
+             [:.post__description {:position "absolute" :width "100%" :bottom "0px" :background "#00000080" :padding "8px"}]
+             [:.post__title {:font-size "18px" :font-weight 600 :-webkit-line-clamp 1 :display "-webkit-box" :-webkit-box-orient "vertical" :overflow "hidden"}]
+             [:.post__user_name {:font-size "16px" :color "white"}]
+             [:.post__image {:aspect-ratio 1.3 :object-fit "cover"}]
+             [:.post__user_image {:width "50px" :height "50px" :border-radius "25px"}]
+             [:.post__user_name {}]
              [:.button {:background "#f5d21c"
                         :border-color "transparent"
                         :border-radius "4px"
                         :font-size "16px"
-                        :padding "8px"}]
+                        :padding "8px"
+                        :min-height "48px"}]
              [:.button:hover {:background "#f5d21c"}]
              [:.button:active {:opacity "0.7"}])}]]
          [:body {}
           [:div {}
            [:h1 {:innerText "Posts"}]
            (concat
-            [:div {:class "post-list"}
-             [:button {:class "button" :innerText "Next" :onclick :load-next}]]
+            [:div {:class "column v_divider16"}]
             (for [i (:items state)]
               [:div {:class "post"}
-               [:span {:class "post__title" :innerText (elipsize (:innerText (:title i)) 100)}]
-               [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 200)}]])
+               [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 300)}]
+               [:div {:class "post__description row h_divider8"}
+                [:img {:class "post__user_image" :loading "lazy" :src (make-preview-url (:src (:image i)) 50)}]
+                [:div {:class "column v_divider8 col_center"}
+                 [:span {:class "post__title" :innerText (elipsize (:innerText (:title i)) 50)}]
+                 [:span {:class "post__user_name" :innerText (:innerText (:username i))}]]]])
             [[:button {:class "button" :innerText "Next" :onclick :load-next}]])]]]]])
 
 (defn page-loaded {:cofx [:db]} [{db :db} page]
@@ -64,6 +73,7 @@
                  :target {:items {:type :collection
                                   :query "div.postContainer"
                                   :item {:title {:type :node :query "div.post_content"}
+                                         :username {:type :node :query "div.uhead_nick"}
                                          :image {:type :node :query "div.image img"}}}}
                  :dispatch render-page}]
    [:db (update db storage (fn [db] (assoc db :next 2)))]])

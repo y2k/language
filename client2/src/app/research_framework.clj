@@ -38,7 +38,7 @@
 ;;    (.body)))
 
 (defn download-http [url]
-  (slurp "/Users/igor/Downloads/example_html.html"))
+  (slurp "/Users/igor/Documents/sample2.html"))
 
 (declare execute-command)
 
