@@ -24,18 +24,21 @@
   [[:ui [:html {}
          [:head {}
           [:title {:innerText "Posts"}]
+          [:link {:rel "stylesheet" :href "https://necolas.github.io/normalize.css/8.0.1/normalize.css"}]
           [:script {:async true :src "https://unpkg.com/htmx.org@1.8.2"}]
           [:style
            {:innerText
             (gc/css
-             [:.post-list [:.post [(gs/& (gs/not (gs/first-child))) {:margin-top "8px"}]]]
+             [:body {:padding "16px" :font-family "Arial"}]
+             [:.post-list {:display "flex" :flex-direction "column"}]
+             [:.post-list [:* [(gs/& (gs/not (gs/first-child))) {:margin-top "8px"}]]]
              [:.post {:background "#f0f0f0"
                       :border-radius "4px"
                       :padding "8px"
                       :display "flex"
                       :flex-direction "column"}]
              [:.post [:* [(gs/& (gs/not gs/first-child)) {:margin-top "8px"}]]]
-             [:.post__title {:font-size "20px"}]
+             [:.post__title {:font-size "18px" :font-weight 600}]
              [:.post__image {:aspect-ratio 1}]
              [:.button {:background "#f5d21c"
                         :border-color "transparent"
@@ -53,8 +56,8 @@
             (for [i (:items state)]
               [:div {:class "post"}
                [:span {:class "post__title" :innerText (elipsize (:innerText (:title i)) 100)}]
-               [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 200)}]]))
-           [:button {:class "button" :innerText "Next" :onclick :load-next}]]]]]])
+               [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 200)}]])
+            [[:button {:class "button" :innerText "Next" :onclick :load-next}]])]]]]])
 
 (defn page-loaded {:cofx [:db]} [{db :db} page]
   [[:parse-html {:page page
