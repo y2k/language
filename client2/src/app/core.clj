@@ -40,14 +40,12 @@
 
              [:.post {:position "relative" :display "flex" :flex-direction "column" :overflow "hidden"}]
              [:.post__description {:position "absolute" :width "100%" :bottom "0px" :background "#00000080" :padding "8px"}]
-             [:.post__title {:font-size "18px" :font-weight 600 :-webkit-line-clamp 1 :display "-webkit-box" :-webkit-box-orient "vertical" :overflow "hidden"}]
+             [:.post__title {:color "white" :font-size "18px" :font-weight 600 :-webkit-line-clamp 1 :display "-webkit-box" :-webkit-box-orient "vertical" :overflow "hidden"}]
              [:.post__user_name {:font-size "16px" :color "white"}]
              [:.post__image {:aspect-ratio 1.3 :object-fit "cover"}]
              [:.post__user_image {:width "50px" :height "50px" :border-radius "25px"}]
-             [:.post__user_name {}]
              [:.button {:background "#f5d21c"
                         :border-color "transparent"
-                        :border-radius "4px"
                         :font-size "16px"
                         :padding "8px"
                         :min-height "48px"}]
@@ -62,11 +60,11 @@
               [:div {:class "post"}
                [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 300)}]
                [:div {:class "post__description row h_divider8"}
-                [:img {:class "post__user_image" :loading "lazy" :src (make-preview-url (:src (:image i)) 50)}]
+                [:img {:class "post__user_image" :loading "lazy" :src (make-preview-url (:src (:user-image i)) 50)}]
                 [:div {:class "column v_divider8 col_center"}
                  [:span {:class "post__title" :innerText (elipsize (:innerText (:title i)) 50)}]
                  [:span {:class "post__user_name" :innerText (:innerText (:username i))}]]]])
-            [[:button {:class "button" :innerText "Next" :onclick :load-next}]])]]]]])
+            [[:button {:class "button" :innerText "Next" :onclick "alert('test')"}]])]]]]])
 
 (defn page-loaded {:cofx [:db]} [{db :db} page]
   [[:parse-html {:page page
@@ -74,6 +72,7 @@
                                   :query "div.postContainer"
                                   :item {:title {:type :node :query "div.post_content"}
                                          :username {:type :node :query "div.uhead_nick"}
+                                         :user-image {:type :node :query "img.avatar"}
                                          :image {:type :node :query "div.image img"}}}}
                  :dispatch render-page}]
    [:db (update db storage (fn [db] (assoc db :next 2)))]])
