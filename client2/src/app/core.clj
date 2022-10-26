@@ -24,27 +24,30 @@
   [[:ui [:html {}
          [:head {}
           [:title {:innerText "Posts"}]
+          [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
           [:link {:rel "stylesheet" :href "https://necolas.github.io/normalize.css/8.0.1/normalize.css"}]
           [:script {:async true :src "https://unpkg.com/htmx.org@1.8.2"}]
           [:style
            {:innerText
             (gc/css
-             [:body {:padding "0px 16px 16px" :font-family "Arial"}]
+             [:body {:padding "0px 16px 16px" :font-family "Arial" :background "#1f1f1f" :color "white"}]
              [:.v_divider8 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-top "8px"}]]]]
              [:.v_divider16 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-top "16px"}]]]]
              [:.h_divider8 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-left "8px"}]]]]
              [:.h_divider16 [:> [:* [(gs/& (gs/not gs/first-child)) {:margin-left "16px"}]]]]
+             [:.collapse {:display "none !important"}]
              [:.column {:display "flex" :flex-direction "column"}]
              [:.row {:display "flex" :flex-direction "row"}]
              [:.col_center {:justify-content "center"}]
-
-             [:.post {:position "relative" :display "flex" :flex-direction "column" :overflow "hidden"}]
-             [:.post__description {:position "absolute" :width "100%" :bottom "0px" :background "#00000080" :padding "8px"}]
-             [:.post__title {:color "white" :font-size "18px" :font-weight 600 :-webkit-line-clamp 1 :display "-webkit-box" :-webkit-box-orient "vertical" :overflow "hidden"}]
-             [:.post__user_name {:font-size "16px" :color "white"}]
-             [:.post__image {:aspect-ratio 1.3 :object-fit "cover"}]
-             [:.post__user_image {:width "50px" :height "50px" :border-radius "25px"}]
+             [:.row_center {:align-items "center"}]
+             [:.post__description {}]
+             [:.post__title {:color "white" :font-size "18px" :-webkit-line-clamp 3 :display "-webkit-box" :-webkit-box-orient "vertical" :overflow "hidden"}]
+             [:.post__image {:aspect-ratio 1.3 :object-fit "cover" :border-radius "4px"}]
+             [:.post__user_name {:font-size "14px" :color "#afafaf"}]
+             [:.post__user_image {:width "25px" :height "25px" :border-radius "50%"}]
+             [:.post__divider {:height "1px" :background "#3f3f3f"}]
              [:.button {:background "#f5d21c"
+                        :border-radius "4px"
                         :border-color "transparent"
                         :font-size "16px"
                         :padding "8px"
@@ -57,13 +60,15 @@
            (concat
             [:div {:class "column v_divider16"}]
             (for [i (:items state)]
-              [:div {:class "post"}
+              [:div {:class "post column v_divider16"}
                [:img {:class "post__image" :loading "lazy" :src (make-preview-url (:src (:image i)) 300)}]
-               [:div {:class "post__description row h_divider8"}
+               (let [title (:innerText (:title i))]
+                 [:span {:class (str "post__title" (if (or (nil? title) (= "" title)) " collapse" ""))
+                         :innerText (elipsize title 50)}])
+               [:div {:class "post__description row h_divider8 row_center"}
                 [:img {:class "post__user_image" :loading "lazy" :src (make-preview-url (:src (:user-image i)) 50)}]
-                [:div {:class "column v_divider8 col_center"}
-                 [:span {:class "post__title" :innerText (elipsize (:innerText (:title i)) 50)}]
-                 [:span {:class "post__user_name" :innerText (:innerText (:username i))}]]]])
+                [:span {:class "post__user_name" :innerText (:innerText (:username i))}]]
+               [:div {:class "post__divider"}]])
             [[:button {:class "button" :innerText "Next" :onclick "alert('test')"}]])]]]]])
 
 (defn page-loaded {:cofx [:db]} [{db :db} page]
