@@ -7,6 +7,36 @@ open MetaLang
 module P = LanguageParser
 
 [<Fact>]
+let test7 () =
+    let node = P.compile "(module (defn main [a] (. a substring 1 10)))"
+
+    test
+        <@
+            ExtModule
+                [ ExtDefn(
+                      "main",
+                      [ ("a", Unknown) ],
+                      Unknown,
+                      [ ExtCall(".", [ ExtSymbol "a"; ExtSymbol "substring"; ExtConst "1"; ExtConst "10" ]) ]
+                  ) ] = node
+        @>
+
+[<Fact>]
+let test6 () =
+    let node = P.compile "(module (defn main [a] (. a toUpperCase)))"
+
+    test
+        <@
+            ExtModule
+                [ ExtDefn(
+                      "main",
+                      [ ("a", Unknown) ],
+                      Unknown,
+                      [ ExtCall(".", [ ExtSymbol "a"; ExtSymbol "toUpperCase" ]) ]
+                  ) ] = node
+        @>
+
+[<Fact>]
 let test5 () =
     let node =
         P.compile
@@ -17,22 +47,25 @@ let test5 () =
         (dispatch-render)))"""
 
     test
-        <@ ExtModule [ ExtDefn(
-                           "update-text",
-                           [ ("new-text", Unknown) ],
-                           Unknown,
-                           [ ExtCall(
-                               "ref-set",
-                               [ ExtSymbol "model"
-                                 ExtCall(
-                                     "dic-add",
-                                     [ ExtCall("ref-get", [ ExtSymbol "model" ])
-                                       ExtConst "\"text\""
-                                       ExtSymbol "new-text" ]
-                                 ) ]
-                             )
-                             ExtCall("dispatch-render", []) ]
-                       ) ] = node @>
+        <@
+            ExtModule
+                [ ExtDefn(
+                      "update-text",
+                      [ ("new-text", Unknown) ],
+                      Unknown,
+                      [ ExtCall(
+                            "ref-set",
+                            [ ExtSymbol "model"
+                              ExtCall(
+                                  "dic-add",
+                                  [ ExtCall("ref-get", [ ExtSymbol "model" ])
+                                    ExtConst "\"text\""
+                                    ExtSymbol "new-text" ]
+                              ) ]
+                        )
+                        ExtCall("dispatch-render", []) ]
+                  ) ] = node
+        @>
 
 [<Fact>]
 let test4 () =
@@ -43,23 +76,24 @@ let test4 () =
       (def model (ref-create (dic-add (dic-add dic-nil "items" list-nil) "text" ""))))"""
 
     test
-        <@ ExtModule [ ExtDef(
-                           "model",
-                           ExtCall(
-                               "ref-create",
-                               [ ExtCall(
-                                     "dic-add",
-                                     [ ExtCall(
-                                         "dic-add",
-                                         [ ExtSymbol "dic-nil"
-                                           ExtConst "\"items\""
-                                           ExtSymbol "list-nil" ]
-                                       )
-                                       ExtConst "\"text\""
-                                       ExtConst "\"\"" ]
-                                 ) ]
-                           )
-                       ) ] = node @>
+        <@
+            ExtModule
+                [ ExtDef(
+                      "model",
+                      ExtCall(
+                          "ref-create",
+                          [ ExtCall(
+                                "dic-add",
+                                [ ExtCall(
+                                      "dic-add",
+                                      [ ExtSymbol "dic-nil"; ExtConst "\"items\""; ExtSymbol "list-nil" ]
+                                  )
+                                  ExtConst "\"text\""
+                                  ExtConst "\"\"" ]
+                            ) ]
+                      )
+                  ) ] = node
+        @>
 
 [<Fact>]
 let test3 () =
@@ -70,30 +104,31 @@ let test3 () =
       (defn dispatch-render [] (ui-render (view (ref-get model)))))"""
 
     test
-        <@ ExtModule [ ExtDefn(
-                           "dispatch-render",
-                           [],
-                           Unknown,
-                           [ ExtCall("ui-render", [ ExtCall("view", [ ExtCall("ref-get", [ ExtSymbol "model" ]) ]) ]) ]
-                       ) ] = node @>
+        <@
+            ExtModule
+                [ ExtDefn(
+                      "dispatch-render",
+                      [],
+                      Unknown,
+                      [ ExtCall("ui-render", [ ExtCall("view", [ ExtCall("ref-get", [ ExtSymbol "model" ]) ]) ]) ]
+                  ) ] = node
+        @>
 
 [<Fact>]
 let test2 () =
-    let node =
-        P.compile "(module (defn main [a b] (foo (baz a b) b) (bar a b)))"
+    let node = P.compile "(module (defn main [a b] (foo (baz a b) b) (bar a b)))"
 
     test
-        <@ ExtModule [ ExtDefn(
-                           "main",
-                           [ "a", Unknown; "b", Unknown ],
-                           Unknown,
-                           [ ExtCall(
-                               "foo",
-                               [ ExtCall("baz", [ ExtSymbol "a"; ExtSymbol "b" ])
-                                 ExtSymbol "b" ]
-                             )
-                             ExtCall("bar", [ ExtSymbol "a"; ExtSymbol "b" ]) ]
-                       ) ] = node @>
+        <@
+            ExtModule
+                [ ExtDefn(
+                      "main",
+                      [ "a", Unknown; "b", Unknown ],
+                      Unknown,
+                      [ ExtCall("foo", [ ExtCall("baz", [ ExtSymbol "a"; ExtSymbol "b" ]); ExtSymbol "b" ])
+                        ExtCall("bar", [ ExtSymbol "a"; ExtSymbol "b" ]) ]
+                  ) ] = node
+        @>
 
 [<Fact>]
 let test () =
