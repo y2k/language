@@ -15,15 +15,10 @@ module Language = struct
   [@@deriving show]
 
   let lbrace = char '('
-
   let rbrace = char ')'
-
   let l_sbrace = char '['
-
   let r_sbrace = char ']'
-
   let space = take_while1 (function ' ' | '\n' -> true | _ -> false)
-
   let space_or_empty = take_while (function ' ' | '\n' -> true | _ -> false)
 
   let number =
