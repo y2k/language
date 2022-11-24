@@ -16,6 +16,7 @@ module SexpParser =
                       (fun ch ->
                           isLetter ch
                           || isDigit ch
+                          || ch = '?'
                           || ch = '.'
                           || ch = '-'
                           || ch = '_'
