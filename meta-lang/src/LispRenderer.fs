@@ -21,6 +21,7 @@ let rec private renderType =
              |> List.map renderType
              |> reduceSafe (sprintf "%s -> %s"))
             (renderType retType)
+    | x -> failwithf "Cant find renderType for %A" x
 
 let rec render =
     function
@@ -59,3 +60,4 @@ let rec render =
         |> List.map render
         |> reduceSafe (sprintf "%s%s")
         |> sprintf "(module%s)"
+    | x -> failwithf "Cant render for %A" x

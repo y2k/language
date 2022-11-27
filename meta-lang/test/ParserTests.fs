@@ -7,6 +7,37 @@ open MetaLang
 module P = LanguageParser
 
 [<Fact>]
+let test9 () =
+    let node = P.compile "(module (defn foo [x] (= 2 2)))"
+
+    test
+        <@
+            ExtModule [ ExtDefn("foo", [ ("x", Unknown) ], Unknown, [ ExtCall("=", [ ExtConst "2"; ExtConst "2" ]) ]) ] = node
+        @>
+
+[<Fact>]
+let test8_2 () =
+    let node =
+        P.compile """(module (defn a [x] x) #_(comment (println "hello") (println "world")) (defn b [x] x))"""
+
+    test
+        <@
+            ExtModule
+                [ ExtDefn("a", [ ("x", Unknown) ], Unknown, [ ExtSymbol "x" ])
+                  ExtDefn("b", [ ("x", Unknown) ], Unknown, [ ExtSymbol "x" ]) ] = node
+        @>
+
+[<Fact>]
+let test8_1 () =
+    let node = P.compile "(module #_ (defn main [a]))"
+    test <@ ExtModule [] = node @>
+
+[<Fact>]
+let test8 () =
+    let node = P.compile "(module #_(defn main [a]))"
+    test <@ ExtModule [] = node @>
+
+[<Fact>]
 let test7 () =
     let node = P.compile "(module (defn main [a] (. a substring 1 10)))"
 

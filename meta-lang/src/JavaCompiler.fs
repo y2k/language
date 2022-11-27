@@ -109,10 +109,7 @@ let rec compile r program =
 
         //     sprintf "((%s)%s).%s(%s)" clsName instance methodName args
         else
-            let args =
-                argNodes
-                |> List.map compile
-                |> List.reduceString (sprintf "%s, %s")
+            let args = argNodes |> List.map compile |> List.reduceString (sprintf "%s, %s")
 
             sprintf "((Function)%s).apply(new Object[] {%s})" name args
     | Def (name, node) ->
@@ -145,10 +142,7 @@ static {
         //     env
         //     := Environment.register !env (Environment.Param a)
 
-        let body =
-            nodes
-            |> List.map compile
-            |> List.reduceString (sprintf "%s;%s")
+        let body = nodes |> List.map compile |> List.reduceString (sprintf "%s;%s")
 
         // env := backupEnv
 
@@ -192,3 +186,4 @@ class Module {
     }
 %s
 }"""
+    | x -> failwithf "Cant compile %A" x

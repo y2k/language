@@ -10,39 +10,38 @@ module SexpParser =
     open FParsec
 
     let private patom =
-        (choice [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"'))
-                   |>> (sprintf "\"%s\""))
-                  many1Satisfy
-                      (fun ch ->
-                          isLetter ch
-                          || isDigit ch
-                          || ch = '?'
-                          || ch = '.'
-                          || ch = '-'
-                          || ch = '_'
-                          || ch = '+'
-                          || ch = ':') ]
+        (choice
+            [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"'))
+               |>> (sprintf "\"%s\""))
+              many1Satisfy (fun ch ->
+                  isLetter ch
+                  || isDigit ch
+                  || ch = '='
+                  || ch = '?'
+                  || ch = '.'
+                  || ch = '-'
+                  || ch = '_'
+                  || ch = '+'
+                  || ch = ':') ]
          |>> (fun name -> Atom name))
+
+    let private mkCommonParse openCh closeCh toCollection expr : Parser<_, unit> =
+        let discard = pstring "#_" >>. expr |>> (fun _ -> None)
+
+        between
+            (spaces .>> choice [ pstring openCh ])
+            (choice [ pstring closeCh ])
+            ((many (choice [ discard; patom |>> Some; expr |>> Some ] .>> spaces))
+             |>> (List.choose id >> toCollection))
 
     let private psexp: Parser<_, unit> =
         let expr, exprImpl = createParserForwardedToRef ()
 
-        exprImpl
-        := choice [ between
-                        (spaces .>> choice [ pstring "(" ])
-                        (choice [ pstring ")" ])
-                        ((many (choice [ patom; expr ] .>> spaces))
-                         |>> List)
-                    between
-                        (spaces .>> choice [ pstring "[" ])
-                        (choice [ pstring "]" ])
-                        ((many (choice [ patom; expr ] .>> spaces))
-                         |>> Vector)
-                    between
-                        (spaces .>> choice [ pstring "{" ])
-                        (choice [ pstring "}" ])
-                        ((many (choice [ patom; expr ] .>> spaces))
-                         |>> SMap) ]
+        exprImpl.Value <-
+            choice
+                [ mkCommonParse "(" ")" List expr
+                  mkCommonParse "[" "]" Vector expr
+                  mkCommonParse "{" "}" SMap expr ]
 
         expr
 
@@ -60,8 +59,7 @@ let rec private compileFuncBody sexp =
         let letArgs =
             args
             |> List.chunkBySize 2
-            |> List.map
-                (function
+            |> List.map (function
                 | [ Atom name; sexp ] -> name, compileFuncBody sexp
                 | n -> failwithf "illegal node inside let: %O" n)
 
@@ -69,28 +67,22 @@ let rec private compileFuncBody sexp =
     | List (Atom "fn" :: Vector argsSexp :: body) ->
         let args =
             argsSexp
-            |> List.map
-                (function
+            |> List.map (function
                 | Atom argName -> argName, Unknown
                 | n -> failwithf "invalid node %O" n)
 
         ExtFn(args, Unknown, body |> List.map compileFuncBody)
     | List (Atom fname :: args) -> ExtCall(fname, args |> List.map compileFuncBody)
     | Atom sym ->
-        if sym.StartsWith(':') then
-            ExtConst(sym.Substring(1))
-        else if sym = "true" || sym = "false" then
-            ExtConst sym
-        else if Regex.IsMatch(sym, "^[a-z].*$") then
-            ExtSymbol sym
-        else
-            ExtConst sym
+        if sym.StartsWith(':') then ExtConst(sym.Substring(1))
+        else if sym = "true" || sym = "false" then ExtConst sym
+        else if Regex.IsMatch(sym, "^[a-z].*$") then ExtSymbol sym
+        else ExtConst sym
     | Vector xs -> ExtVector(xs |> List.map compileFuncBody)
     | SMap xs ->
         xs
         |> List.chunkBySize 2
-        |> List.map
-            (function
+        |> List.map (function
             | Atom k :: v :: [] when k.StartsWith(':') -> k.Substring(1), compileFuncBody v
             | s -> failwithf "Invalid map node %O" s)
         |> Map.ofList
@@ -103,8 +95,7 @@ let private compileDefn sexp =
     | List (Atom "defn" :: Atom funcName :: Vector argsSexp :: body) ->
         let args =
             argsSexp
-            |> List.map
-                (function
+            |> List.map (function
                 | Atom argName -> argName, Unknown
                 | n -> failwithf "invalid node %O" n)
 
