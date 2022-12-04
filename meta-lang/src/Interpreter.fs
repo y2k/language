@@ -11,7 +11,7 @@ let private tryFindFunction funcs funcName funArgs =
 
 let private findFunction funcs funcName funArgs =
     tryFindFunction funcs funcName funArgs
-    |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s'" funcName)
+    |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' with %i args" funcName (Seq.length funArgs))
 
 type Context =
     private
