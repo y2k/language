@@ -9,10 +9,24 @@ type sexp =
 module SexpParser =
     open FParsec
 
+    let stringParser: Parser<string, unit> =
+        let normalChar = satisfy (fun c -> c <> '\\' && c <> '"')
+
+        let unescape c =
+            match c with
+            | 'n' -> '\n'
+            | 'r' -> '\r'
+            | 't' -> '\t'
+            | c -> c
+
+        let escapedChar = pstring "\\" >>. (anyOf "\\nrt\"" |>> unescape)
+
+        between (pstring "\"") (pstring "\"") (manyChars (normalChar <|> escapedChar))
+        |>> (sprintf "\"%s\"")
+
     let private patom =
         (choice
-            [ (between (pchar '"') (pchar '"') (manySatisfy (fun ch -> ch <> '"'))
-               |>> (sprintf "\"%s\""))
+            [ stringParser
               many1Satisfy (fun ch ->
                   isLetter ch
                   || isDigit ch

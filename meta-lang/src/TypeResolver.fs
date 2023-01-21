@@ -152,6 +152,13 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
                 |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
                 |> fst
 
+            if Seq.length args <> Seq.length funcSign then
+                failwithf
+                    "Used args count %i when call fun '%s' not equals that required %i"
+                    (Seq.length args)
+                    callName
+                    (Seq.length funcSign)
+
             let ri =
                 args
                 |> List.mapi (fun i n -> n, funcSign.[i])
