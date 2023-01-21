@@ -112,7 +112,7 @@ let runCode code funName args =
 
     LanguageParser.compile code
     |> MetaLang.mapToCoreLang
-    |> TypeResolver.resolve' env ctx
+    |> TypeResolver.resolve env ctx
     |> Interpreter.run
         (Map.ofList [ "str",
                       (fun (args: (unit -> obj) list) ->

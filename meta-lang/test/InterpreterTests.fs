@@ -63,7 +63,7 @@ let asset code args expected =
     code
     |> LanguageParser.compile
     |> mapToCoreLang
-    |> Interpreter.run foregnFunctions "main" args
+    |> Interpreter.run (fun x _ -> Map.tryFind x foregnFunctions) "main" args
     |> fun actual ->
         let expected = box expected
         test <@ expected = actual @>

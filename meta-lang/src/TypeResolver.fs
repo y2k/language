@@ -9,6 +9,7 @@ type Context =
     private
         { functions: Map<string, Type list * Type>
           funParams: (string * Type) list }
+
     static member empty =
         { functions = Map.empty
           funParams = [] }
@@ -19,25 +20,25 @@ module Map =
 
 let fundFunctionByArgs (ctx: Context) args retType =
     ctx.functions
-    |> Map.pick
-        (fun name (args', rt) ->
-            match args' with
-            | xs when xs = args && rt = retType -> Some(name, retType)
-            | _ -> None)
+    |> Map.tryPick (fun name (args', rt) ->
+        match args' with
+        | xs when xs = args && rt = retType -> Some(name, retType)
+        | _ -> None)
 
 let findReturnType (ctx: Context) (inputType: Type) =
     ctx.functions
-    |> Map.pick
-        (fun _ (args, retType) ->
-            match args with
-            | [ x ] when x = inputType -> Some retType
-            | _ -> None)
+    |> Map.pick (fun _ (args, retType) ->
+        match args with
+        | [ x ] when x = inputType -> Some retType
+        | _ -> None)
 
 let findFuncArgType (ctx: Context) name argIndex =
-    ctx.functions.[name] |> fst |> List.item argIndex
+    Map.tryFind name ctx.functions
+    |> Option.map (fst >> List.item argIndex)
+    |> Option.defaultWith (fun _ -> failwithf "Cant find func: %O[%O]" name argIndex)
 
-let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
-    let resolve = resolve'' ext
+let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
+    let resolve = resolve' ext
 
     match program with
     | Module (imports, nodes) ->
@@ -49,17 +50,15 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
 
                     let ctx' =
                         { ctx with
-                              functions =
-                                  match node' with
-                                  | Defn (name, ps, _, _) ->
-                                      let types = ps |> List.map snd
-                                      Map.add name (types, Unknown) ctx.functions
-                                  | _ -> ctx.functions }
+                            functions =
+                                match node' with
+                                | Defn (name, ps, _, _) ->
+                                    let types = ps |> List.map snd
+                                    Map.add name (types, Unknown) ctx.functions
+                                | _ -> ctx.functions }
 
                     ctx', nodes @ [ node' ])
-                ({ Context.empty with
-                       functions = ctx.functions },
-                 [])
+                ({ Context.empty with functions = ctx.functions }, [])
 
         Module(imports, nodes), Map.empty
     | Defn (name, ps, _, body) ->
@@ -75,13 +74,12 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
 
         let nps =
             ps
-            |> List.map
-                (fun (x, t) ->
-                    match t with
-                    | Unknown -> x, Map.tryFind x ri |> Option.defaultValue Unknown
-                    | Dictionary _
-                    | Specific _ -> x, t
-                    | Function _ -> failwith "TODO")
+            |> List.map (fun (x, t) ->
+                match t with
+                | Unknown -> x, Map.tryFind x ri |> Option.defaultValue Unknown
+                | Dictionary _
+                | Specific _ -> x, t
+                | Function _ -> failwith "TODO")
 
         Defn(name, nps, Unknown, body), Map.empty
     // | Dic items ->
@@ -167,23 +165,32 @@ let rec private resolve'' (ext: E.t) (ctx: Context) program : Node * ResolvedInf
                     Map.empty
 
             program, ri
-    | other -> other, Map.empty
+    | Let (bindings, body) ->
+        let body = body |> List.map (fun x -> resolve ctx x |> fst)
+        let bindings = List.map (fun (k, v) -> k, resolve ctx v |> fst) bindings
+        Let(bindings, body), Map.empty
+    | NMap map -> NMap(Map.map (fun _ x -> resolve ctx x |> fst) map), Map.empty
+    | NVector xs -> NVector(List.map (fun x -> resolve ctx x |> fst) xs), Map.empty
+    | Symbol _ as other -> other, Map.empty
+    | Fn (args, resType, body) ->
+        let body = body |> List.map (fun x -> resolve ctx x |> fst)
+        Fn(args, resType, body), Map.empty
+    | Def _ as other -> other, Map.empty
+    | Const _ as other -> other, Map.empty
+
+let registerFunc name args (ctx: Context) =
+    { ctx with functions = ctx.functions |> Map.add name args }
 
 let defaultContext =
     { Context.empty with
-          functions =
-              Map.ofArray [| "intrinsic_set",
-                             ([ (Dictionary Map.empty)
-                                Specific "String"
-                                Unknown ],
-                              Unknown)
-                             "add", ([ Specific "Int"; Specific "Int" ], Unknown) |] }
+        functions =
+            Map.ofArray
+                [| "intrinsic_set", ([ (Dictionary Map.empty); Specific "String"; Unknown ], Unknown)
+                   "add", ([ Specific "Int"; Specific "Int" ], Unknown) |] }
+    |> registerFunc "if" ([ Specific "bool"; Unknown; Unknown ], Unknown)
+    |> registerFunc "map" ([ Function([ Unknown ], Unknown); Specific "list" ], Specific "list")
+    |> registerFunc "FIXME" ([], Unknown)
+    |> registerFunc "=" ([ Unknown; Unknown ], Specific "bool")
+    |> registerFunc "unknown_of_sexp" ([ RawSexp ], Unknown)
 
-let resolve ext program =
-    resolve'' ext defaultContext program |> fst
-
-let resolve' ext ctx program = resolve'' ext ctx program |> fst
-
-let registerFunc name args (ctx: Context) =
-    { ctx with
-          functions = ctx.functions |> Map.add name args }
+let resolve ext ctx program = resolve' ext ctx program |> fst

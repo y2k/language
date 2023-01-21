@@ -109,7 +109,7 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
     | NMap xs -> xs |> Map.map (fun _ v -> invokeNode ctx v) |> box
     | n -> failwithf "not implemented for node %O" n
 
-let run2 extFuncResolve (funcName: string) (funArgs: obj list) (program: Node) : obj =
+let run extFuncResolve (funcName: string) (funArgs: obj list) (program: Node) : obj =
     match program with
     | Module (_, rootNodes) ->
         let funcs =
@@ -147,8 +147,4 @@ let run2 extFuncResolve (funcName: string) (funArgs: obj list) (program: Node) :
             { ctx with globalValues = Map.fold (fun m k v -> Map.add k v m) globalValues globalFunValues }
 
         body |> List.map (fun b -> invokeNode ctx b) |> List.last
-
     | n -> failwithf "Unsupported program root node (%O)" n
-
-let run extFuncs (funcName: string) (funArgs: obj list) (program: Node) : obj =
-    run2 (fun funName _ -> Map.tryFind funName extFuncs) funcName funArgs program

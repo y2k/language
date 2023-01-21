@@ -51,8 +51,7 @@ let call (symbolName: string) (b: Node list) : Node = Call(symbolName, b)
 let def (a: string) (c: Node) : Node = Def(a, c)
 
 let defn (a: string) (params': string list) (c: Node list) : Node =
-    let paramsWithTypes =
-        params' |> List.map (fun p -> p, Unknown)
+    let paramsWithTypes = params' |> List.map (fun p -> p, Unknown)
 
     Defn(a, paramsWithTypes, Unknown, c)
 
@@ -71,8 +70,7 @@ module Environment =
 
     let resolve (t: t) (name: string) : SymbolType =
         t
-        |> List.find
-            (fun s ->
-                match s with
-                | Func (n, _) -> n = name
-                | Param n -> n = name)
+        |> List.find (fun s ->
+            match s with
+            | Func (n, _) -> n = name
+            | Param n -> n = name)

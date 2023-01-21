@@ -25,7 +25,7 @@ let resolveTypes (n: Node) =
              Specific "dic")
         |> TypeResolver.registerFunc "update-model" ([ Function([ Specific "dic" ], Specific "dic") ], unitType)
 
-    TypeResolver.resolve' env ctx n
+    TypeResolver.resolve env ctx n
     |> ConstantValidator.validate
         (TypeResolver.fundFunctionByArgs ctx)
         (TypeResolver.findFuncArgType ctx)

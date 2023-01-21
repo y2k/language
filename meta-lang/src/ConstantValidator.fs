@@ -10,27 +10,39 @@ let rec callRecursive f node =
     | Module (_, funcs) -> funcs |> List.iter (callRecursive f)
     | Defn (_, _, _, body) -> body |> List.iter (callRecursive f)
     | Const _
-    | Symbol _
-    | Def _ -> ()
+    | Symbol _ -> ()
+    | Fn (_, _, body) -> body |> List.iter (callRecursive f)
+    | Def (_, body) -> callRecursive f body
+    | NMap xs -> Map.values xs |> Seq.iter (callRecursive f)
+    | NVector body -> body |> List.iter (callRecursive f)
+    | Let (_, body) -> body |> List.iter (callRecursive f)
 
-let validate fundFunctionByArgs findFuncArgType invokeFunc node =
+let private callParseFunForValidConst findFuncArgType findFunctionByArgs invokeFunc name i arg =
+    match arg with
+    | Const sexp ->
+        let (expSign: Type) = findFuncArgType name i
+
+        let (conFuncName, actSign: Type) =
+            findFunctionByArgs [ RawSexp ] expSign
+            |> Option.defaultWith (fun _ -> failwithf "Can't find function for parse sexp->%O (sexp: %O)" expSign sexp)
+
+        invokeFunc conFuncName [ sexp ] |> ignore
+    | _ -> ()
+
+let validate findFunctionByArgs findFuncArgType invokeFunc node =
     callRecursive
         (fun node ->
             match node with
             | Call (name, args) ->
-                args
-                |> List.iteri
-                    (fun i arg ->
-                        match arg with
-                        | Const sexp ->
-                            let (expSign: Type) = findFuncArgType name i
-                            let (conFuncName, actSign: Type) = fundFunctionByArgs [ RawSexp ] expSign
-                            invokeFunc conFuncName [ sexp ] |> ignore
-                        | _ -> ())
+                List.iteri (callParseFunForValidConst findFuncArgType findFunctionByArgs invokeFunc name) args
             | Const _
             | Symbol _
             | Def _
             | Defn _
+            | NMap _
+            | NVector _
+            | Let _
+            | Fn _
             | Module _ -> ())
         node
 
