@@ -5,9 +5,13 @@ module E = ExternalTypeResolver
 
 type ResolvedInfo = Map<string, Type>
 
+type private ArgsDef =
+    | GeneralArgs of Type list
+    | MultiArgs of Type
+
 type Context =
     private
-        { functions: Map<string, Type list * Type>
+        { functions: Map<string, ArgsDef * Type>
           funParams: (string * Type) list }
 
     static member empty =
@@ -22,19 +26,24 @@ let fundFunctionByArgs (ctx: Context) args retType =
     ctx.functions
     |> Map.tryPick (fun name (args', rt) ->
         match args' with
-        | xs when xs = args && rt = retType -> Some(name, retType)
+        | GeneralArgs xs when xs = args && rt = retType -> Some(name, retType)
+        | MultiArgs x when (List.replicate (Seq.length args) x) = args && rt = retType -> Some(name, retType)
         | _ -> None)
 
 let findReturnType (ctx: Context) (inputType: Type) =
     ctx.functions
     |> Map.pick (fun _ (args, retType) ->
         match args with
-        | [ x ] when x = inputType -> Some retType
+        | GeneralArgs [ x ] when x = inputType -> Some retType
+        | MultiArgs x when x = inputType -> Some retType
         | _ -> None)
 
 let findFuncArgType (ctx: Context) name argIndex =
     Map.tryFind name ctx.functions
-    |> Option.map (fst >> List.item argIndex)
+    |> Option.map fst
+    |> Option.map (function
+        | GeneralArgs x -> List.item argIndex x
+        | MultiArgs x -> x)
     |> Option.defaultWith (fun _ -> failwithf "Cant find func: %O[%O]" name argIndex)
 
 let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo =
@@ -54,7 +63,7 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
                                 match node' with
                                 | Defn (name, ps, _, _) ->
                                     let types = ps |> List.map snd
-                                    Map.add name (types, Unknown) ctx.functions
+                                    Map.add name (GeneralArgs types, Unknown) ctx.functions
                                 | _ -> ctx.functions }
 
                     ctx', nodes @ [ node' ])
@@ -100,16 +109,22 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
                 |> Option.defaultWith (fun _ -> failwithf "Can't find function '%s' (%A)" callName ctx)
                 |> fst
 
-            if Seq.length args <> Seq.length funcSign then
+            match funcSign with
+            | GeneralArgs x when Seq.length args <> Seq.length x ->
                 failwithf
                     "Used args count %i when call fun '%s' not equals that required %i"
                     (Seq.length args)
                     callName
-                    (Seq.length funcSign)
+                    (Seq.length x)
+            | _ -> ()
 
             let ri =
                 args
-                |> List.mapi (fun i n -> n, funcSign.[i])
+                |> List.mapi (fun i n ->
+                    n,
+                    match funcSign with
+                    | GeneralArgs funcSign -> funcSign.[i]
+                    | MultiArgs x -> x)
                 |> List.fold
                     (fun a (x, type') ->
                         match x with
@@ -133,15 +148,21 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
     | Def _ as other -> other, Map.empty
     | Const _ as other -> other, Map.empty
 
-let registerFunc name args (ctx: Context) =
-    { ctx with functions = ctx.functions |> Map.add name args }
+let registerFunc name (args, retType) (ctx: Context) =
+    { ctx with functions = ctx.functions |> Map.add name (GeneralArgs args, retType) }
+
+let registerVarArgsFunc name arg retType (ctx: Context) =
+    { ctx with functions = ctx.functions |> Map.add name (MultiArgs arg, retType) }
 
 let defaultContext =
     { Context.empty with
         functions =
             Map.ofArray
-                [| "intrinsic_set", ([ (Dictionary Map.empty); Specific "String"; Unknown ], Unknown)
-                   "add", ([ Specific "Int"; Specific "Int" ], Unknown) |] }
+                [| "intrinsic_set", (GeneralArgs [ (Dictionary Map.empty); Specific "String"; Unknown ], Unknown)
+                   "add",
+                   (GeneralArgs[Specific "Int"
+                                Specific "Int"],
+                    Unknown) |] }
     |> registerFunc "if" ([ Specific "bool"; Unknown; Unknown ], Unknown)
     |> registerFunc "map" ([ Function([ Unknown ], Unknown); Specific "list" ], Specific "list")
     |> registerFunc "FIXME" ([], Unknown)
