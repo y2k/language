@@ -82,58 +82,6 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
                 | Function _ -> failwith "TODO")
 
         Defn(name, nps, Unknown, body), Map.empty
-    // | Dic items ->
-    //     let ri =
-    //         items
-    //         |> List.map snd
-    //         |> List.fold
-    //             (fun a n ->
-    //                 let (_, r) = resolve ctx n
-    //                 Map.addAll r a)
-    //             Map.empty
-
-    //     program, ri
-    // | ReadDic (_, Symbol dicName) ->
-    //     let ri =
-    //         Map.ofList [ dicName, Dictionary Map.empty ]
-
-    //     program, ri
-    // | Bind (_, nodes) ->
-    //     let ri =
-    //         nodes
-    //         |> List.fold
-    //             (fun a n ->
-    //                 let (_, r) = resolve ctx n
-    //                 Map.addAll r a)
-    //             Map.empty
-
-    //     program, ri
-    // | Call ("intrinsic_invoke_static", (String path) :: args) ->
-    //     let ri =
-    //         args
-    //         |> List.mapi (fun i n -> n, E.resolveStatic' ext path (List.length args) i)
-    //         |> List.fold
-    //             (fun a (x, type') ->
-    //                 match x with
-    //                 | Symbol name -> Map.add name (Specific type') a
-    //                 | _ -> a)
-    //             Map.empty
-
-    //     program, ri
-    // | Call ("intrinsic_invoke", (String path) :: _ :: args) ->
-    //     let ri =
-    //         args
-    //         |> List.mapi (fun i n -> n, E.resolve' ext path (List.length args) i)
-    //         |> List.fold
-    //             (fun a (x, type') ->
-    //                 match x with
-    //                 | Symbol name -> Map.add name (Specific type') a
-    //                 | node ->
-    //                     let (_, r) = resolve ctx node
-    //                     Map.addAll r a)
-    //             Map.empty
-
-    //     program, ri
     | Call (callName, args) ->
         match List.tryFind (fun (n, _) -> n = callName) ctx.funParams with
         | Some (_, ftype) ->
