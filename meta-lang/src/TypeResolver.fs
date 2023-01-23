@@ -55,6 +55,15 @@ let rec private resolve' (ext: E.t) (ctx: Context) program : Node * ResolvedInfo
             nodes
             |> List.fold
                 (fun (ctx, nodes) node ->
+                    let ctx =
+                        { ctx with
+                            functions =
+                                match node with
+                                | Defn (name, ps, _, _) ->
+                                    let types = ps |> List.map snd
+                                    Map.add name (GeneralArgs types, Unknown) ctx.functions
+                                | _ -> ctx.functions }
+
                     let (node', _) = resolve ctx node
 
                     let ctx' =
