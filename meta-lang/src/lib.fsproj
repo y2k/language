@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="MetaLang.fs" />
+    <Compile Include="MacroExpand.fs" />
     <Compile Include="Interpreter.fs" />
     <Compile Include="LanguageParser.fs" />
     <Compile Include="ConstLevelFunctions.fs" />
