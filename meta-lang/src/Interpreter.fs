@@ -23,10 +23,13 @@ type Context =
           globalValues: Map<string, obj> }
 
 let findValueInContext (ctx: Context) symName : obj =
-    ctx.argTypes
-    |> List.tryFindIndex (fun (n, _) -> n = symName)
-    |> Option.map (fun argIndex -> ctx.funArgs.[argIndex])
-    |> Option.orElseWith (fun _ -> Map.tryFind symName ctx.localVariables)
+    let findInArgs () =
+        ctx.argTypes
+        |> List.tryFindIndex (fun (n, _) -> n = symName)
+        |> Option.map (fun argIndex -> ctx.funArgs.[argIndex])
+
+    Map.tryFind symName ctx.localVariables
+    |> Option.orElseWith (fun _ -> findInArgs ())
     |> Option.orElseWith (fun _ -> Map.tryFind symName ctx.globalValues)
     |> Option.defaultWith (fun _ -> failwithf "Can't find value '%s'" symName)
 
