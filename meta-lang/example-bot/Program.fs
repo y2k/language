@@ -36,19 +36,19 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
         | [| "/set_env"; name; key; value |] ->
             db.BeginTrans() |> ignore
 
-            envCol.DeleteMany
-                (fun doc ->
-                    doc.["user"].AsInt64 = update.Message.From.Id
-                    && doc.["name"].AsString = name
-                    && doc.["key"].AsString = key)
+            envCol.DeleteMany(fun doc ->
+                doc.["user"].AsInt64 = update.Message.From.Id
+                && doc.["name"].AsString = name
+                && doc.["key"].AsString = key)
             |> ignore
 
             envCol.Insert(
                 BsonDocument(
-                    dict [ "user", BsonValue.op_Implicit update.Message.From.Id
-                           "name", BsonValue.op_Implicit name
-                           "key", BsonValue.op_Implicit key
-                           "value", BsonValue.op_Implicit value ]
+                    dict
+                        [ "user", BsonValue.op_Implicit update.Message.From.Id
+                          "name", BsonValue.op_Implicit name
+                          "key", BsonValue.op_Implicit key
+                          "value", BsonValue.op_Implicit value ]
                 )
             )
             |> ignore
@@ -57,17 +57,16 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
         | [| "/add"; name; url |] ->
             db.BeginTrans() |> ignore
 
-            collection.DeleteMany
-                (fun doc ->
-                    doc.["user"].AsInt64 = update.Message.From.Id
-                    && doc.["name"].AsString = name)
+            collection.DeleteMany(fun doc ->
+                doc.["user"].AsInt64 = update.Message.From.Id && doc.["name"].AsString = name)
             |> ignore
 
             collection.Insert(
                 BsonDocument(
-                    dict [ "user", BsonValue.op_Implicit update.Message.From.Id
-                           "name", BsonValue.op_Implicit name
-                           "url", BsonValue.op_Implicit url ]
+                    dict
+                        [ "user", BsonValue.op_Implicit update.Message.From.Id
+                          "name", BsonValue.op_Implicit name
+                          "url", BsonValue.op_Implicit url ]
                 )
             )
             |> ignore
@@ -79,11 +78,10 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
 
             let message =
                 codes
-                |> Seq.mapi
-                    (fun i doc ->
-                        let name = doc.["name"].AsString
-                        let url = doc.["url"].AsString
-                        sprintf "%s = %s" name url)
+                |> Seq.mapi (fun i doc ->
+                    let name = doc.["name"].AsString
+                    let url = doc.["url"].AsString
+                    sprintf "%s = %s" name url)
                 |> Seq.fold (fun a x -> sprintf "%s\n%s" a x) "Scripts:"
 
             do!
@@ -93,15 +91,45 @@ let invokeCommand (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) 
         | [| "/rm"; name |] ->
             db.BeginTrans() |> ignore
 
-            collection.DeleteMany
-                (fun doc ->
-                    doc.["user"].AsInt64 = update.Message.From.Id
-                    && doc.["name"].AsString = name)
+            collection.DeleteMany(fun doc ->
+                doc.["user"].AsInt64 = update.Message.From.Id && doc.["name"].AsString = name)
             |> ignore
 
             db.Commit() |> ignore
         | _ -> ()
     }
+
+let private extFunctions =
+    Map.ofList
+        [ "str",
+          (fun (args: (unit -> obj) list) ->
+              args
+              |> List.map (fun f ->
+                  match f () with
+                  | :? string as s -> s
+                  | :? bool as b -> b.ToString()
+                  | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
+                  | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
+              |> List.fold (sprintf "%O%O") ""
+              |> box)
+          "get-in",
+          (fun (args: (unit -> obj) list) ->
+              let m: Map<string, obj> = args.[0] () |> unbox
+              let path: obj list = args.[1] () |> unbox
+
+              path
+              |> List.fold
+                  (fun ma k' ->
+                      let m: Map<string, obj> = unbox ma
+
+                      let k =
+                          match k' with
+                          | :? RSexp as x -> let (RSexp x) = x in x
+                          | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
+
+                      m.[unbox k])
+                  (box m)
+              |> box) ]
 
 let runCode code funName args =
     let env = ExternalTypeResolver.loadDefault ()
@@ -113,47 +141,14 @@ let runCode code funName args =
     LanguageParser.compile code
     |> MetaLang.mapToCoreLang
     |> TypeResolver.resolve env ctx
-    |> Interpreter.run
-        (Map.ofList [ "str",
-                      (fun (args: (unit -> obj) list) ->
-                          args
-                          |> List.map
-                              (fun f ->
-                                  match f () with
-                                  | :? string as s -> s
-                                  | :? bool as b -> b.ToString()
-                                  | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
-                                  | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
-                          |> List.fold (sprintf "%O%O") ""
-                          |> box)
-                      "get-in",
-                      (fun (args: (unit -> obj) list) ->
-                          let m: Map<string, obj> = args.[0] () |> unbox
-                          let path: obj list = args.[1] () |> unbox
-
-                          path
-                          |> List.fold
-                              (fun ma k' ->
-                                  let m: Map<string, obj> = unbox ma
-
-                                  let k =
-                                      match k' with
-                                      | :? RSexp as x -> let (RSexp x) = x in x
-                                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
-
-                                  m.[unbox k])
-                              (box m)
-                          |> box) ])
-        funName
-        args
+    |> Interpreter.run (fun n _ -> Map.tryFind n extFunctions) funName args
 
 let handleInline (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) =
     async {
         let collection = db.GetCollection("main")
         let envCol = db.GetCollection("env")
 
-        let name =
-            update.InlineQuery.Query.Split ' ' |> Seq.head
+        let name = update.InlineQuery.Query.Split ' ' |> Seq.head
 
         let args =
             update.InlineQuery.Query.Split ' '
@@ -166,18 +161,14 @@ let handleInline (db: LiteDatabase) (bot: ITelegramBotClient) (update: Update) =
         let userId = update.InlineQuery.From.Id
 
         let url =
-            collection.Find
-                (fun doc ->
-                    doc.["user"].AsInt64 = userId
-                    && doc.["name"].AsString = name)
+            collection.Find(fun doc -> doc.["user"].AsInt64 = userId && doc.["name"].AsString = name)
             |> Seq.tryHead
             |> Option.map (fun doc -> doc.["url"].AsString)
 
         let env =
-            envCol.Find
-                (fun doc ->
-                    doc.["user"].AsInt64 = update.InlineQuery.From.Id
-                    && doc.["name"].AsString = name)
+            envCol.Find(fun doc ->
+                doc.["user"].AsInt64 = update.InlineQuery.From.Id
+                && doc.["name"].AsString = name)
             |> Seq.map (fun doc -> doc.["key"].AsString, box doc.["value"].AsString)
             |> Map.ofSeq
 
@@ -229,8 +220,7 @@ let main argv =
     use db = new LiteDatabase("main.db")
     let collection = db.GetCollection("main")
 
-    let bot =
-        TelegramBotClient(Environment.GetEnvironmentVariable "TELEGRAM_TOKEN")
+    let bot = TelegramBotClient(Environment.GetEnvironmentVariable "TELEGRAM_TOKEN")
 
     bot.StartReceiving(
         { new IUpdateHandler with
@@ -247,8 +237,8 @@ let main argv =
                             do! handleInline db bot update
                         else if not <| isNull update.Message then
                             do! invokeCommand db bot update
-                    with
-                    | e -> printfn "ERROR :: %O" e
+                    with e ->
+                        printfn "ERROR :: %O" e
                 }
                 |> Async.StartAsTask
                 |> (fun x -> x :> Tasks.Task) }

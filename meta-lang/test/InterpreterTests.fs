@@ -6,59 +6,56 @@ open MetaLang
 
 let asset code args expected =
     let foregnFunctions =
-        Map.ofList [ "get-in",
-                     (fun (args: (unit -> obj) list) ->
-                         let m: Map<string, obj> = args.[0] () |> unbox
-                         let path: obj list = args.[1] () |> unbox
+        Map.ofList
+            [ "get-in",
+              (fun (args: (unit -> obj) list) ->
+                  let m: Map<string, obj> = args.[0] () |> unbox
+                  let path: obj list = args.[1] () |> unbox
 
-                         path
-                         |> List.fold
-                             (fun ma k' ->
-                                 let m: Map<string, obj> = unbox ma
+                  path
+                  |> List.fold
+                      (fun ma k' ->
+                          let m: Map<string, obj> = unbox ma
 
-                                 let k =
-                                     match k' with
-                                     | :? RSexp as x -> let (RSexp x) = x in x
-                                     | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
+                          let k =
+                              match k' with
+                              | :? RSexp as x -> let (RSexp x) = x in x
+                              | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
 
-                                 m.[unbox k])
-                             (box m)
-                         |> box)
-                     "str",
-                     (fun (args: (unit -> obj) list) ->
-                         args
-                         |> List.map
-                             (fun f ->
-                                 match f () with
-                                 | :? string as s -> s
-                                 | :? bool as b -> b.ToString()
-                                 | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
-                                 | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
-                         |> List.fold (sprintf "%O%O") ""
-                         |> box)
-                     "if",
-                     (fun (args: (unit -> obj) list) ->
-                         let condition =
-                             match args.[0] () with
-                             | :? bool as b -> b
-                             | :? RSexp as x -> let (RSexp x) = x in System.Boolean.Parse(x)
-                             | x -> failwithf "Can't parse '%O' to bool" x
+                          m.[unbox k])
+                      (box m)
+                  |> box)
+              "str",
+              (fun (args: (unit -> obj) list) ->
+                  args
+                  |> List.map (fun f ->
+                      match f () with
+                      | :? string as s -> s
+                      | :? bool as b -> b.ToString()
+                      | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
+                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
+                  |> List.fold (sprintf "%O%O") ""
+                  |> box)
+              "if",
+              (fun (args: (unit -> obj) list) ->
+                  let condition =
+                      match args.[0] () with
+                      | :? bool as b -> b
+                      | :? RSexp as x -> let (RSexp x) = x in System.Boolean.Parse(x)
+                      | x -> failwithf "Can't parse '%O' to bool" x
 
-                         if condition then
-                             args.[1] ()
-                         else
-                             args.[2] ())
-                     "+",
-                     (fun (args: (unit -> obj) list) ->
-                         let toInt (arg: (unit -> obj)) =
-                             match arg () with
-                             | :? int as x -> x
-                             | :? RSexp as x -> let (RSexp x) = x in int x
-                             | x -> failwithf "Can't parse '%O' to int" x
+                  if condition then args.[1] () else args.[2] ())
+              "+",
+              (fun (args: (unit -> obj) list) ->
+                  let toInt (arg: (unit -> obj)) =
+                      match arg () with
+                      | :? int as x -> x
+                      | :? RSexp as x -> let (RSexp x) = x in int x
+                      | x -> failwithf "Can't parse '%O' to int" x
 
-                         let a = toInt args.[0]
-                         let b = toInt args.[1]
-                         a + b |> box) ]
+                  let a = toInt args.[0]
+                  let b = toInt args.[1]
+                  a + b |> box) ]
 
     code
     |> LanguageParser.compile
@@ -67,6 +64,11 @@ let asset code args expected =
     |> fun actual ->
         let expected = box expected
         test <@ expected = actual @>
+
+[<Fact>]
+let test30 () =
+    asset "(module (defn main [] (let [x 1] (let [x 2] x))))" [] (RSexp "2")
+    asset "(module (defn main [] (let [x 1] (let [x 2 x 3] x))))" [] (RSexp "3")
 
 [<Fact>]
 let test29 () =
@@ -82,16 +84,11 @@ let test27 () =
         "(module (defn main [] [:download {:to_url \"g.com\"}]))"
         []
         [ box <| RSexp "download"
-          box
-          <| Map.ofList [ "to_url", box <| RSexp "\"g.com\"" ] ]
+          box <| Map.ofList [ "to_url", box <| RSexp "\"g.com\"" ] ]
 
 [<Fact>]
 let test26 () =
-    asset
-        "(module (defn main [] {:a 1 :b \"2\"}))"
-        []
-        (Map.ofList [ "a", box <| RSexp "1"
-                      "b", box <| RSexp "\"2\"" ])
+    asset "(module (defn main [] {:a 1 :b \"2\"}))" [] (Map.ofList [ "a", box <| RSexp "1"; "b", box <| RSexp "\"2\"" ])
 
 [<Fact>]
 let test25 () =
@@ -136,12 +133,7 @@ let test17 () =
 
 [<Fact>]
 let test16 () =
-    asset
-        "(module (defn main [] [1 2 3]))"
-        []
-        [ RSexp "1" |> box
-          RSexp "2" |> box
-          RSexp "3" |> box ]
+    asset "(module (defn main [] [1 2 3]))" [] [ RSexp "1" |> box; RSexp "2" |> box; RSexp "3" |> box ]
 
 [<Fact>]
 let test15 () =
