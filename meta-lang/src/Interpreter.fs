@@ -80,6 +80,7 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
                 | Some (fargTypes, _, fbody) ->
                     let ctx2 =
                         { ctx with
+                            localVariables = Map.empty
                             argTypes = fargTypes
                             funArgs = callArgs |> List.map (fun argBody -> invokeNode ctx argBody) }
 
