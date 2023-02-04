@@ -24,7 +24,7 @@ let private callParseFunForValidConst findFuncArgType findFunctionByArgs invokeF
 
         let (conFuncName, actSign: Type) =
             findFunctionByArgs [ RawSexp ] expSign
-            |> Option.defaultWith (fun _ -> failwithf "Can't find function for parse sexp->%O (sexp: %O)" expSign sexp)
+            |> Option.defaultWith (fun _ -> failwithf "Can't find function for parse sexp to [%O] (sexp: %O)" expSign sexp)
 
         invokeFunc conFuncName [ sexp ] |> ignore
     | _ -> ()

@@ -86,6 +86,17 @@ let findNativeFunction (name: string) _ =
         Some(fun (args: (unit -> obj) list) ->
             let (l: bool) = args[0]() |> unbox
             if l then args[1]() |> unbox else false |> box)
+    | "or" ->
+        Some(fun (args: (unit -> obj) list) ->
+            args
+            |> List.tryPick (fun argf ->
+                match argf () with
+                | :? bool as x -> if x then Some(box x) else None
+                | :? RSexp as (RSexp x) when x = "false" || x = "true" ->
+                    if x = "true" then Some(box (RSexp "true")) else None
+                | x when not (isNull x) -> Some x
+                | _ -> None)
+            |> Option.defaultValue null)
     | "not=" ->
         Some(fun (args: (unit -> obj) list) ->
             let (l: obj) = args[0]() |> unwrapRSexp
