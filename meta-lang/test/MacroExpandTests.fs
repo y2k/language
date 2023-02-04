@@ -34,7 +34,6 @@ let private validate actual expected =
         |> MacroExpand.expandSexp
         |> LanguageParser.compileToExtNode
         |> mapToCoreLang
-        |> MacroExpand.run
 
     let expected =
         expected
