@@ -7,6 +7,16 @@ let private expandSingleSexp (name: string) (body: sexp list) : sexp =
     match name, body with
     | x, [ dict ] when x.StartsWith ':' -> List [ Atom "get"; dict; Atom name ]
     | "comment", _ -> Atom "nil"
+    | "if-some", _ ->
+        match body with
+        | [ Vector [ Atom _ as var; src ]; then_; else_ ] ->
+            List[Atom "let"
+
+                 Vector[var
+                        src]
+
+                 List [ Atom "if"; List [ Atom "some?"; var ]; then_; else_ ]]
+        | _ -> failwithf "invalid macro body: %O" body
     | "->>", _ ->
         body
         |> List.reduce (fun a x ->
