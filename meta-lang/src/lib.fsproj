@@ -6,13 +6,14 @@
 
   <ItemGroup>
     <Compile Include="MetaLang.fs" />
-    <Compile Include="MacroExpand.fs" />
     <Compile Include="Interpreter.fs" />
     <Compile Include="LanguageParser.fs" />
+    <Compile Include="MacroExpand.fs" />
     <Compile Include="ConstLevelFunctions.fs" />
     <Compile Include="ConstantValidator.fs" />
     <Compile Include="ExternalTypeResolver.fs" />
     <Compile Include="TypeResolver.fs" />
+    <Compile Include="DefaultFunctions.fs" />
     <Compile Include="JavaCompiler.fs" />
     <Compile Include="LispRenderer.fs" />
   </ItemGroup>

@@ -34,6 +34,7 @@ module SexpParser =
                   || ch = '?'
                   || ch = '.'
                   || ch = '-'
+                  || ch = '>'
                   || ch = '_'
                   || ch = '+'
                   || ch = ':') ]
@@ -90,7 +91,7 @@ let rec private compileFuncBody sexp =
     | Atom sym ->
         if sym.StartsWith(':') then ExtConst(sym.Substring(1))
         else if sym = "true" || sym = "false" then ExtConst sym
-        else if Regex.IsMatch(sym, "^[a-z].*$") then ExtSymbol sym
+        else if Regex.IsMatch(sym, "^[a-z_].*$") then ExtSymbol sym
         else ExtConst sym
     | Vector xs -> ExtVector(xs |> List.map compileFuncBody)
     | SMap xs ->
@@ -116,7 +117,11 @@ let private compileDefn sexp =
         ExtDefn(funcName, args, Unknown, body |> List.map compileFuncBody)
     | _ -> failwithf "invalid node %O" sexp
 
-let compile str =
-    match SexpParser.parse str with
+let parse str = SexpParser.parse str
+
+let compileToExtNode nodes =
+    match nodes with
     | List (Atom "module" :: methods) -> ExtModule(methods |> List.map compileDefn)
     | p -> failwithf "invalid program (%O)" p
+
+let compile = parse >> compileToExtNode

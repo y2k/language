@@ -1,23 +1,25 @@
 module MacroExpand
 
 open MetaLang
+open LanguageParser
 
-(*
+let private expandSingleSexp (name: string) (body: sexp list) : sexp =
+    match name with
+    | "->>" ->
+        body
+        |> List.reduce (fun a x ->
+            match x with
+            | List xs -> xs @ [ a ] |> List
+            | _ -> failwithf "invalid macro body: %O" body)
+    | _ -> Atom name :: body |> List
 
-(case
-  input
-  :a :result_a
-  :b :result_b
-  :result_def)
-
-(let [x input]
- (if (= :a x)
-    result_a)
-    (if (= :b x)
-      result_b
-      result_def))
-
-*)
+let rec expandSexp (node: sexp) : sexp =
+    match node with
+    | Atom _ -> node
+    | List ((Atom head) :: atoms) -> expandSingleSexp head (List.map expandSexp atoms)
+    | List atoms -> List.map expandSexp atoms |> List
+    | Vector atoms -> List.map expandSexp atoms |> Vector
+    | SMap atoms -> List.map expandSexp atoms |> SMap
 
 let private expand name (args: Node list) : Node =
     match name with
