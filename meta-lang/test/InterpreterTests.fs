@@ -78,6 +78,7 @@ let test34 () =
     asset "(module (defn foo [f] (f)) (defn main [x] (foo (fn [] x))))" [3] 3
     asset "(module (defn foo [f] (f)) (defn main [] (let [x 3] (foo (fn [] x)))))" [] (RSexp "3")
     asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (foo (fn [] x)))))" [2] (RSexp "3")
+    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (let [x 4] (foo (fn [] x))))))" [2] (RSexp "4")
 
 [<Fact>]
 let test33 () =
