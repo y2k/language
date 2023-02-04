@@ -31,6 +31,7 @@ let findValueInContext (ctx: Context) symName : obj =
     Map.tryFind symName ctx.localVariables
     |> Option.orElseWith (fun _ -> findInArgs ())
     |> Option.orElseWith (fun _ -> Map.tryFind symName ctx.globalValues)
+    |> Option.orElseWith (fun _ -> if symName = "nil" then Some null else None)
     |> Option.defaultWith (fun _ -> failwithf "Can't find value '%s'" symName)
 
 let rec private invokeNode (ctx: Context) (body: Node) : obj =

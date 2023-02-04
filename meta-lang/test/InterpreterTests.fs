@@ -58,12 +58,25 @@ let asset code args expected =
                   a + b |> box) ]
 
     code
-    |> LanguageParser.compile
+    |> LanguageParser.parse
+    |> MacroExpand.expandSexp
+    |> LanguageParser.compileToExtNode
     |> mapToCoreLang
-    |> Interpreter.run (fun x _ -> Map.tryFind x foregnFunctions) "main" args
+    |> Interpreter.run
+        (fun x _ ->
+            Map.tryFind x foregnFunctions
+            |> Option.orElseWith (fun _ -> DefaultFunctions.findNativeFunction x ()))
+        "main"
+        args
     |> fun actual ->
         let expected = box expected
         test <@ expected = actual @>
+
+[<Fact>]
+let test32 () =
+    asset "(module (comment foo bar) (defn foo [f x] (f x)) (defn main [] (foo (fn [x] x) 3)))" [] (RSexp "3")
+    asset "(module (defn foo [f x] (f x)) (defn main [] (foo (fn [x] x) 3)))" [] (RSexp "3")
+    asset "(module (defn foo [f x] (f x)) (defn main [] (comment foo bar) (foo (fn [x] x) 3)))" [] (RSexp "3")
 
 [<Fact>]
 let test31 () =

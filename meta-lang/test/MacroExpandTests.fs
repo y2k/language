@@ -23,13 +23,17 @@ let private validate actual expected =
     test <@ expected = actual @>
 
 [<Fact>]
+let test4 () =
+    validate "(comment (let [x 1] x))" "nil"
+
+[<Fact>]
 let test3 () =
-    validate "(:foo bar)" " (get bar :foo)"
-    validate "(:foo (let [x {}] x))" " (get (let [x {}] x) :foo)"
+    validate "(:foo bar)" "(get bar :foo)"
+    validate "(:foo (let [x {}] x))" "(get (let [x {}] x) :foo)"
 
 [<Fact>]
 let test2 () =
-    validate "(->> a (b) (c d))" " (c d (b a))"
+    validate "(->> a (b) (c d))" "(c d (b a))"
 
 [<Fact>]
 let test () =

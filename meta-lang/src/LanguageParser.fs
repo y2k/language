@@ -106,7 +106,7 @@ let rec private compileFuncBody sexp =
 
 let private compileDefn sexp =
     match sexp with
-    | List (Atom "def" :: Atom valName :: body :: []) -> ExtDef(valName, compileFuncBody body)
+    | List (Atom "def" :: Atom valName :: body :: []) -> ExtDef(valName, compileFuncBody body) |> Some
     | List (Atom "defn" :: Atom funcName :: Vector argsSexp :: body) ->
         let args =
             argsSexp
@@ -114,14 +114,15 @@ let private compileDefn sexp =
                 | Atom argName -> argName, Unknown
                 | n -> failwithf "invalid node %O" n)
 
-        ExtDefn(funcName, args, Unknown, body |> List.map compileFuncBody)
+        ExtDefn(funcName, args, Unknown, body |> List.map compileFuncBody) |> Some
+    | Atom "nil" -> None
     | _ -> failwithf "invalid node %O" sexp
 
 let parse str = SexpParser.parse str
 
 let compileToExtNode nodes =
     match nodes with
-    | List (Atom "module" :: methods) -> ExtModule(methods |> List.map compileDefn)
+    | List (Atom "module" :: methods) -> ExtModule(methods |> List.choose compileDefn)
     | p -> failwithf "invalid program (%O)" p
 
 let compile = parse >> compileToExtNode

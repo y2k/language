@@ -6,6 +6,7 @@ open LanguageParser
 let private expandSingleSexp (name: string) (body: sexp list) : sexp =
     match name, body with
     | x, [ dict ] when x.StartsWith ':' -> List [ Atom "get"; dict; Atom name ]
+    | "comment", _ -> Atom "nil"
     | "->>", _ ->
         body
         |> List.reduce (fun a x ->
