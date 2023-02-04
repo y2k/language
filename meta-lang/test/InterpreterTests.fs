@@ -73,6 +73,13 @@ let asset code args expected =
         test <@ expected = actual @>
 
 [<Fact>]
+let test34 () =
+    asset "(module (defn foo [f] (f)) (defn main [] (foo (fn [] 3))))" [] (RSexp "3")
+    asset "(module (defn foo [f] (f)) (defn main [x] (foo (fn [] x))))" [3] 3
+    asset "(module (defn foo [f] (f)) (defn main [] (let [x 3] (foo (fn [] x)))))" [] (RSexp "3")
+    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (foo (fn [] x)))))" [2] (RSexp "3")
+
+[<Fact>]
 let test33 () =
     asset "(module (defn main [] (or nil false 3)))" [] (RSexp "3")
     asset "(module (defn main [x] (or nil false x)))" [ 3 ] 3

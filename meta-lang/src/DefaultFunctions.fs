@@ -2,7 +2,7 @@ module DefaultFunctions
 
 open MetaLang
 
-let private asString (instance: obj) =
+let asString (instance: obj) =
     match instance with
     | null -> null
     | :? string as s -> s
@@ -18,6 +18,9 @@ let private unwrapRSexp (instance: obj) =
 
 let defaultContext =
     TypeResolver.defaultContext
+    |> TypeResolver.registerFunc "assoc" ([ Dictionary Map.empty; Keyword; Unknown ], Dictionary Map.empty)
+    |> TypeResolver.registerFunc "cons" ([ Unknown; Specific "list" ], Specific "list")
+    |> TypeResolver.registerVarArgsFunc "or" Unknown Unknown
     |> TypeResolver.registerFunc ".split" ([ Specific "string"; Specific "string" ], Unknown)
     |> TypeResolver.registerFunc "vec" ([ Unknown ], Specific "list")
     |> TypeResolver.registerFunc "concat" ([ Specific "list"; Specific "list" ], Specific "list")
@@ -38,6 +41,17 @@ let defaultContext =
 
 let findNativeFunction (name: string) _ =
     match name with
+    | "assoc" ->
+        Some(fun (args: (unit -> obj) list) ->
+            let dic: Map<string, obj> = args[0]() |> unbox
+            let key: string = args[1]() |> asString
+            let value = args[2]()
+            Map.add key value dic |> box)
+    | "cons" ->
+        Some(fun (args: (unit -> obj) list) ->
+            let value = args[0]()
+            let list: obj list = args[1]() |> unbox
+            value :: list |> box)
     | ".split" ->
         Some(fun (args: (unit -> obj) list) ->
             let instance = args[0]() |> asString

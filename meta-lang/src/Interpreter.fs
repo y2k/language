@@ -105,7 +105,11 @@ let rec private invokeNode (ctx: Context) (body: Node) : obj =
         box (fun (args: obj list) ->
             let localCtx =
                 { ctx with
-                    localVariables = ctx.argTypes |> List.mapi (fun i (n, _) -> n, ctx.funArgs.[i]) |> Map.ofList
+                    localVariables =
+                        ctx.argTypes
+                        |> List.mapi (fun i (n, _) -> n, ctx.funArgs.[i])
+                        |> Map.ofList
+                        |> fun lv -> Map.fold (fun lv k v -> Map.add k v lv) lv ctx.localVariables
                     funArgs = args
                     argTypes = argsDesc }
 
