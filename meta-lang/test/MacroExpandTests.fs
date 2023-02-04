@@ -22,9 +22,10 @@ let private validate actual expected =
 
     test <@ expected = actual @>
 
-// [<Fact>]
-// let test3 () =
-//     validate "(->> a (b) (c d))" " (c d (b a))"
+[<Fact>]
+let test3 () =
+    validate "(:foo bar)" " (get bar :foo)"
+    validate "(:foo (let [x {}] x))" " (get (let [x {}] x) :foo)"
 
 [<Fact>]
 let test2 () =

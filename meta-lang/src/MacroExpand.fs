@@ -4,8 +4,9 @@ open MetaLang
 open LanguageParser
 
 let private expandSingleSexp (name: string) (body: sexp list) : sexp =
-    match name with
-    | "->>" ->
+    match name, body with
+    | x, [ dict ] when x.StartsWith ':' -> List [ Atom "get"; dict; Atom name ]
+    | "->>", _ ->
         body
         |> List.reduce (fun a x ->
             match x with
