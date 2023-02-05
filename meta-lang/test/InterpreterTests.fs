@@ -1,84 +1,25 @@
-module InterpreterTests
+module rec InterpreterTests
 
 open Xunit
 open Swensen.Unquote
 open MetaLang
 
-let asset code args expected =
-    let foregnFunctions =
-        Map.ofList
-            [ "get-in",
-              (fun (args: (unit -> obj) list) ->
-                  let m: Map<string, obj> = args.[0] () |> unbox
-                  let path: obj list = args.[1] () |> unbox
-
-                  path
-                  |> List.fold
-                      (fun ma k' ->
-                          let m: Map<string, obj> = unbox ma
-
-                          let k =
-                              match k' with
-                              | :? RSexp as x -> let (RSexp x) = x in x
-                              | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
-
-                          m.[unbox k])
-                      (box m)
-                  |> box)
-              "str",
-              (fun (args: (unit -> obj) list) ->
-                  args
-                  |> List.map (fun f ->
-                      match f () with
-                      | :? string as s -> s
-                      | :? bool as b -> b.ToString()
-                      | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
-                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
-                  |> List.fold (sprintf "%O%O") ""
-                  |> box)
-              "if",
-              (fun (args: (unit -> obj) list) ->
-                  let condition =
-                      match args.[0] () with
-                      | :? bool as b -> b
-                      | :? RSexp as x -> let (RSexp x) = x in System.Boolean.Parse(x)
-                      | x -> failwithf "Can't parse '%O' to bool" x
-
-                  if condition then args.[1] () else args.[2] ())
-              "+",
-              (fun (args: (unit -> obj) list) ->
-                  let toInt (arg: (unit -> obj)) =
-                      match arg () with
-                      | :? int as x -> x
-                      | :? RSexp as x -> let (RSexp x) = x in int x
-                      | x -> failwithf "Can't parse '%O' to int" x
-
-                  let a = toInt args.[0]
-                  let b = toInt args.[1]
-                  a + b |> box) ]
-
-    code
-    |> LanguageParser.parse
-    |> MacroExpand.expandSexp
-    |> LanguageParser.compileToExtNode
-    |> mapToCoreLang
-    |> Interpreter.run
-        (fun x _ ->
-            Map.tryFind x foregnFunctions
-            |> Option.orElseWith (fun _ -> DefaultFunctions.findNativeFunction x ()))
-        "main"
-        args
-    |> fun actual ->
-        let expected = box expected
-        test <@ expected = actual @>
+[<Fact>]
+let test35 () =
+    asset "(module (defn main [] (vector? [])))" [] true
+    asset "(module (defn main [] (vector? [1 2 3])))" [] true
+    asset "(module (defn main [] (vector? [\"1\" \"2\" \"3\"])))" [] true
+    asset "(module (defn main [x] (vector? x)))" [ [ box 0; box 1; box 2 ] ] true
+    asset "(module (defn main [] (vector? \"hello\")))" [] false
+    asset "(module (defn main [x] (vector? x)))" [ "test" ] false
 
 [<Fact>]
 let test34 () =
     asset "(module (defn foo [f] (f)) (defn main [] (foo (fn [] 3))))" [] (RSexp "3")
-    asset "(module (defn foo [f] (f)) (defn main [x] (foo (fn [] x))))" [3] 3
+    asset "(module (defn foo [f] (f)) (defn main [x] (foo (fn [] x))))" [ 3 ] 3
     asset "(module (defn foo [f] (f)) (defn main [] (let [x 3] (foo (fn [] x)))))" [] (RSexp "3")
-    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (foo (fn [] x)))))" [2] (RSexp "3")
-    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (let [x 4] (foo (fn [] x))))))" [2] (RSexp "4")
+    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (foo (fn [] x)))))" [ 2 ] (RSexp "3")
+    asset "(module (defn foo [f] (f)) (defn main [x] (let [x 3] (let [x 4] (foo (fn [] x))))))" [ 2 ] (RSexp "4")
 
 [<Fact>]
 let test33 () =
@@ -231,3 +172,71 @@ let test2 () =
 [<Fact>]
 let test1 () =
     asset "(module (defn main [a b] a))" [ box 1; box 2 ] 1
+
+let asset code (args: obj list) (expected: obj) =
+    let foregnFunctions =
+        Map.ofList
+            [ "get-in",
+              (fun (args: (unit -> obj) list) ->
+                  let m: Map<string, obj> = args.[0] () |> unbox
+                  let path: obj list = args.[1] () |> unbox
+
+                  path
+                  |> List.fold
+                      (fun ma k' ->
+                          let m: Map<string, obj> = unbox ma
+
+                          let k =
+                              match k' with
+                              | :? RSexp as x -> let (RSexp x) = x in x
+                              | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType())
+
+                          m.[unbox k])
+                      (box m)
+                  |> box)
+              "str",
+              (fun (args: (unit -> obj) list) ->
+                  args
+                  |> List.map (fun f ->
+                      match f () with
+                      | :? string as s -> s
+                      | :? bool as b -> b.ToString()
+                      | :? RSexp as x -> let (RSexp x) = x in x.Trim('"').ToString()
+                      | x -> failwithf "Can't parse '%O' (%O) to string" x (x.GetType()))
+                  |> List.fold (sprintf "%O%O") ""
+                  |> box)
+              "if",
+              (fun (args: (unit -> obj) list) ->
+                  let condition =
+                      match args.[0] () with
+                      | :? bool as b -> b
+                      | :? RSexp as x -> let (RSexp x) = x in System.Boolean.Parse(x)
+                      | x -> failwithf "Can't parse '%O' to bool" x
+
+                  if condition then args.[1] () else args.[2] ())
+              "+",
+              (fun (args: (unit -> obj) list) ->
+                  let toInt (arg: (unit -> obj)) =
+                      match arg () with
+                      | :? int as x -> x
+                      | :? RSexp as x -> let (RSexp x) = x in int x
+                      | x -> failwithf "Can't parse '%O' to int" x
+
+                  let a = toInt args.[0]
+                  let b = toInt args.[1]
+                  a + b |> box) ]
+
+    code
+    |> LanguageParser.parse
+    |> MacroExpand.expandSexp
+    |> LanguageParser.compileToExtNode
+    |> mapToCoreLang
+    |> Interpreter.run
+        (fun x _ ->
+            Map.tryFind x foregnFunctions
+            |> Option.orElseWith (fun _ -> DefaultFunctions.findNativeFunction x ()))
+        "main"
+        args
+    |> fun actual ->
+        let expected = box expected
+        test <@ expected = actual @>

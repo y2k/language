@@ -28,6 +28,7 @@ let defaultContext =
     |> TypeResolver.registerFunc "first" ([ Specific "list" ], Unknown)
     |> TypeResolver.registerFunc "keyword_of_sexp" ([ RawSexp ], Keyword)
     |> TypeResolver.registerFunc "some?" ([ Unknown ], Specific "bool")
+    |> TypeResolver.registerFunc "vector?" ([ Unknown ], Specific "bool")
     |> TypeResolver.registerFunc "second" ([ Specific "list" ], Unknown)
     |> TypeResolver.registerFunc "rest" ([ Specific "list" ], Specific "list")
     |> TypeResolver.registerFunc "name" ([ Keyword ], Specific "string")
@@ -70,6 +71,10 @@ let findNativeFunction (name: string) _ =
         Some(fun (args: (unit -> obj) list) ->
             let (l: obj) = args[0]() |> unbox
             not (isNull l))
+    | "vector?" ->
+        Some(fun (args: (unit -> obj) list) ->
+            let (l: obj) = args[0]() |> unbox
+            l.GetType() = typeof<obj list> |> box)
     | "str" -> Some(fun (args: (unit -> obj) list) -> Seq.fold (fun a x -> a + (x () |> asString)) "" args |> box)
     | "name" ->
         Some(fun (args: (unit -> obj) list) ->
