@@ -18,27 +18,28 @@ let private unwrapRSexp (instance: obj) =
 
 let defaultContext =
     TypeResolver.defaultContext
-    |> TypeResolver.registerFunc "assoc" ([ Dictionary Map.empty; Keyword; Unknown ], Dictionary Map.empty)
-    |> TypeResolver.registerFunc "cons" ([ Unknown; Specific "list" ], Specific "list")
+    |> TypeResolver.registerVarArgsFunc "do" Unknown Unknown
     |> TypeResolver.registerVarArgsFunc "or" Unknown Unknown
-    |> TypeResolver.registerFunc ".split" ([ Specific "string"; Specific "string" ], Unknown)
-    |> TypeResolver.registerFunc "vec" ([ Unknown ], Specific "list")
-    |> TypeResolver.registerFunc "concat" ([ Specific "list"; Specific "list" ], Specific "list")
-    |> TypeResolver.registerFunc "get" ([ Unknown; Keyword ], Unknown)
-    |> TypeResolver.registerFunc "first" ([ Specific "list" ], Unknown)
-    |> TypeResolver.registerFunc "keyword_of_sexp" ([ RawSexp ], Keyword)
-    |> TypeResolver.registerFunc "some?" ([ Unknown ], Specific "bool")
-    |> TypeResolver.registerFunc "vector?" ([ Unknown ], Specific "bool")
-    |> TypeResolver.registerFunc "second" ([ Specific "list" ], Unknown)
-    |> TypeResolver.registerFunc "rest" ([ Specific "list" ], Specific "list")
-    |> TypeResolver.registerFunc "name" ([ Keyword ], Specific "string")
-    |> TypeResolver.registerFunc "and" ([ Specific "bool"; Specific "bool" ], Specific "bool")
-    |> TypeResolver.registerFunc "not=" ([ Specific "bool"; Specific "bool" ], Specific "bool")
-    |> TypeResolver.registerFunc
-        "reduce"
-        ([ Function([ Unknown ], Specific "bool"); Unknown; Specific "list" ], Specific "list")
-    |> TypeResolver.registerFunc "filter" ([ Function([ Unknown ], Specific "bool"); Specific "list" ], Specific "list")
     |> TypeResolver.registerVarArgsFunc "str" Unknown (Specific "string")
+    |> TypeResolver.registerFunc ".split" ([ Specific "string"; Specific "string" ], Unknown)
+    |> TypeResolver.registerFunc "+" ([ Unknown; Unknown ], Unknown)
+    |> TypeResolver.registerFunc "and" ([ Specific "bool"; Specific "bool" ], Specific "bool")
+    |> TypeResolver.registerFunc "assoc" ([ Dictionary Map.empty; Keyword; Unknown ], Dictionary Map.empty)
+    |> TypeResolver.registerFunc "concat" ([ Specific "list"; Specific "list" ], Specific "list")
+    |> TypeResolver.registerFunc "cons" ([ Unknown; Specific "list" ], Specific "list")
+    |> TypeResolver.registerFunc "filter" ([ Function([ Unknown ], Specific "bool"); Specific "list" ], Specific "list")
+    |> TypeResolver.registerFunc "first" ([ Specific "list" ], Unknown)
+    |> TypeResolver.registerFunc "get-in" ([ Dictionary Map.empty; Unknown ], Unknown)
+    |> TypeResolver.registerFunc "get" ([ Unknown; Keyword ], Unknown)
+    |> TypeResolver.registerFunc "keyword_of_sexp" ([ RawSexp ], Keyword)
+    |> TypeResolver.registerFunc "name" ([ Keyword ], Specific "string")
+    |> TypeResolver.registerFunc "not=" ([ Specific "bool"; Specific "bool" ], Specific "bool")
+    |> TypeResolver.registerFunc "reduce" ([ Function([ Unknown ], Specific "bool"); Unknown; Specific "list" ], Specific "list")
+    |> TypeResolver.registerFunc "rest" ([ Specific "list" ], Specific "list")
+    |> TypeResolver.registerFunc "second" ([ Specific "list" ], Unknown)
+    |> TypeResolver.registerFunc "some?" ([ Unknown ], Specific "bool")
+    |> TypeResolver.registerFunc "vec" ([ Unknown ], Specific "list")
+    |> TypeResolver.registerFunc "vector?" ([ Unknown ], Specific "bool")
 
 let findNativeFunction (name: string) _ =
     match name with
@@ -71,6 +72,7 @@ let findNativeFunction (name: string) _ =
         Some(fun (args: (unit -> obj) list) ->
             let (l: obj) = args[0]() |> unbox
             not (isNull l))
+    | "do" -> Some(fun (args: (unit -> obj) list) -> Seq.fold (fun a x -> x ()) null args)
     | "vector?" ->
         Some(fun (args: (unit -> obj) list) ->
             let (l: obj) = args[0]() |> unbox

@@ -5,6 +5,11 @@ open Swensen.Unquote
 open MetaLang
 
 [<Fact>]
+let test36 () =
+    asset "(module (defn main [] (do 1 2 3)))" [] (RSexp "3")
+    asset "(module (defn main [x] (do 1 2 x)))" [ 3 ] 3
+
+[<Fact>]
 let test35 () =
     asset "(module (defn main [] (vector? [])))" [] true
     asset "(module (defn main [] (vector? [1 2 3])))" [] true
@@ -231,6 +236,7 @@ let asset code (args: obj list) (expected: obj) =
     |> MacroExpand.expandSexp
     |> LanguageParser.compileToExtNode
     |> mapToCoreLang
+    |> TypeResolver.resolve (ExternalTypeResolver.loadDefault ()) DefaultFunctions.defaultContext
     |> Interpreter.run
         (fun x _ ->
             Map.tryFind x foregnFunctions
