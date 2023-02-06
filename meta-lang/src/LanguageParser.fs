@@ -33,6 +33,7 @@ module SexpParser =
                   || ch = '='
                   || ch = '?'
                   || ch = '.'
+                  || ch = '/'
                   || ch = '-'
                   || ch = '>'
                   || ch = '_'
