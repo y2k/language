@@ -5,6 +5,13 @@ open Swensen.Unquote
 open MetaLang
 
 [<Fact>]
+let test37 () =
+    asset
+        "(module (def count (make-count)) (defn foo [] (inc-and-ret count)) (defn main [] (if-some [x 1] (do (foo) (foo) count) (do (foo) (foo) count))))"
+        []
+        (ref 2)
+
+[<Fact>]
 let test36 () =
     asset "(module (defn main [] (do 1 2 3)))" [] (RSexp "3")
     asset "(module (defn main [x] (do 1 2 x)))" [ 3 ] 3
@@ -199,6 +206,12 @@ let asset code (args: obj list) (expected: obj) =
                           m.[unbox k])
                       (box m)
                   |> box)
+              "make-count", (fun (args: (unit -> obj) list) -> ref 0 |> box)
+              "inc-and-ret",
+              (fun (args: (unit -> obj) list) ->
+                  let r: int ref = args[0]() |> unbox
+                  r.Value <- r.Value + 1
+                  r.Value |> box)
               "str",
               (fun (args: (unit -> obj) list) ->
                   args
@@ -231,12 +244,17 @@ let asset code (args: obj list) (expected: obj) =
                   let b = toInt args.[1]
                   a + b |> box) ]
 
+    let ctx =
+        DefaultFunctions.defaultContext
+        |> TypeResolver.registerFunc "make-count" ([], Unknown)
+        |> TypeResolver.registerFunc "inc-and-ret" ([ Unknown ], Unknown)
+
     code
     |> LanguageParser.parse
     |> MacroExpand.expandSexp
     |> LanguageParser.compileToExtNode
     |> mapToCoreLang
-    |> TypeResolver.resolve (ExternalTypeResolver.loadDefault ()) DefaultFunctions.defaultContext
+    |> TypeResolver.resolve (ExternalTypeResolver.loadDefault ()) ctx
     |> Interpreter.run
         (fun x _ ->
             Map.tryFind x foregnFunctions
