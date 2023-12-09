@@ -26,15 +26,18 @@ let pnode =
   let pspace = A.many (A.char ' ' <|> A.char '\n') in
   A.many1
     (A.fix (fun pnode ->
-         A.take_while1 (function
-           | ' ' | '\n' | '[' | ']' | '(' | ')' | '{' | '}' -> false
-           | _ -> true)
-         >>| (fun x -> Atom x)
+         A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
+         <* A.char '"'
+         >>| (fun x -> Atom ("\"" ^ x ^ "\""))
+         <|> ( A.take_while1 (function
+                 | ' ' | '\n' | '[' | ']' | '(' | ')' | '{' | '}' -> false
+                 | _ -> true)
+             >>| fun x -> Atom x )
          <|> (A.char '{' *> (A.many1 (pnode <* pspace) >>| fun xs -> CBList xs)
              <* A.char '}')
          <|> (A.char '(' *> (A.many1 (pnode <* pspace) >>| fun xs -> RBList xs)
              <* A.char ')')
-         <|> (A.char '[' *> (A.many1 (pnode <* pspace) >>| fun xs -> SBList xs)
+         <|> (A.char '[' *> (A.many (pnode <* pspace) >>| fun xs -> SBList xs)
              <* A.char ']'))
     <* pspace)
 
@@ -49,6 +52,26 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   | Atom x -> x
+  | RBList [ Atom "def"; Atom name; body ] ->
+      Printf.sprintf "const %s = %s;" name (compile body)
+  | RBList [ Atom "<"; a; b ] ->
+      Printf.sprintf "(%s < %s)" (compile a) (compile b)
+  | RBList [ Atom ">"; a; b ] ->
+      Printf.sprintf "(%s > %s)" (compile a) (compile b)
+  | RBList [ Atom "<="; a; b ] ->
+      Printf.sprintf "(%s <= %s)" (compile a) (compile b)
+  | RBList [ Atom ">="; a; b ] ->
+      Printf.sprintf "(%s >= %s)" (compile a) (compile b)
+  | RBList (Atom "and" :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s && %s")
+      |> Printf.sprintf "(%s)"
+  | SBList xs ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s, %s")
+      |> Printf.sprintf "[%s]"
+  | RBList [ Atom "if"; c; a; b ] ->
+      Printf.sprintf "(%s) ? (%s) : (%s)" (compile c) (compile a) (compile b)
   | RBList (Atom "comment" :: _) -> ""
   | RBList [ Atom "export-default"; body ] ->
       Printf.sprintf "export default %s" (compile body)
@@ -56,7 +79,11 @@ let rec compile (node : cljexp) : string =
       let rec to_pairs = function
         | k :: v :: xs ->
             let a = compile k in
-            let kn = String.sub a 1 (String.length a - 1) in
+            let kn =
+              if String.starts_with a ~prefix:":" then
+                String.sub a 1 (String.length a - 1)
+              else a
+            in
             let b = kn ^ ": " ^ compile v in
             let tail = to_pairs xs in
             if tail == "" then b else b ^ ", " ^ tail
@@ -65,8 +92,14 @@ let rec compile (node : cljexp) : string =
       in
       to_pairs xs |> Printf.sprintf "{ %s }"
   | RBList [ Atom "="; a; b ] -> compile a ^ " == " ^ compile b
-  | RBList [ Atom "+"; a; b ] -> compile a ^ " + " ^ compile b
-  | RBList [ Atom "-"; a; b ] -> compile a ^ " - " ^ compile b
+  | RBList (Atom "+" :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s + %s")
+      |> Printf.sprintf "(%s)"
+  | RBList (Atom "-" :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s - %s")
+      |> Printf.sprintf "(%s)"
   | RBList (Atom "->" :: body) ->
       body
       |> List.reduce (fun acc x ->
@@ -89,9 +122,12 @@ let rec compile (node : cljexp) : string =
         (body |> List.map compile |> List.reduce (Printf.sprintf "%s;%s"))
   | RBList (Atom "fn" :: SBList args :: body) ->
       let sargs =
-        args
-        |> List.map (function Atom x -> x | x -> fail_node [ x ])
-        |> List.reduce (Printf.sprintf "%s, %s")
+        match args with
+        | [] -> ""
+        | _ ->
+            args
+            |> List.map (function Atom x -> x | x -> fail_node [ x ])
+            |> List.reduce (Printf.sprintf "%s, %s")
       in
       let sbody =
         body |> List.map compile |> List.rev
@@ -115,7 +151,7 @@ let rec compile (node : cljexp) : string =
         let this = List.hd args |> compile in
         let sargs =
           match args with
-          | [ _ ] -> ""
+          | [ _ ] -> "()"
           | args ->
               args
               |> List.filteri (fun i _ -> i >= 1)
@@ -126,14 +162,17 @@ let rec compile (node : cljexp) : string =
         this ^ "." ^ mname ^ sargs
       else if String.ends_with ~suffix:"." fname then
         let cnst_name = String.sub fname 0 (String.length fname - 1) in
-        args |> List.map compile
-        |> List.reduce (Printf.sprintf "%s, %s")
-        |> Printf.sprintf "new %s(%s)" cnst_name
+        let fargs =
+          if List.length args = 0 then ""
+          else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+        in
+        fargs |> Printf.sprintf "new %s(%s)" cnst_name
       else
-        String.map (function '/' -> '.' | x -> x) fname
-        ^ "("
-        ^ (args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
-        ^ ")"
+        let sargs =
+          if List.length args = 0 then ""
+          else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+        in
+        String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")"
   | x -> fail_node [ x ]
 
 let main str =

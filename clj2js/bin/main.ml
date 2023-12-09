@@ -5,4 +5,7 @@ let read_text_file filename =
   close_in channel;
   content
 
-let () = Sys.argv.(1) |> read_text_file |> Clj2js.main |> print_endline
+let () =
+  Sys.argv.(1) |> read_text_file |> Clj2js.main
+  |> Printf.sprintf "\"use strict\";\n%s"
+  |> print_endline
