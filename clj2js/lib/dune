@@ -1,0 +1,5 @@
+(library
+ (name clj2js)
+ (preprocess
+  (pps ppx_deriving.show))
+ (libraries angstrom))

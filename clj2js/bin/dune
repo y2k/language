@@ -1,0 +1,4 @@
+(executable
+ (public_name clj2js)
+ (name main)
+ (libraries clj2js))
