@@ -82,4 +82,9 @@ map((x) => { return x }, xs)|};
   assert_ "(.json r a)" "r.json(a)";
   assert_ "(.json r a b)" "r.json(a, b)";
   assert_ "(or a b 1 2)" "(a || b || 1 || 2)";
+  assert_ "(foo 1)\n\n\n(foo 3)" "foo(1)\nfoo(3)";
+  assert_ "(foo 1)\n;;(foo 2)\n(foo 3)" "foo(1)\nfoo(3)";
+  assert_ "(foo 1)\n;;(foo 2.1)\n;;(foo 2.2)\n(foo 3)" "foo(1)\nfoo(3)";
+  assert_ "(foo 1)\n\n;;(foo 2.1)\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
+  assert_ "(foo 1)\n\n;;(foo 2.1)\n\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
   ()

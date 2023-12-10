@@ -23,7 +23,8 @@ let fail_node es =
   |> failwith
 
 let pnode =
-  let pspace = A.many (A.char ' ' <|> A.char '\n') in
+  let pcomment = A.string ";;" *> A.take_while (( <> ) '\n') *> A.char '\n' in
+  let pspace = A.many (A.char ' ' <|> A.char '\n' <|> pcomment) in
   A.many1
     (A.fix (fun pnode ->
          A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
