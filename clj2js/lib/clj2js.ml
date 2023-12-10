@@ -66,6 +66,10 @@ let rec compile (node : cljexp) : string =
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s && %s")
       |> Printf.sprintf "(%s)"
+  | RBList (Atom "or" :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s || %s")
+      |> Printf.sprintf "(%s)"
   | SBList xs ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s, %s")

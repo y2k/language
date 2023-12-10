@@ -81,4 +81,5 @@ map((x) => { return x }, xs)|};
   assert_ "(.json r)" "r.json()";
   assert_ "(.json r a)" "r.json(a)";
   assert_ "(.json r a b)" "r.json(a, b)";
+  assert_ "(or a b 1 2)" "(a || b || 1 || 2)";
   ()
