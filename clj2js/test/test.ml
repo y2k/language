@@ -88,4 +88,12 @@ map((x) => { return x }, xs)|};
   assert_ "(foo 1)\n\n;;(foo 2.1)\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n\n;;(foo 2.1)\n\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(->> 0 (a 1) (b 2) (c 3))" "c(3, b(2, a(1, 0)))";
+  assert_ "(if-let [a 1 b 2 c 3] foo bar)"
+    "(function () { const a = 1; return (a) ? ((function () { const b = 2; \
+     return (b) ? ((function () { const c = 3; return (c) ? (foo) : (bar) \
+     })()) : (bar) })()) : (bar) })()";
+  assert_ "(if-let [a 1 b 2 c 3] (+ a b c) -1)"
+    "(function () { const a = 1; return (a) ? ((function () { const b = 2; \
+     return (b) ? ((function () { const c = 3; return (c) ? ((a + b + c)) : \
+     (-1) })()) : (-1) })()) : (-1) })()";
   ()
