@@ -69,19 +69,6 @@ let rec compile (node : cljexp) : string =
              | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
              | xs -> fail_node [ xs ])
       |> compile
-  (*
-     (if-let [a 1 b 2 c 3] foo bar)
-
-     (let [a 1]
-      (if a
-       (let [b 2]
-        (if b
-         (if [c 3]
-          foo
-          bar)
-         bar))
-       bar))
-  *)
   | RBList [ Atom "if-let"; SBList bindings; then'; else' ] ->
       let rec loop = function
         | Atom name :: value :: tail ->
