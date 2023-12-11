@@ -52,6 +52,24 @@ let rec compile (node : cljexp) : string =
     | xs -> fail_node xs
   in
   match node with
+  (* "Marco function" *)
+  | RBList (Atom "->" :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom z -> RBList [ Atom z; acc ]
+             | RBList (a :: bs) -> RBList (a :: acc :: bs)
+             | xs -> fail_node [ xs ])
+      |> compile
+  | RBList (Atom "->>" :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom z -> RBList [ acc; Atom z ]
+             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
+             | xs -> fail_node [ xs ])
+      |> compile
+  (* Core forms *)
   | Atom x -> x
   | RBList [ Atom "def"; Atom name; body ] ->
       Printf.sprintf "const %s = %s;" name (compile body)
@@ -105,22 +123,6 @@ let rec compile (node : cljexp) : string =
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s - %s")
       |> Printf.sprintf "(%s)"
-  | RBList (Atom "->" :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom z -> RBList [ Atom z; acc ]
-             | RBList (a :: bs) -> RBList (a :: acc :: bs)
-             | xs -> fail_node [ xs ])
-      |> compile
-  | RBList (Atom "->>" :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom z -> RBList [ acc; Atom z ]
-             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
-             | xs -> fail_node [ xs ])
-      |> compile
   | RBList [ Atom "first"; body ] ->
       RBList [ Atom ".at"; RBList [ Atom "Array/from"; body ]; Atom "0" ]
       |> compile
@@ -158,6 +160,7 @@ let rec compile (node : cljexp) : string =
         |> List.reduce (Printf.sprintf "%s; %s")
       in
       "(function () { " ^ svals ^ sbody ^ " })()"
+  (* Functions calls *)
   | RBList (Atom fname :: args) ->
       if String.starts_with ~prefix:"." fname then
         let mname = String.sub fname 1 (String.length fname - 1) in
