@@ -87,4 +87,5 @@ map((x) => { return x }, xs)|};
   assert_ "(foo 1)\n;;(foo 2.1)\n;;(foo 2.2)\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n\n;;(foo 2.1)\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n\n;;(foo 2.1)\n\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
+  assert_ "(->> 0 (a 1) (b 2) (c 3))" "c(3, b(2, a(1, 0)))";
   ()

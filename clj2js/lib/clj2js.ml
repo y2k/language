@@ -110,7 +110,15 @@ let rec compile (node : cljexp) : string =
       |> List.reduce (fun acc x ->
              match x with
              | Atom z -> RBList [ Atom z; acc ]
-             | RBList (a :: b) -> RBList (a :: acc :: b)
+             | RBList (a :: bs) -> RBList (a :: acc :: bs)
+             | xs -> fail_node [ xs ])
+      |> compile
+  | RBList (Atom "->>" :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom z -> RBList [ acc; Atom z ]
+             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
              | xs -> fail_node [ xs ])
       |> compile
   | RBList [ Atom "first"; body ] ->
