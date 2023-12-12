@@ -96,4 +96,8 @@ map((x) => { return x }, xs)|};
     "(function () { const a = 1; return (a) ? ((function () { const b = 2; \
      return (b) ? ((function () { const c = 3; return (c) ? ((a + b + c)) : \
      (-1) })()) : (-1) })()) : (-1) })()";
+  assert_ "(if-let [_ 1 _ 2 _ 3] 6 -1)"
+    "(function () { const _ = 1; return (_) ? ((function () { const _ = 2; \
+     return (_) ? ((function () { const _ = 3; return (_) ? (6) : (-1) })()) : \
+     (-1) })()) : (-1) })()";
   ()
