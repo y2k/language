@@ -1,6 +1,21 @@
 let assert_ code expected =
   let actual = Clj2js.main code in
-  if actual <> expected then failwith actual
+  if actual <> expected then (
+    print_endline actual;
+    print_newline ();
+    failwith "actual <> expected")
+
+let read_sample filename =
+  let channel = open_in ("../../../test/samples/" ^ filename) in
+  let size = in_channel_length channel in
+  let content = really_input_string channel size in
+  close_in channel;
+  content
+
+let assert_file filename =
+  let code = read_sample filename in
+  let expected = read_sample (filename ^ ".js") in
+  assert_ code expected
 
 let () =
   assert_
@@ -47,7 +62,7 @@ export default { fetch: fetch-handler }|};
 ((foo(c0)) ? (a0) : (b0)) ? ((foo(c1)) ? (a1) : (b1)) : ((foo(c2)) ? (a2) : (b2))
 (1 == 2) ? (a) : (b)|};
   assert_ "(+ 1 (+ 10 20 30) 3 (str 1) 5)"
-    "(1 + (10 + 20 + 30) + 3 + str(1) + 5)";
+    {|(1 + (10 + 20 + 30) + 3 + ("" + 1) + 5)|};
   assert_ "(- 1 (- 10 20))" "(1 - (10 - 20))";
   assert_ "(- 1 2 3 4)" "(1 - 2 - 3 - 4)";
   assert_ {|{"content-type" "application/json" :a [1 [10 20 30] 3]}|}
@@ -100,4 +115,5 @@ map((x) => { return x }, xs)|};
     "(function () { const _ = 1; return (_) ? ((function () { const _ = 2; \
      return (_) ? ((function () { const _ = 3; return (_) ? (6) : (-1) })()) : \
      (-1) })()) : (-1) })()";
+  assert_file "hotreload-client.clj";
   ()

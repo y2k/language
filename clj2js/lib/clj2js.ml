@@ -53,6 +53,8 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList (Atom "str" :: body) ->
+      RBList (Atom "+" :: Atom "\"\"" :: body) |> compile
   | RBList (Atom "->" :: body) ->
       body
       |> List.reduce (fun acc x ->
@@ -84,6 +86,33 @@ let rec compile (node : cljexp) : string =
       loop bindings |> compile
   (* Core forms *)
   | Atom x -> x
+  | RBList (Atom "try" :: body) ->
+      let to_string_with_returns nodes =
+        let count = List.length nodes in
+        nodes
+        |> List.mapi (fun i x ->
+               let l = compile x in
+               Some (if i < count - 1 then l else "return " ^ l))
+        |> List.filter_map Fun.id
+        |> List.reduce (Printf.sprintf "%s\n%s")
+      in
+      let try_body =
+        body
+        |> List.filter (function
+             | RBList (Atom "catch" :: _) -> false
+             | _ -> true)
+        |> to_string_with_returns
+      in
+      let e_name, catch_body =
+        body
+        |> List.find_map (function
+             | RBList (Atom "catch" :: Atom e :: body) ->
+                 Some (e, to_string_with_returns body)
+             | _ -> None)
+        |> Option.get
+      in
+      Printf.sprintf "(function() { try { %s } catch (%s) { %s } })()" try_body
+        e_name catch_body
   | RBList [ Atom "def"; Atom name; body ] ->
       Printf.sprintf "const %s = %s;" name (compile body)
   | RBList [ Atom "<"; a; b ] ->

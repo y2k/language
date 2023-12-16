@@ -1,0 +1,2 @@
+const start_hot_reload_client = (request) => { return fetch("http://localhost:8787/", { method: "POST", body: request }).then((r) => { return r.text() }).then((cmd) => { return (function () { const result = (function() { try { return eval(cmd) } catch (e) { return ("" + e) } })(); return console.log(("" + cmd + " -> " + result)) })() }).catch((e) => { console.error(e); return new Promise((resolve) => { return setTimeout(() => { return resolve("") }, 5000) }) }).then((cmd_result) => { return start_hot_reload_client(cmd_result) }) }
+start_hot_reload_client("")

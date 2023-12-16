@@ -12,6 +12,8 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.11"}
+  "angstrom"
+  "ppx_deriving.show"
   "odoc" {with-doc}
 ]
 build: [
