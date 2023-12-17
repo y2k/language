@@ -5,14 +5,14 @@ let assert_ code expected =
     print_newline ();
     failwith "actual <> expected")
 
-let read_sample filename =
-  let channel = open_in ("../../../test/samples/" ^ filename) in
-  let size = in_channel_length channel in
-  let content = really_input_string channel size in
-  close_in channel;
-  content
-
 let assert_file filename =
+  let read_sample filename =
+    let channel = open_in ("../../../test/samples/" ^ filename) in
+    let size = in_channel_length channel in
+    let content = really_input_string channel size in
+    close_in channel;
+    content
+  in
   let code = read_sample filename in
   let expected = read_sample (filename ^ ".js") in
   assert_ code expected
@@ -116,4 +116,5 @@ map((x) => { return x }, xs)|};
      return (_) ? ((function () { const _ = 3; return (_) ? (6) : (-1) })()) : \
      (-1) })()) : (-1) })()";
   assert_file "hotreload-client.clj";
+  assert_file "sample1.clj";
   ()
