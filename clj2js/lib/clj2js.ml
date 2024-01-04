@@ -53,6 +53,10 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList [ Atom "__unsafe_insert_js"; Atom body ]
+    when String.starts_with ~prefix:"\"" body
+         && String.ends_with ~suffix:"\"" body ->
+      String.sub body 1 (String.length body - 2)
   | RBList (Atom "str" :: body) ->
       RBList (Atom "+" :: Atom "\"\"" :: body) |> compile
   | RBList (Atom "->" :: body) ->

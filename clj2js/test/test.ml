@@ -117,4 +117,8 @@ map((x) => { return x }, xs)|};
      (-1) })()) : (-1) })()";
   assert_file "hotreload-client.clj";
   assert_file "sample1.clj";
+  assert_ {|(foo 1)(__unsafe_insert_js "import some")(bar 2)|}
+    {|foo(1)
+import some
+bar(2)|};
   ()
