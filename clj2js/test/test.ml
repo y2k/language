@@ -42,7 +42,7 @@ let () =
     {|(defn fetch-handler [request env context] request)
   (export-default {:fetch fetch-handler})|}
     {|const fetch-handler = (request, env, context) => { return request }
-export default { fetch: fetch-handler }|};
+export default { "fetch": fetch-handler }|};
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
   assert_ {|(comment 1 2 3)
@@ -51,7 +51,7 @@ export default { fetch: fetch-handler }|};
     "\nprintln(1, 2, 3)\n";
   assert_
     {|(export-default {:foo 1 :foo2 {:foo 1 :bar "2" :baz false} :bar "2" :baz false})|}
-    {|export default { foo: 1, foo2: { foo: 1, bar: "2", baz: false }, bar: "2", baz: false }|};
+    {|export default { "foo": 1, "foo2": { "foo": 1, "bar": "2", "baz": false }, "bar": "2", "baz": false }|};
   assert_
     {|(if (foo 1) a b)
 (if (if (foo c0) a0 b0)
@@ -66,7 +66,7 @@ export default { fetch: fetch-handler }|};
   assert_ "(- 1 (- 10 20))" "(1 - (10 - 20))";
   assert_ "(- 1 2 3 4)" "(1 - 2 - 3 - 4)";
   assert_ {|{"content-type" "application/json" :a [1 [10 20 30] 3]}|}
-    {|{ "content-type": "application/json", a: [1, [10, 20, 30], 3] }|};
+    {|{ "content-type": "application/json", "a": [1, [10, 20, 30], 3] }|};
   assert_ {|(println "hello world")|} {|println("hello world")|};
   assert_
     {|(println)
@@ -122,4 +122,5 @@ map((x) => { return x }, xs)|};
 import some
 bar(2)|};
   assert_ {|(assoc person :city "NY")|} {|{ ...person, city: "NY" }|};
+  assert_ "(merge object1 object2)" "{ ...object1, ...object2 }";
   ()

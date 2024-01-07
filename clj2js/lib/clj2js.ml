@@ -53,6 +53,8 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList [ Atom "merge"; a; b ] ->
+      Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b)
   | RBList [ Atom "assoc"; Atom map; Atom key; value ]
     when String.starts_with ~prefix:":" key ->
       Printf.sprintf "{ ...%s, %s: %s }" map
@@ -90,10 +92,14 @@ let rec compile (node : cljexp) : string =
                 RBList [ Atom "if"; Atom name; loop tail; else' ];
               ]
         | [] -> then'
-        | _ -> failwith "???"
+        | _ ->
+            failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] "
+            ^ __LOC__
       in
       loop bindings |> compile
   (* Core forms *)
+  | Atom x when String.starts_with ~prefix:":" x ->
+      "\"" ^ String.sub x 1 (String.length x - 1) ^ "\""
   | Atom x -> x
   | RBList (Atom "try" :: body) ->
       let to_string_with_returns nodes =
@@ -162,7 +168,7 @@ let rec compile (node : cljexp) : string =
             let tail = to_pairs xs in
             if tail == "" then b else b ^ ", " ^ tail
         | [] -> ""
-        | _ -> failwith "???"
+        | _ -> failwith __LOC__
       in
       to_pairs xs |> Printf.sprintf "{ %s }"
   | RBList [ Atom "="; a; b ] -> compile a ^ " == " ^ compile b
