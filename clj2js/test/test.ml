@@ -121,4 +121,5 @@ map((x) => { return x }, xs)|};
     {|foo(1)
 import some
 bar(2)|};
+  assert_ {|(assoc person :city "NY")|} {|{ ...person, city: "NY" }|};
   ()

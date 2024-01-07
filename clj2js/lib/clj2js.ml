@@ -53,6 +53,11 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList [ Atom "assoc"; Atom map; Atom key; value ]
+    when String.starts_with ~prefix:":" key ->
+      Printf.sprintf "{ ...%s, %s: %s }" map
+        (String.sub key 1 (String.length key - 1))
+        (compile value)
   | RBList [ Atom "__unsafe_insert_js"; Atom body ]
     when String.starts_with ~prefix:"\"" body
          && String.ends_with ~suffix:"\"" body ->
