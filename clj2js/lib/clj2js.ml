@@ -8,6 +8,8 @@ module List = struct
     match xs with
     | [] -> failwith "List is empty"
     | xs -> List.fold_left f (List.hd xs) (List.tl xs)
+
+  let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
 end
 
 type cljexp =
@@ -34,7 +36,7 @@ let pnode =
                  | ' ' | '\n' | '[' | ']' | '(' | ')' | '{' | '}' -> false
                  | _ -> true)
              >>| fun x -> Atom x )
-         <|> (A.char '{' *> (A.many1 (pnode <* pspace) >>| fun xs -> CBList xs)
+         <|> (A.char '{' *> (A.many (pnode <* pspace) >>| fun xs -> CBList xs)
              <* A.char '}')
          <|> (A.char '(' *> (A.many1 (pnode <* pspace) >>| fun xs -> RBList xs)
              <* A.char ')')
@@ -53,6 +55,11 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList [ Atom "concat"; a; b ] ->
+      Printf.sprintf "[...%s, ...%s]" (compile a) (compile b)
+  | RBList [ Atom "conj"; a; b ] ->
+      Printf.sprintf "[...%s, %s]" (compile a) (compile b)
+  | RBList [ Atom "spread"; a ] -> Printf.sprintf "...%s" (compile a)
   | RBList [ Atom "merge"; a; b ] ->
       Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b)
   | RBList [ Atom "assoc"; Atom map; Atom key; value ]
@@ -148,8 +155,8 @@ let rec compile (node : cljexp) : string =
       |> Printf.sprintf "(%s)"
   | SBList xs ->
       xs |> List.map compile
-      |> List.reduce (Printf.sprintf "%s, %s")
-      |> Printf.sprintf "[%s]"
+      |> List.reduce_opt (Printf.sprintf "%s, %s")
+      |> Option.value ~default:"" |> Printf.sprintf "[%s]"
   | RBList [ Atom "if"; c; a; b ] ->
       Printf.sprintf "(%s) ? (%s) : (%s)" (compile c) (compile a) (compile b)
   | RBList (Atom "comment" :: _) -> ""
@@ -170,7 +177,7 @@ let rec compile (node : cljexp) : string =
         | [] -> ""
         | _ -> failwith __LOC__
       in
-      to_pairs xs |> Printf.sprintf "{ %s }"
+      to_pairs xs |> Printf.sprintf "{%s}"
   | RBList [ Atom "="; a; b ] -> compile a ^ " == " ^ compile b
   | RBList (Atom "+" :: xs) ->
       xs |> List.map compile
