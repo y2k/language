@@ -128,4 +128,6 @@ bar(2)|};
   assert_ "(concat [1 2] [3 4])" "[...[1, 2], ...[3, 4]]";
   assert_ "[]" "[]";
   assert_ "{}" "{}";
+  assert_ {|(throw (Error. "foo"))|} {|(function(){throw new Error("foo")})()|};
+  assert_ "(not= a b)" "a != b";
   ()

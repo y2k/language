@@ -108,6 +108,10 @@ let rec compile (node : cljexp) : string =
   | Atom x when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\""
   | Atom x -> x
+  | RBList [ Atom "not="; a; b ] ->
+      Printf.sprintf "%s != %s" (compile a) (compile b)
+  | RBList [ Atom "throw"; ex ] ->
+      Printf.sprintf "(function(){throw %s})()" (compile ex)
   | RBList (Atom "try" :: body) ->
       let to_string_with_returns nodes =
         let count = List.length nodes in
