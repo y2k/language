@@ -191,6 +191,12 @@ let rec compile (node : cljexp) : string =
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s - %s")
       |> Printf.sprintf "(%s)"
+  | RBList (Atom "*" :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s * %s")
+      |> Printf.sprintf "(%s)"
+  | RBList [ Atom "/"; a; b ] ->
+      Printf.sprintf "(%s / %s)" (compile a) (compile b)
   | RBList [ Atom "first"; body ] ->
       RBList [ Atom ".at"; RBList [ Atom "Array/from"; body ]; Atom "0" ]
       |> compile

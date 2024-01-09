@@ -130,4 +130,6 @@ bar(2)|};
   assert_ "{}" "{}";
   assert_ {|(throw (Error. "foo"))|} {|(function(){throw new Error("foo")})()|};
   assert_ "(not= a b)" "a != b";
+  assert_ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
+  assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
   ()
