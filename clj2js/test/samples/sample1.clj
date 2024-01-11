@@ -3,7 +3,7 @@
       children (Array/from parent.children)]
   (.sort children
          (fn [n1 n2]
-           (defn tag_count [n]
+           (defn- tag_count [n]
              (let [x (second n.children)]
                (-> x.innerText (.replaceAll "," "") parseInt)))
            (- (tag_count n1) (tag_count n2))))

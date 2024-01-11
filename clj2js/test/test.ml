@@ -22,26 +22,26 @@ let () =
     {|(defn fetch [request env context]
    (.log console request)
    (.log console request))|}
-    {|const fetch = (request, env, context) => { console.log(request); return console.log(request) }|};
+    {|export const fetch = (request, env, context) => { console.log(request); return console.log(request) }|};
   assert_
     {|(defn fetch [request env context]
      (->
        a b))|}
-    "const fetch = (request, env, context) => { return b(a) }";
+    "export const fetch = (request, env, context) => { return b(a) }";
   assert_
     {|(defn fetch [request env context]
      (->
       (.json request null)
       (.next (fn [text] (failwith "???")))))|}
-    {|const fetch = (request, env, context) => { return request.json(null).next((text) => { return failwith("???") }) }|};
+    {|export const fetch = (request, env, context) => { return request.json(null).next((text) => { return failwith("???") }) }|};
   assert_
     {|(defn fetch [request env context]
      request)|}
-    "const fetch = (request, env, context) => { return request }";
+    "export const fetch = (request, env, context) => { return request }";
   assert_
     {|(defn fetch-handler [request env context] request)
   (export-default {:fetch fetch-handler})|}
-    {|const fetch-handler = (request, env, context) => { return request }
+    {|export const fetch-handler = (request, env, context) => { return request }
 export default {"fetch": fetch-handler}|};
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
@@ -132,4 +132,6 @@ bar(2)|};
   assert_ "(not= a b)" "a != b";
   assert_ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
+  assert_ "(defn- foo [x] x)" "const foo = (x) => { return x }";
+  assert_ "(defn foo [x] x)" "export const foo = (x) => { return x }";
   ()

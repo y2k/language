@@ -205,6 +205,9 @@ let rec compile (node : cljexp) : string =
       |> compile
   | RBList (Atom "defn" :: Atom fname :: SBList args :: body) ->
       let fn = RBList (Atom "fn" :: SBList args :: body) in
+      Printf.sprintf "export const %s = %s" fname (compile fn)
+  | RBList (Atom "defn-" :: Atom fname :: SBList args :: body) ->
+      let fn = RBList (Atom "fn" :: SBList args :: body) in
       Printf.sprintf "const %s = %s" fname (compile fn)
   | RBList (Atom "while" :: condition :: body) ->
       Printf.sprintf "while (%s) {%s}" (compile condition)
