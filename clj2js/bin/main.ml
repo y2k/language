@@ -6,6 +6,7 @@ let read_text_file filename =
   content
 
 let () =
-  Sys.argv.(1) |> read_text_file |> Clj2js.main
+  let filename = Sys.argv.(1) in
+  filename |> read_text_file |> Clj2js.main filename
   |> Printf.sprintf "\"use strict\";\n%s"
   |> print_endline

@@ -1,5 +1,5 @@
 let assert_ code expected =
-  let actual = Clj2js.main code in
+  let actual = Clj2js.main "" code in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
@@ -134,5 +134,6 @@ bar(2)|};
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
   assert_ "(defn- foo [x] x)" "const foo = (x) => { return x }";
   assert_ "(defn foo [x] x)" "export const foo = (x) => { return x }";
-  assert_ "FIXME" {|(function(){throw new Error("Not implemented")})()|};
+  assert_ "(foo FIXME)"
+    {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
   ()
