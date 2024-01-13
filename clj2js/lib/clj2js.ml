@@ -55,6 +55,12 @@ let rec compile (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | Atom "FIXME" ->
+      RBList
+        [
+          Atom "throw"; RBList [ Atom "Error."; Atom {|"Not implemented"|} ];
+        ]
+      |> compile
   | RBList [ Atom "concat"; a; b ] ->
       Printf.sprintf "[...%s, ...%s]" (compile a) (compile b)
   | RBList [ Atom "conj"; a; b ] ->
