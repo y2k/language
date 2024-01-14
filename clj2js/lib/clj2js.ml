@@ -83,8 +83,8 @@ let rec compile_ (context : context) (node : cljexp) : string =
               Atom (unknown_location, "Error.");
               Atom
                 ( unknown_location,
-                  Printf.sprintf {|"Not implemented main.clj:%i:%i"|} loc.line
-                    loc.pos );
+                  Printf.sprintf {|"Not implemented %s:%i:%i"|} context.filename
+                    loc.line loc.pos );
             ];
         ]
       |> compile
@@ -99,12 +99,14 @@ let rec compile_ (context : context) (node : cljexp) : string =
                 (Atom (unknown_location, "str")
                 :: Atom
                      ( unknown_location,
-                       Printf.sprintf {|"FIXME main.clj:%i:%i - "|} loc.line
-                         (loc.pos - 1) )
+                       Printf.sprintf {|"FIXME %s:%i:%i - "|} context.filename
+                         loc.line (loc.pos - 1) )
                 :: body);
             ];
         ]
       |> compile
+  | RBList (Atom (l, "println") :: body) ->
+      RBList (Atom (l, "console/info") :: body) |> compile
   | RBList [ Atom (_, "concat"); a; b ] ->
       Printf.sprintf "[...%s, ...%s]" (compile a) (compile b)
   | RBList [ Atom (_, "conj"); a; b ] ->

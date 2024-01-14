@@ -1,5 +1,5 @@
 let assert_ code expected =
-  let actual = Clj2js.main "" code in
+  let actual = Clj2js.main "main.clj" code in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
@@ -48,7 +48,7 @@ export default {"fetch": fetch-handler}|};
   assert_ {|(comment 1 2 3)
   (println 1 2 3)
   (comment 1 2 3)|}
-    "\nprintln(1, 2, 3)\n";
+    "\nconsole.info(1, 2, 3)\n";
   assert_
     {|(export-default {:foo 1 :foo2 {:foo 1 :bar "2" :baz false} :bar "2" :baz false})|}
     {|export default {"foo": 1, "foo2": {"foo": 1, "bar": "2", "baz": false}, "bar": "2", "baz": false}|};
@@ -67,7 +67,7 @@ export default {"fetch": fetch-handler}|};
   assert_ "(- 1 2 3 4)" "(1 - 2 - 3 - 4)";
   assert_ {|{"content-type" "application/json" :a [1 [10 20 30] 3]}|}
     {|{"content-type": "application/json", "a": [1, [10, 20, 30], 3]}|};
-  assert_ {|(println "hello world")|} {|println("hello world")|};
+  assert_ {|(println "hello world")|} {|console.info("hello world")|};
   assert_
     {|(println)
 (println )
@@ -75,9 +75,9 @@ export default {"fetch": fetch-handler}|};
 (Response. )
 (Response.)
 (Response. 1)|}
-    {|println()
-println()
-println(1)
+    {|console.info()
+console.info()
+console.info(1)
 new Response()
 new Response()
 new Response(1)|};
@@ -138,4 +138,6 @@ bar(2)|};
     {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
   assert_ "(foo (FIXME A1 B2))"
     {|foo((function(){throw new Error(("" + "FIXME main.clj:1:6 - " + A1 + B2))})())|};
+  assert_ {|(println)|} {|console.info()|};
+  assert_ {|(println "hello" world 123)|} {|console.info("hello", world, 123)|};
   ()
