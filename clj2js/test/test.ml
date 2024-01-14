@@ -136,4 +136,6 @@ bar(2)|};
   assert_ "(defn foo [x] x)" "export const foo = (x) => { return x }";
   assert_ "(foo FIXME)"
     {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
+  assert_ "(foo (FIXME A1 B2))"
+    {|foo((function(){throw new Error(("" + "FIXME main.clj:1:6 - " + A1 + B2))})())|};
   ()

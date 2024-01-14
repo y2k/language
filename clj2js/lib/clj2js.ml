@@ -88,6 +88,23 @@ let rec compile_ (context : context) (node : cljexp) : string =
             ];
         ]
       |> compile
+  | RBList (Atom (loc, "FIXME") :: body) ->
+      RBList
+        [
+          Atom (loc, "throw");
+          RBList
+            [
+              Atom (unknown_location, "Error.");
+              RBList
+                (Atom (unknown_location, "str")
+                :: Atom
+                     ( unknown_location,
+                       Printf.sprintf {|"FIXME main.clj:%i:%i - "|} loc.line
+                         (loc.pos - 1) )
+                :: body);
+            ];
+        ]
+      |> compile
   | RBList [ Atom (_, "concat"); a; b ] ->
       Printf.sprintf "[...%s, ...%s]" (compile a) (compile b)
   | RBList [ Atom (_, "conj"); a; b ] ->
