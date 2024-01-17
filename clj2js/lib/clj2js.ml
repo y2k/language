@@ -74,6 +74,21 @@ let rec compile_ (context : context) (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList (Atom (_, "require") :: requiries) ->
+      requiries
+      |> List.map (function
+           | SBList [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ] ->
+               Printf.sprintf "import * as %s from './%s.js';" alias
+                 (String.map (function '.' -> '/' | ch -> ch) name)
+           | _ -> fail_node requiries)
+      |> List.reduce (Printf.sprintf "%s\n%s")
+  | RBList
+      [
+        Atom (_, "import");
+        SBList [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ];
+      ] ->
+      Printf.sprintf "import * as %s from '%s';" alias
+        (String.map (function '.' -> '/' | ch -> ch) name)
   | Atom (loc, "FIXME") ->
       RBList
         [
@@ -114,9 +129,9 @@ let rec compile_ (context : context) (node : cljexp) : string =
   | RBList [ Atom (_, "spread"); a ] -> Printf.sprintf "...%s" (compile a)
   | RBList [ Atom (_, "merge"); a; b ] ->
       Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b)
-  | RBList [ Atom (_, "assoc"); Atom (_, map); Atom (_, key); value ]
+  | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
     when String.starts_with ~prefix:":" key ->
-      Printf.sprintf "{ ...%s, %s: %s }" map
+      Printf.sprintf "{ ...%s, %s: %s }" (compile map)
         (String.sub key 1 (String.length key - 1))
         (compile value)
   | RBList [ Atom (_, "__unsafe_insert_js"); Atom (_, body) ]
