@@ -122,7 +122,8 @@ map((x) => { return x }, xs)|};
 import some
 bar(2)|};
   assert_ {|(assoc person :city "NY")|} {|{ ...person, city: "NY" }|};
-  assert_ {|(-> (foo person) (assoc :city "NY"))|} {|{ ...foo(person), city: "NY" }|};
+  assert_ {|(-> (foo person) (assoc :city "NY"))|}
+    {|{ ...foo(person), city: "NY" }|};
   assert_ {|(-> person (assoc :city "NY"))|} {|{ ...person, city: "NY" }|};
   assert_ "(merge object1 object2)" "{ ...object1, ...object2 }";
   assert_ "(sum (spread [1 2 3]))" "sum(...[1, 2, 3])";
@@ -146,4 +147,6 @@ bar(2)|};
   assert_ "(require [vendor.effects :as e] [main :as app])"
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';";
+  assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
+    {|(1 == 2) ? (3) : ((4 == 5) ? (6) : ((7 == 8) ? (9) : (0)))|};
   ()
