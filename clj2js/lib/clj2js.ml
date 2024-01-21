@@ -74,6 +74,8 @@ let rec compile_ (context : context) (node : cljexp) : string =
   in
   match node with
   (* "Marco function" *)
+  | RBList (Atom (l, "do") :: body) ->
+      RBList (Atom (l, "let") :: SBList [] :: body) |> compile
   | RBList (Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_

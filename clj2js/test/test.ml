@@ -149,4 +149,6 @@ bar(2)|};
      import * as app from './main.js';";
   assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
     {|(1 == 2) ? (3) : ((4 == 5) ? (6) : ((7 == 8) ? (9) : (0)))|};
+  assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
+    "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   ()
