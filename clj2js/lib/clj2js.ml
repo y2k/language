@@ -246,7 +246,7 @@ let rec compile_ (context : context) (node : cljexp) : string =
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:"" |> Printf.sprintf "[%s]"
   | RBList [ Atom (_, "if"); c; a; b ] ->
-      Printf.sprintf "(%s) ? (%s) : (%s)" (compile c) (compile a) (compile b)
+      Printf.sprintf "(%s ? %s : %s)" (compile c) (compile a) (compile b)
   | RBList (Atom (_, "comment") :: _) -> ""
   | RBList [ Atom (_, "export-default"); body ] ->
       Printf.sprintf "export default %s" (compile body)

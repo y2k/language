@@ -58,9 +58,9 @@ export default {"fetch": fetch-handler}|};
   (if (foo c1) a1 b1)
   (if (foo c2) a2 b2))
   (if (= 1 2) a b)|}
-    {|(foo(1)) ? (a) : (b)
-((foo(c0)) ? (a0) : (b0)) ? ((foo(c1)) ? (a1) : (b1)) : ((foo(c2)) ? (a2) : (b2))
-(1 == 2) ? (a) : (b)|};
+    {|(foo(1) ? a : b)
+((foo(c0) ? a0 : b0) ? (foo(c1) ? a1 : b1) : (foo(c2) ? a2 : b2))
+(1 == 2 ? a : b)|};
   assert_ "(+ 1 (+ 10 20 30) 3 (str 1) 5)"
     {|(1 + (10 + 20 + 30) + 3 + ("" + 1) + 5)|};
   assert_ "(- 1 (- 10 20))" "(1 - (10 - 20))";
@@ -104,17 +104,17 @@ map((x) => { return x }, xs)|};
   assert_ "(foo 1)\n\n;;(foo 2.1)\n\n;;(foo 2.2)\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(->> 0 (a 1) (b 2) (c 3))" "c(3, b(2, a(1, 0)))";
   assert_ "(if-let [a 1 b 2 c 3] foo bar)"
-    "(function () { const a = 1; return (a) ? ((function () { const b = 2; \
-     return (b) ? ((function () { const c = 3; return (c) ? (foo) : (bar) \
-     })()) : (bar) })()) : (bar) })()";
+    "(function () { const a = 1; return (a ? (function () { const b = 2; \
+     return (b ? (function () { const c = 3; return (c ? foo : bar) })() : \
+     bar) })() : bar) })()";
   assert_ "(if-let [a 1 b 2 c 3] (+ a b c) -1)"
-    "(function () { const a = 1; return (a) ? ((function () { const b = 2; \
-     return (b) ? ((function () { const c = 3; return (c) ? ((a + b + c)) : \
-     (-1) })()) : (-1) })()) : (-1) })()";
+    "(function () { const a = 1; return (a ? (function () { const b = 2; \
+     return (b ? (function () { const c = 3; return (c ? (a + b + c) : -1) \
+     })() : -1) })() : -1) })()";
   assert_ "(if-let [_ 1 _ 2 _ 3] 6 -1)"
-    "(function () { const _ = 1; return (_) ? ((function () { const _ = 2; \
-     return (_) ? ((function () { const _ = 3; return (_) ? (6) : (-1) })()) : \
-     (-1) })()) : (-1) })()";
+    "(function () { const _ = 1; return (_ ? (function () { const _ = 2; \
+     return (_ ? (function () { const _ = 3; return (_ ? 6 : -1) })() : -1) \
+     })() : -1) })()";
   assert_file "hotreload-client.clj";
   assert_file "sample1.clj";
   assert_ {|(foo 1)(__unsafe_insert_js "import some")(bar 2)|}
@@ -148,7 +148,8 @@ bar(2)|};
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';";
   assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
-    {|(1 == 2) ? (3) : ((4 == 5) ? (6) : ((7 == 8) ? (9) : (0)))|};
+    {|(1 == 2 ? 3 : (4 == 5 ? 6 : (7 == 8 ? 9 : 0)))|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
+  assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
   ()
