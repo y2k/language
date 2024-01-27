@@ -48,7 +48,7 @@ export default {"fetch": fetch-handler}|};
   assert_ {|(comment 1 2 3)
   (println 1 2 3)
   (comment 1 2 3)|}
-    "\nconsole.info(1, 2, 3)\n";
+    "console.info(1, 2, 3)";
   assert_
     {|(export-default {:foo 1 :foo2 {:foo 1 :bar "2" :baz false} :bar "2" :baz false})|}
     {|export default {"foo": 1, "foo2": {"foo": 1, "bar": "2", "baz": false}, "bar": "2", "baz": false}|};
