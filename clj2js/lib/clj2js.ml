@@ -37,12 +37,24 @@ type context = {
 }
 
 module MacroInterpretator = struct
+  let compute_args (arg_names : cljexp list) (arg_values : cljexp list) :
+      cljexp StringMap.t =
+    let rec compute_args' acc arg_names arg_values =
+      match (arg_names, arg_values) with
+      | [ Atom (_, "&"); Atom (_, name) ], vt ->
+          StringMap.add name (RBList vt) acc
+      | Atom (_, name) :: nt, v :: vt ->
+          compute_args' (StringMap.add name v acc) nt vt
+      | a, b -> fail_node (List.concat [ a; b ])
+    in
+    compute_args' StringMap.empty arg_names arg_values
+
   let run (context : context) (macro : cljexp) (macro_args : cljexp list) :
       cljexp =
     match macro with
-    | RBList (_ :: _ :: SBList [ Atom (_, "&"); Atom (_, varg_name) ] :: body)
-      ->
+    | RBList (_ :: _ :: SBList macro_arg_names :: body) ->
         let rec execute (node : cljexp) : cljexp =
+          let args = compute_args macro_arg_names macro_args in
           match node with
           | RBList [ Atom (_, "concat"); a; b ] -> (
               match (execute a, execute b) with
@@ -79,7 +91,8 @@ module MacroInterpretator = struct
               Atom (unknown_location, string_of_int context.loc.pos)
           | Atom (_, x) when String.starts_with ~prefix:"'" x ->
               Atom (unknown_location, String.sub x 1 (String.length x - 1))
-          | Atom (_, x) when x = varg_name -> RBList macro_args
+          | Atom (_, x) when StringMap.exists (fun k _ -> k = x) args ->
+              StringMap.find x args
           | Atom (_, x)
             when String.starts_with ~prefix:"\"" x
                  && String.ends_with ~suffix:"\"" x ->
@@ -197,25 +210,23 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             ^ __LOC__
       in
       loop bindings |> compileOut
+  | RBList [ Atom (l, "first"); body ] ->
+      RBList
+        [
+          Atom (l, ".at");
+          RBList [ Atom (unknown_location, "Array/from"); body ];
+          Atom (unknown_location, "0");
+        ]
+      |> compileOut
+  | RBList [ Atom (l, "second"); body ] ->
+      RBList
+        [
+          Atom (l, ".at");
+          RBList [ Atom (unknown_location, "Array/from"); body ];
+          Atom (unknown_location, "1");
+        ]
+      |> compileOut
   (* Core forms *)
-  | RBList [ Atom (_, "concat"); a; b ] ->
-      Printf.sprintf "[...%s, ...%s]" (compile a) (compile b) |> withContext
-  | RBList [ Atom (_, "conj"); a; b ] ->
-      Printf.sprintf "[...%s, %s]" (compile a) (compile b) |> withContext
-  | RBList [ Atom (_, "spread"); a ] ->
-      Printf.sprintf "...%s" (compile a) |> withContext
-  | RBList [ Atom (_, "merge"); a; b ] ->
-      Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b) |> withContext
-  | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
-    when String.starts_with ~prefix:":" key ->
-      Printf.sprintf "{ ...%s, %s: %s }" (compile map)
-        (String.sub key 1 (String.length key - 1))
-        (compile value)
-      |> withContext
-  | RBList [ Atom (_, "__unsafe_insert_js"); Atom (_, body) ]
-    when String.starts_with ~prefix:"\"" body
-         && String.ends_with ~suffix:"\"" body ->
-      String.sub body 1 (String.length body - 2) |> withContext
   | RBList (Atom (_, "require") :: requiries) ->
       requiries
       |> List.map (function
@@ -235,6 +246,24 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> withContext
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
+  | RBList [ Atom (_, "concat"); a; b ] ->
+      Printf.sprintf "[...%s, ...%s]" (compile a) (compile b) |> withContext
+  | RBList [ Atom (_, "conj"); a; b ] ->
+      Printf.sprintf "[...%s, %s]" (compile a) (compile b) |> withContext
+  | RBList [ Atom (_, "spread"); a ] ->
+      Printf.sprintf "...%s" (compile a) |> withContext
+  | RBList [ Atom (_, "merge"); a; b ] ->
+      Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b) |> withContext
+  | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
+    when String.starts_with ~prefix:":" key ->
+      Printf.sprintf "{ ...%s, %s: %s }" (compile map)
+        (String.sub key 1 (String.length key - 1))
+        (compile value)
+      |> withContext
+  | RBList [ Atom (_, "__unsafe_insert_js"); Atom (_, body) ]
+    when String.starts_with ~prefix:"\"" body
+         && String.ends_with ~suffix:"\"" body ->
+      String.sub body 1 (String.length body - 2) |> withContext
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> withContext
   | Atom (_, x) -> x |> withContext
@@ -330,28 +359,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "(%s)" |> withContext
   | RBList [ Atom (_, "/"); a; b ] ->
       Printf.sprintf "(%s / %s)" (compile a) (compile b) |> withContext
-  | RBList [ Atom (l, "first"); body ] ->
-      RBList
-        [
-          Atom (l, ".at");
-          RBList [ Atom (unknown_location, "Array/from"); body ];
-          Atom (unknown_location, "0");
-        ]
-      |> compileOut
-  | RBList [ Atom (l, "second"); body ] ->
-      RBList
-        [
-          Atom (l, ".at");
-          RBList [ Atom (unknown_location, "Array/from"); body ];
-          Atom (unknown_location, "1");
-        ]
-      |> compileOut
   | RBList (Atom (l, "defn") :: Atom (_, fname) :: SBList args :: body) ->
       let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
       Printf.sprintf "export const %s = %s" fname (compile fn) |> withContext
-  | RBList (Atom (l, "defn-") :: Atom (_, fname) :: SBList args :: body) ->
-      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
-      Printf.sprintf "const %s = %s" fname (compile fn) |> withContext
   | RBList (Atom (_, "while") :: condition :: body) ->
       Printf.sprintf "while (%s) {%s}" (compile condition)
         (body |> List.map compile |> List.reduce (Printf.sprintf "%s;%s"))
@@ -422,7 +432,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 
 let main (filename : string) str =
   let prelude_macros =
-    {|(defmacro do [& body] (concat (list 'let (vec)) body))
+    {|(defmacro defn- [name args & body]
+        (list 'def name
+          (concat
+            (list 'fn args)
+            body)))
+      (defmacro do [& body] (concat (list 'let (vec)) body))
       (defmacro println [& args] (concat (list 'console/info) args))
       (defmacro FIXME [& args]
         (list 'throw

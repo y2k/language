@@ -115,8 +115,6 @@ map((x) => { return x }, xs)|};
     "(function () { const _ = 1; return (_ ? (function () { const _ = 2; \
      return (_ ? (function () { const _ = 3; return (_ ? 6 : -1) })() : -1) \
      })() : -1) })()";
-  assert_file "hotreload-client.clj";
-  assert_file "sample1.clj";
   assert_ {|(foo 1)(__unsafe_insert_js "import some")(bar 2)|}
     {|foo(1)
 import some
@@ -135,7 +133,7 @@ bar(2)|};
   assert_ "(not= a b)" "a != b";
   assert_ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
-  assert_ "(defn- foo [x] x)" "const foo = (x) => { return x }";
+  assert_ "(defn- foo [x] x)" "const foo = (x) => { return x };";
   assert_ "(defn foo [x] x)" "export const foo = (x) => { return x }";
   assert_ "(foo FIXME)"
     {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
@@ -152,4 +150,9 @@ bar(2)|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
+  ()
+
+let () =
+  assert_file "hotreload-client.clj";
+  assert_file "sample1.clj";
   ()
