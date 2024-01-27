@@ -268,7 +268,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> withContext
   | Atom (_, x) -> x |> withContext
   | RBList [ Atom (_, "not="); a; b ] ->
-      Printf.sprintf "%s != %s" (compile a) (compile b) |> withContext
+      Printf.sprintf "%s !== %s" (compile a) (compile b) |> withContext
   | RBList [ Atom (_, "throw"); ex ] ->
       Printf.sprintf "(function(){throw %s})()" (compile ex) |> withContext
   | RBList (Atom (_, "try") :: body) ->
@@ -344,7 +344,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       to_pairs xs |> Printf.sprintf "{%s}" |> withContext
   | RBList [ Atom (_, "="); a; b ] ->
-      compile a ^ " == " ^ compile b |> withContext
+      compile a ^ " === " ^ compile b |> withContext
   | RBList (Atom (_, "+") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s + %s")

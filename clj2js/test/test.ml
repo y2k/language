@@ -60,7 +60,7 @@ export default {"fetch": fetch-handler}|};
   (if (= 1 2) a b)|}
     {|(foo(1) ? a : b)
 ((foo(c0) ? a0 : b0) ? (foo(c1) ? a1 : b1) : (foo(c2) ? a2 : b2))
-(1 == 2 ? a : b)|};
+(1 === 2 ? a : b)|};
   assert_ "(+ 1 (+ 10 20 30) 3 (str 1) 5)"
     {|(1 + (10 + 20 + 30) + 3 + ("" + 1) + 5)|};
   assert_ "(- 1 (- 10 20))" "(1 - (10 - 20))";
@@ -130,7 +130,7 @@ bar(2)|};
   assert_ "[]" "[]";
   assert_ "{}" "{}";
   assert_ {|(throw (Error. "foo"))|} {|(function(){throw new Error("foo")})()|};
-  assert_ "(not= a b)" "a != b";
+  assert_ "(not= a b)" "a !== b";
   assert_ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
   assert_ "(defn- foo [x] x)" "const foo = (x) => { return x };";
@@ -146,7 +146,7 @@ bar(2)|};
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';";
   assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
-    {|(1 == 2 ? 3 : (4 == 5 ? 6 : (7 == 8 ? 9 : 0)))|};
+    {|(1 === 2 ? 3 : (4 === 5 ? 6 : (7 === 8 ? 9 : 0)))|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
