@@ -75,7 +75,7 @@ module MacroInterpretator = struct
               Atom (unknown_location, "\"" ^ result ^ "\"")
           | RBList (Atom (_, "list") :: list_args) ->
               RBList (List.map execute list_args)
-          | RBList (Atom (_, "vec") :: vec_args) ->
+          | RBList (Atom (_, "vector") :: vec_args) ->
               SBList (List.map execute vec_args)
           | RBList [ Atom (_, "-"); ea; eb ] -> (
               match (execute ea, execute eb) with
@@ -150,7 +150,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     | xs -> fail_node xs
   in
   match node with
-  (* "Marco function" *)
+  (* "Macro function" *)
+  | RBList (Atom (l, "λ") :: body) ->
+      RBList (Atom (l, "fn") :: body) |> compileOut
   | RBList (Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_
@@ -437,7 +439,7 @@ let main (filename : string) str =
           (concat
             (list 'fn args)
             body)))
-      (defmacro do [& body] (concat (list 'let (vec)) body))
+      (defmacro do [& body] (concat (list 'let (vector)) body))
       (defmacro println [& args] (concat (list 'console/info) args))
       (defmacro FIXME [& args]
         (list 'throw

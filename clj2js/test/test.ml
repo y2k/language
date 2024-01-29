@@ -20,44 +20,45 @@ let assert_file filename =
 let () =
   assert_
     {|(defn fetch [request env context]
-   (.log console request)
-   (.log console request))|}
+                (.log console request)
+                (.log console request))|}
     {|export const fetch = (request, env, context) => { console.log(request); return console.log(request) }|};
   assert_
     {|(defn fetch [request env context]
-     (->
-       a b))|}
+        (->
+          a b))|}
     "export const fetch = (request, env, context) => { return b(a) }";
   assert_
     {|(defn fetch [request env context]
-     (->
-      (.json request null)
-      (.next (fn [text] (failwith "???")))))|}
+        (->
+         (.json request null)
+         (.next (fn [text] (failwith "???")))))|}
     {|export const fetch = (request, env, context) => { return request.json(null).next((text) => { return failwith("???") }) }|};
   assert_
     {|(defn fetch [request env context]
-     request)|}
+        request)|}
     "export const fetch = (request, env, context) => { return request }";
   assert_
     {|(defn fetch-handler [request env context] request)
-  (export-default {:fetch fetch-handler})|}
+     (export-default {:fetch fetch-handler})|}
     {|export const fetch-handler = (request, env, context) => { return request }
 export default {"fetch": fetch-handler}|};
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
-  assert_ {|(comment 1 2 3)
-  (println 1 2 3)
-  (comment 1 2 3)|}
+  assert_
+    {|(comment 1 2 3)
+     (println 1 2 3)
+     (comment 1 2 3)|}
     "console.info(1, 2, 3)";
   assert_
     {|(export-default {:foo 1 :foo2 {:foo 1 :bar "2" :baz false} :bar "2" :baz false})|}
     {|export default {"foo": 1, "foo2": {"foo": 1, "bar": "2", "baz": false}, "bar": "2", "baz": false}|};
   assert_
     {|(if (foo 1) a b)
-(if (if (foo c0) a0 b0)
-  (if (foo c1) a1 b1)
-  (if (foo c2) a2 b2))
-  (if (= 1 2) a b)|}
+   (if (if (foo c0) a0 b0)
+     (if (foo c1) a1 b1)
+     (if (foo c2) a2 b2))
+     (if (= 1 2) a b)|}
     {|(foo(1) ? a : b)
 ((foo(c0) ? a0 : b0) ? (foo(c1) ? a1 : b1) : (foo(c2) ? a2 : b2))
 (1 === 2 ? a : b)|};
@@ -70,19 +71,20 @@ export default {"fetch": fetch-handler}|};
   assert_ {|(println "hello world")|} {|console.info("hello world")|};
   assert_
     {|(println)
-(println )
-(println 1)
-(Response. )
-(Response.)
-(Response. 1)|}
+   (println )
+   (println 1)
+   (Response. )
+   (Response.)
+   (Response. 1)|}
     {|console.info()
 console.info()
 console.info(1)
 new Response()
 new Response()
 new Response(1)|};
-  assert_ {|(map (fn [] 0) xs)
-(map (fn [x] x) xs)|}
+  assert_
+    {|(map (fn [] 0) xs)
+   (map (fn [x] x) xs)|}
     {|map(() => { return 0 }, xs)
 map((x) => { return x }, xs)|};
   assert_ "(and a (and 1 2 3) c d)" "(a && (1 && 2 && 3) && c && d)";
@@ -150,6 +152,10 @@ bar(2)|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
+  assert_ {|(map (λ [] 0) xs)
+(map (λ [x] x) xs)|}
+    {|map(() => { return 0 }, xs)
+map((x) => { return x }, xs)|};
   ()
 
 let () =
