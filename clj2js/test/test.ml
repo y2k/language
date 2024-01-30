@@ -152,10 +152,6 @@ bar(2)|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
-  assert_ {|(map (λ [] 0) xs)
-(map (λ [x] x) xs)|}
-    {|map(() => { return 0 }, xs)
-map((x) => { return x }, xs)|};
   ()
 
 let () =

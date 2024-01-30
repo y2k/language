@@ -151,8 +151,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   in
   match node with
   (* "Macro function" *)
-  | RBList (Atom (l, "λ") :: body) ->
-      RBList (Atom (l, "fn") :: body) |> compileOut
   | RBList (Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_
