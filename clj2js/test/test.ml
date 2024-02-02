@@ -152,6 +152,12 @@ bar(2)|};
   assert_ "(do (foo 1 2) (bar 3 4) (baz 5 6))"
     "(function () { foo(1, 2); bar(3, 4); return baz(5, 6) })()";
   assert_ "(str a (if b c d))" {|("" + a + (b ? c : d))|};
+  assert_ "(set! foo 1)" "foo = 1;";
+  assert_ "(set! foo.bar 1)" "foo.bar = 1;";
+  assert_ "(set! (.-bar foo) 1)" "foo.bar = 1;";
+  assert_ "(set! (.-bar (foo 2)) 1)" "foo(2).bar = 1;";
+  assert_ "(defmacro foo [a b] (list a 1)) (foo c d)" "c(1)";
+  assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1);\nd(2)";
   ()
 
 let () =

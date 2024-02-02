@@ -45,12 +45,13 @@ module MacroInterpretator = struct
           StringMap.add name (RBList vt) acc
       | Atom (_, name) :: nt, v :: vt ->
           compute_args' (StringMap.add name v acc) nt vt
+      | [], [] -> acc
       | a, b -> fail_node (List.concat [ a; b ])
     in
     compute_args' StringMap.empty arg_names arg_values
 
   let run (context : context) (macro : cljexp) (macro_args : cljexp list) :
-      cljexp =
+      cljexp list =
     match macro with
     | RBList (_ :: _ :: SBList macro_arg_names :: body) ->
         let rec execute (node : cljexp) : cljexp =
@@ -101,7 +102,7 @@ module MacroInterpretator = struct
               Atom (unknown_location, x)
           | node -> fail_node [ node ]
         in
-        execute (List.rev body |> List.hd)
+        body |> List.map execute
     | _ -> failwith "FIXME"
 end
 
@@ -227,6 +228,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         ]
       |> compileOut
   (* Core forms *)
+  | RBList [ Atom (_, "set!"); target; value ] ->
+      Printf.sprintf "%s = %s;" (compile target) (compile value) |> withContext
+  | RBList [ Atom (_, field); target ]
+    when String.starts_with ~prefix:".-" field ->
+      Printf.sprintf "%s.%s" (compile target)
+        (String.sub field 2 (String.length field - 2))
+      |> withContext
   | RBList (Atom (_, "require") :: requiries) ->
       requiries
       |> List.map (function
@@ -419,7 +427,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
          MacroInterpretator.run { context with loc = l }
            (StringMap.find fname context.macros)
            args
-         |> compile
+         |> List.map compile
+         |> List.reduce (Printf.sprintf "%s;\n%s")
        else
          let sargs =
            if List.length args = 0 then ""
