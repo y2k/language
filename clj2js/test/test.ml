@@ -158,6 +158,10 @@ bar(2)|};
   assert_ "(set! (.-bar (foo 2)) 1)" "foo(2).bar = 1;";
   assert_ "(defmacro foo [a b] (list a 1)) (foo c d)" "c(1)";
   assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1);\nd(2)";
+  assert_ "(type a)" "typeof a";
+  assert_ {|(= (type a) "String")|} {|typeof a === "String"|};
+  assert_ "(not a)" "!a";
+  assert_ "(not (+ 1 2))" "!(1 + 2)";
   ()
 
 let () =

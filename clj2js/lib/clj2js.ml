@@ -228,6 +228,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         ]
       |> compileOut
   (* Core forms *)
+  | RBList [ Atom (_, "not"); arg ] ->
+      Printf.sprintf "!%s" (compile arg) |> withContext
+  | RBList [ Atom (_, "type"); arg ] ->
+      Printf.sprintf "typeof %s" (compile arg) |> withContext
   | RBList [ Atom (_, "set!"); target; value ] ->
       Printf.sprintf "%s = %s;" (compile target) (compile value) |> withContext
   | RBList [ Atom (_, field); target ]
