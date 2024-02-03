@@ -1,9 +1,9 @@
 open Angstrom
 module A = Angstrom
 
-type location = { line : int; pos : int } [@@deriving show]
+type location = { line : int; pos : int; symbol : string } [@@deriving show]
 
-let unknown_location = { line = 0; pos = 0 }
+let unknown_location = { line = 0; pos = 0; symbol = "" }
 
 type cljexp =
   | Atom of location * string
@@ -14,26 +14,41 @@ type cljexp =
 
 let pnode find_line_and_pos =
   let pcomment = A.string ";;" *> A.take_while (( <> ) '\n') *> A.char '\n' in
+  let pmeta =
+    A.char '^' *> A.take_while1 (fun x -> (x >= 'A' && x <= 'z') || x = '.')
+  in
   let pspace = A.many (A.char ' ' <|> A.char '\n' <|> pcomment) in
+  let patom =
+    A.both A.pos
+      (A.take_while1 (function
+        | ' ' | '\n' | '[' | ']' | '(' | ')' | '{' | '}' -> false
+        | _ -> true))
+    >>| fun (pos, x) ->
+    let line, pos = find_line_and_pos pos in
+    ({ line; pos; symbol = "" }, x)
+  in
+  let patom_ = patom >>| fun (m, a) -> Atom (m, a) in
+  let patom_meta =
+    A.map2 (pmeta <* pspace) patom ~f:(fun m (a, x) ->
+        Atom ({ a with symbol = m }, x))
+  in
+  let ptext =
+    A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
+    <* A.char '"'
+    >>| fun x -> Atom (unknown_location, "\"" ^ x ^ "\"")
+  in
   A.many1
     (A.fix (fun pnode ->
-         A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
-         <* A.char '"'
-         >>| (fun x -> Atom (unknown_location, "\"" ^ x ^ "\""))
-         <|> ( A.both A.pos
-                 (A.take_while1 (function
-                   | ' ' | '\n' | '[' | ']' | '(' | ')' | '{' | '}' -> false
-                   | _ -> true))
-             >>| fun (pos, x) ->
-               let line, pos = find_line_and_pos pos in
-               Atom ({ line; pos }, x) )
-         <|> (A.char '{' *> (A.many (pnode <* pspace) >>| fun xs -> CBList xs)
-             <* A.char '}')
-         <|> (A.char '(' *> (A.many1 (pnode <* pspace) >>| fun xs -> RBList xs)
-             <* A.char ')')
-         <|> (A.char '[' *> (A.many (pnode <* pspace) >>| fun xs -> SBList xs)
-             <* A.char ']'))
-    <* pspace)
+         pspace
+         *> (ptext <|> patom_meta <|> patom_
+            <|> (A.char '{' *> (A.many (pnode <* pspace) >>| fun xs -> CBList xs)
+                <* A.char '}')
+            <|> (A.char '('
+                 *> (A.many1 (pnode <* pspace) >>| fun xs -> RBList xs)
+                <* A.char ')')
+            <|> (A.char '[' *> (A.many (pnode <* pspace) >>| fun xs -> SBList xs)
+                <* A.char ']'))
+         <* pspace))
 
 let find_line_and_pos str index =
   let length = String.length str in

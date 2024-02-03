@@ -165,6 +165,16 @@ bar(2)|};
   ()
 
 let () =
+  assert_
+    "(defn fetch [^java.lang.Integer request ^kotlin.List env context] request)"
+    "export const fetch = (request, env, context) => { return request }";
+  assert_ "(defn foo [^an.app.Ac act ^an.we.WeVi webView] act)"
+    "export const foo = (act, webView) => { return act }";
+  assert_ "(defn foo [ ^an.app.Ac act ^an.we.WeVi webView] act)"
+    "export const foo = (act, webView) => { return act }";
+  ()
+
+let () =
   assert_file "hotreload-client.clj";
   assert_file "sample1.clj";
   ()
