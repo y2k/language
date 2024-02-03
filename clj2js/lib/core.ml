@@ -14,9 +14,6 @@ type cljexp =
 
 let pnode find_line_and_pos =
   let pcomment = A.string ";;" *> A.take_while (( <> ) '\n') *> A.char '\n' in
-  let pmeta =
-    A.char '^' *> A.take_while1 (fun x -> (x >= 'A' && x <= 'z') || x = '.')
-  in
   let pspace = A.many (A.char ' ' <|> A.char '\n' <|> pcomment) in
   let patom =
     A.both A.pos
@@ -28,15 +25,22 @@ let pnode find_line_and_pos =
     ({ line; pos; symbol = "" }, x)
   in
   let patom_ = patom >>| fun (m, a) -> Atom (m, a) in
+  let ptext_ =
+    A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
+    <* A.char '"'
+  in
+  let pmeta =
+    A.char '^'
+    *> (ptext_
+       <|> A.take_while1 (fun x ->
+               (x >= 'A' && x <= 'z')
+               || x = '.' || x = '(' || x = ')' || x = '-' || x = '>'))
+  in
   let patom_meta =
     A.map2 (pmeta <* pspace) patom ~f:(fun m (a, x) ->
         Atom ({ a with symbol = m }, x))
   in
-  let ptext =
-    A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
-    <* A.char '"'
-    >>| fun x -> Atom (unknown_location, "\"" ^ x ^ "\"")
-  in
+  let ptext = ptext_ >>| fun x -> Atom (unknown_location, "\"" ^ x ^ "\"") in
   A.many1
     (A.fix (fun pnode ->
          pspace

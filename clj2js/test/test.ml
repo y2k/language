@@ -172,6 +172,10 @@ let () =
     "export const foo = (act, webView) => { return act }";
   assert_ "(defn foo [ ^an.app.Ac act ^an.we.WeVi webView] act)"
     "export const foo = (act, webView) => { return act }";
+  assert_ {|(defn foo [^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
+    "export const foo = (a, b) => { return a }";
+  assert_ {|(defn foo [ ^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
+    "export const foo = (a, b) => { return a }";
   ()
 
 let () =

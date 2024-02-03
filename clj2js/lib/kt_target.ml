@@ -16,6 +16,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList (Atom (_, "ns") :: Atom (_, name) :: _) ->
+      Printf.sprintf "package %s\n" name |> withContext
   | RBList (Atom (_, "+") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s + %s")
@@ -29,7 +31,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | [] -> ""
         | _ ->
             args
-            |> List.map (function Atom (_, x) -> x | x -> fail_node [ x ])
+            |> List.map (function
+                 | Atom (m, x) ->
+                     if m.symbol = "" then x else x ^ ":" ^ m.symbol
+                 | x -> fail_node [ x ])
             |> List.reduce (Printf.sprintf "%s, %s")
             |> Printf.sprintf "%s -> "
       in
@@ -57,7 +62,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s; %s")
       in
       "" ^ svals ^ sbody ^ "" |> withContext
-  | RBList (Atom (_, "proxy") :: _ :: _ :: body) ->
+  | RBList (Atom (_, "proxy") :: SBList supers :: _ :: body) ->
+      let super =
+        match supers with
+        | Atom (_, n) :: _ -> ": " ^ n ^ "()"
+        | [] -> ""
+        | x -> fail_node x
+      in
       let _, b =
         body
         |> List.fold_left
@@ -71,7 +82,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                      |> List.fold_left (Printf.sprintf "%s\n%s") ""
                    in
                    let fargs =
-                     args |> List.map compile |> function
+                     args
+                     |> List.map (function
+                          | Atom (m, x) -> x ^ ":" ^ m.symbol
+                          | n -> fail_node [ n ])
+                     |> function
                      | [] -> ""
                      | xs -> xs |> List.reduce (Printf.sprintf "%s, %s")
                    in
@@ -80,12 +95,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                      |> compile
                    in
                    ( [],
-                     Printf.sprintf "%s\nfun %s (%s) { %s }" attrs_s fname fargs
-                       fbody )
+                     out
+                     ^ Printf.sprintf "%s\n%sfun %s (%s) { %s }" attrs_s
+                         (if super = "" then "" else " override ")
+                         fname fargs fbody )
                | _ -> fail_node [ n ])
              ([], "")
       in
-      Printf.sprintf "object { %s }" b |> withContext
+      Printf.sprintf "object %s { %s }" super b |> withContext
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
   (* Functions or Macro calls *)
