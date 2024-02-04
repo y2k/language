@@ -16,6 +16,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList [ Atom (_, "as"); value; cls ] ->
+      Printf.sprintf "%s as %s" (compile value) (compile cls) |> withContext
   | RBList (Atom (_, "ns") :: Atom (_, name) :: _) ->
       Printf.sprintf "package %s\n" name |> withContext
   | RBList (Atom (_, "+") :: xs) ->
@@ -153,7 +155,6 @@ let main (filename : string) str =
             (list 'fn args)
             body)))
       (defmacro do [& body] (concat (list 'let (vector)) body))
-      (defmacro println [& args] (concat (list 'console/info) args))
       (defmacro FIXME [& args]
         (list 'throw
           (list 'Error.
