@@ -18,8 +18,24 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* ========================== *)
   | RBList [ Atom (_, "as"); value; cls ] ->
       Printf.sprintf "%s as %s" (compile value) (compile cls) |> withContext
-  | RBList (Atom (_, "ns") :: Atom (_, name) :: _) ->
-      Printf.sprintf "package %s\n" name |> withContext
+  | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
+      let imports =
+        ns_params
+        |> List.map (function
+             | RBList (Atom (_, ":import") :: imports) ->
+                 imports
+                 |> List.map (function
+                      | SBList (Atom (_, pkg) :: classes) ->
+                          List.map compile classes
+                          |> List.map (fun c ->
+                                 Printf.sprintf "import %s.%s;" pkg c)
+                          |> List.reduce (Printf.sprintf "%s\n%s")
+                      | n -> fail_node [ n ])
+                 |> List.reduce (Printf.sprintf "%s\n%s")
+             | n -> fail_node [ n ])
+        |> List.reduce (Printf.sprintf "%s\n%s")
+      in
+      Printf.sprintf "package %s\n%s\n" name imports |> withContext
   | RBList (Atom (_, "+") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s + %s")
