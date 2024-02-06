@@ -162,6 +162,7 @@ bar(2)|};
   assert_ {|(= (type a) "String")|} {|typeof a === "String"|};
   assert_ "(not a)" "!a";
   assert_ "(not (+ 1 2))" "!(1 + 2)";
+  assert_ "(get xs 7)" "xs[7]";
   ()
 
 let () =

@@ -2,13 +2,14 @@ module A = Angstrom
 open Core
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
-  (* let compileOut node = compile_ context node in *)
   let compile node = compile_ context node |> snd in
   let withContext node = (context, node) in
   match expand_core_macro node with
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> withContext
-  | Atom (_, x) -> x |> withContext
+  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> withContext
+  | Atom (_, x) ->
+      x |> String.map (function '/' -> '.' | x -> x) |> withContext
   | SBList xs ->
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")

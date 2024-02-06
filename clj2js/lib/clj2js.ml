@@ -24,7 +24,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (l, "first"); body ] ->
       RBList
         [
-          Atom (l, ".at");
+          Atom (l, "get");
           RBList [ Atom (unknown_location, "Array/from"); body ];
           Atom (unknown_location, "0");
         ]
@@ -32,7 +32,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (l, "second"); body ] ->
       RBList
         [
-          Atom (l, ".at");
+          Atom (l, "get");
           RBList [ Atom (unknown_location, "Array/from"); body ];
           Atom (unknown_location, "1");
         ]
@@ -45,6 +45,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> withContext
+  (*  *)
+  | RBList [ Atom (_, "get"); target; index ] ->
+      Printf.sprintf "%s[%s]" (compile target) (compile index) |> withContext
   | RBList [ Atom (_, "not"); arg ] ->
       Printf.sprintf "!%s" (compile arg) |> withContext
   | RBList [ Atom (_, "type"); arg ] ->
