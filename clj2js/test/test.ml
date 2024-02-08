@@ -163,6 +163,12 @@ bar(2)|};
   assert_ "(not a)" "!a";
   assert_ "(not (+ 1 2))" "!(1 + 2)";
   assert_ "(get xs 7)" "xs[7]";
+  assert_ "(case (foo 1) 2 (bar 22) (getbaz 3) baz :qwe 3 other)"
+    {|(function () { const gen_1 = foo(1); return (gen_1 === 2 ? bar(22) : (gen_1 === getbaz(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
+  assert_ "(case key 2 (bar 22) (getbaz 3) baz :qwe 3 other)"
+    {|(function () { const gen_1 = key; return (gen_1 === 2 ? bar(22) : (gen_1 === getbaz(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
+  assert_ "(case key 2 (bar 22) (getbaz 3) baz :qwe 3 (other a))"
+    {|(function () { const gen_1 = key; return (gen_1 === 2 ? bar(22) : (gen_1 === getbaz(3) ? baz : (gen_1 === "qwe" ? 3 : other(a)))) })()|};
   ()
 
 let () =

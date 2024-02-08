@@ -89,6 +89,30 @@ let fail_node es =
 
 let expand_core_macro node =
   match node with
+  | RBList (Atom (l, "case") :: target :: body) ->
+      let rec loop = function
+        | cond :: then_ :: body ->
+            RBList
+              [
+                Atom (unknown_location, "if");
+                RBList
+                  [
+                    Atom (unknown_location, "=");
+                    Atom (unknown_location, "gen_1");
+                    cond;
+                  ];
+                then_;
+                loop body;
+              ]
+        | [ x ] -> x
+        | _ -> fail_node [ node ]
+      in
+      RBList
+        [
+          Atom (l, "let");
+          SBList [ Atom (unknown_location, "gen_1"); target ];
+          loop body;
+        ]
   | RBList (Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_
