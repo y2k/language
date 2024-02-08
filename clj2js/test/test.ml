@@ -134,6 +134,7 @@ map((x) => { return x }, xs)|};
 import some
 bar(2)|};
   assert_ {|(assoc person :city "NY")|} {|{ ...person, city: "NY" }|};
+  assert_ {|(assoc data.db user_id data.now)|} {|(function(){const temp={...data.db};temp[user_id]=data.now;return temp})()|};
   assert_ {|(-> (foo person) (assoc :city "NY"))|}
     {|{ ...foo(person), city: "NY" }|};
   assert_ {|(-> person (assoc :city "NY"))|} {|{ ...person, city: "NY" }|};
