@@ -87,7 +87,7 @@ let fail_node es =
   |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
   |> failwith
 
-let expand_core_macro node =
+let rec expand_core_macro node =
   match node with
   | RBList (Atom (l, "case") :: target :: body) ->
       let rec loop = function
@@ -135,7 +135,9 @@ let expand_core_macro node =
              | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
              | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
              | xs -> fail_node [ xs ])
-  | RBList [ Atom (_, "if-let"); SBList bindings; then'; else' ] ->
+  | RBList (Atom (l, "if-let") :: tail) ->
+      expand_core_macro (RBList (Atom (l, "if-let*") :: tail))
+  | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
       let rec loop = function
         | Atom (l, name) :: value :: tail ->
             RBList
