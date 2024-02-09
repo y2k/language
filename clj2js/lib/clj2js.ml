@@ -92,8 +92,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (String.sub key 1 (String.length key - 1))
         (compile value)
       |> withContext
-  | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ] ->
-      Printf.sprintf "(function(){const temp={...%s};temp[%s]=%s;return temp})()" (compile map) key (compile value)
+  | RBList [ Atom (_, "assoc"); map; key; value ] ->
+      Printf.sprintf
+        "(function(){const temp={...%s};temp[%s]=%s;return temp})()"
+        (compile map) (compile key) (compile value)
       |> withContext
   | RBList [ Atom (_, "__unsafe_insert_js"); Atom (_, body) ]
     when String.starts_with ~prefix:"\"" body
