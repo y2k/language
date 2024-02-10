@@ -134,7 +134,8 @@ map((x) => { return x }, xs)|};
 import some
 bar(2)|};
   assert_ {|(assoc person :city "NY")|} {|{ ...person, city: "NY" }|};
-  assert_ {|(assoc data.db user_id data.now)|} {|(function(){const temp={...data.db};temp[user_id]=data.now;return temp})()|};
+  assert_ {|(assoc data.db user_id data.now)|}
+    {|(function(){const temp={...data.db};temp[user_id]=data.now;return temp})()|};
   assert_ {|(-> (foo person) (assoc :city "NY"))|}
     {|{ ...foo(person), city: "NY" }|};
   assert_ {|(-> person (assoc :city "NY"))|} {|{ ...person, city: "NY" }|};
@@ -182,6 +183,15 @@ bar(2)|};
     {|(function () { const gen_1 = key; return (gen_1 === 2 ? bar(22) : (gen_1 === getbaz(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
   assert_ "(case key 2 (bar 22) (getbaz 3) baz :qwe 3 (other a))"
     {|(function () { const gen_1 = key; return (gen_1 === 2 ? bar(22) : (gen_1 === getbaz(3) ? baz : (gen_1 === "qwe" ? 3 : other(a)))) })()|};
+  assert_ "(fn [xs] (let [a (get xs 0) b (get xs 1)] (+ a b)))"
+    "(xs) => { return (function () { const a = xs[0]; const b = xs[1]; return \
+     (a + b) })() }";
+  assert_ "(fn [[a b]] (+ a b))"
+    "(p__1) => { return (function () { const a = p__1[0]; const b = p__1[1]; \
+     return (a + b) })() }";
+  assert_ "(fn [c [a b] d] (+ a b c d))"
+    "(c, p__2, d) => { return (function () { const a = p__2[0]; const b = \
+     p__2[1]; return (a + b + c + d) })() }";
   ()
 
 let () =

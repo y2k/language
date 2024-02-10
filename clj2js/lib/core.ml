@@ -87,6 +87,16 @@ let fail_node es =
   |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
   |> failwith
 
+module NameGenerator : sig
+  val get_new_var : unit -> string
+end = struct
+  let index = ref 0
+
+  let get_new_var () =
+    index := !index + 1;
+    "p__" ^ string_of_int !index
+end
+
 let rec expand_core_macro node =
   match node with
   | RBList (Atom (l, "case") :: target :: body) ->
@@ -158,6 +168,42 @@ let rec expand_core_macro node =
             ^ __LOC__
       in
       loop bindings
+  | RBList (Atom (l, "fn") :: SBList args :: body) as origin_fn -> (
+      let rec loop new_args let_args = function
+        | [] -> (new_args, let_args)
+        | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
+        | SBList xs :: tail ->
+            let virt_arg =
+              Atom (unknown_location, NameGenerator.get_new_var ())
+            in
+            let let_args =
+              xs
+              |> List.fold_left
+                   (fun (i, acc) x ->
+                     ( i + 1,
+                       acc
+                       @ [
+                           x;
+                           RBList
+                             [
+                               Atom (unknown_location, "get");
+                               virt_arg;
+                               Atom (unknown_location, string_of_int i);
+                             ];
+                         ] ))
+                   (0, let_args)
+              |> snd
+            in
+            loop (new_args @ [ virt_arg ]) let_args tail
+        | xs -> fail_node xs
+      in
+      match loop [] [] args with
+      | _, [] -> origin_fn
+      | new_args, let_args ->
+          let body =
+            RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
+          in
+          RBList [ Atom (l, "fn"); SBList new_args; body ])
   | _ -> node
 
 module MacroInterpretator = struct
