@@ -192,6 +192,17 @@ bar(2)|};
   assert_ "(fn [c [a b] d] (+ a b c d))"
     "(c, p__2, d) => { return (function () { const a = p__2[0]; const b = \
      p__2[1]; return (a + b + c + d) })() }";
+  assert_ "(ns app (:require [vendor.effects :as e] [main :as app]))"
+    "import * as e from './vendor/effects.js';\n\
+     import * as app from './main.js';";
+  assert_ "(ns a (:import [fs.promises :as fs]))"
+    "import * as fs from 'fs/promises';";
+  assert_
+    "(ns app (:require [vendor.effects :as e] [main :as app]) (:import \
+     [fs.promises :as fs]))"
+    "import * as e from './vendor/effects.js';\n\
+     import * as app from './main.js';\n\
+     import * as fs from 'fs/promises';";
   ()
 
 let () =

@@ -59,6 +59,28 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "%s.%s" (compile target)
         (String.sub field 2 (String.length field - 2))
       |> withContext
+  | RBList (Atom (_, "ns") :: _ :: depencencies) ->
+      depencencies
+      |> List.map (function
+           | RBList
+               [
+                 Atom (_, ":import");
+                 SBList [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ];
+               ] ->
+               Printf.sprintf "import * as %s from '%s';" alias
+                 (String.map (function '.' -> '/' | ch -> ch) name)
+           | RBList (Atom (_, ":require") :: requiries) ->
+               requiries
+               |> List.map (function
+                    | SBList
+                        [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ] ->
+                        Printf.sprintf "import * as %s from './%s.js';" alias
+                          (String.map (function '.' -> '/' | ch -> ch) name)
+                    | _ -> fail_node requiries)
+               |> List.reduce (Printf.sprintf "%s\n%s")
+           | x -> fail_node [ x ])
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> withContext
   | RBList (Atom (_, "require") :: requiries) ->
       requiries
       |> List.map (function
