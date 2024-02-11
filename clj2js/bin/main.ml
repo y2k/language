@@ -7,9 +7,13 @@ let read_text_file filename =
 
 let () =
   if Array.length Sys.argv <= 2 then
-    let filename = Sys.argv.(1) in
-    filename |> read_text_file |> Clj2js.main filename
-    |> Printf.sprintf "\"use strict\";\n%s"
+    (match Sys.argv.(1) with
+    | "prelude" -> (Clj2js.prelude |> Clj2js.main "prelude", "")
+    | filename ->
+        ( filename |> read_text_file |> Clj2js.main filename,
+          Clj2js.prelude_imports ))
+    |> (fun (code, imports) ->
+         Printf.sprintf "\"use strict\";\n%s\n%s" imports code)
     |> print_endline
   else
     let target = Sys.argv.(0) in

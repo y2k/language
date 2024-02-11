@@ -1,6 +1,17 @@
 module A = Angstrom
 open Core
 
+let prelude =
+  {|
+(defn atom [x] (Array/of x))
+   (defn reset [a x]
+     (.pop a)
+     (.push a x))
+   (defn deref [a] (get a 0))
+|}
+
+let prelude_imports = "import { atom, reset, deref } from './prelude.js';"
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compileOut node = compile_ context node in
   let compile node = compile_ context node |> snd in
