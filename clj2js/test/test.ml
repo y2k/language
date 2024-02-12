@@ -170,6 +170,7 @@ bar(2)|};
   assert_ "(set! foo.bar 1)" "foo.bar = 1;";
   assert_ "(set! (.-bar foo) 1)" "foo.bar = 1;";
   assert_ "(set! (.-bar (foo 2)) 1)" "foo(2).bar = 1;";
+  assert_ "(set! (.-bar (get xs 2)) 1)" "xs[2].bar = 1;";
   assert_ "(defmacro foo [a b] (list a 1)) (foo c d)" "c(1)";
   assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1);\nd(2)";
   assert_ "(type a)" "typeof a";
