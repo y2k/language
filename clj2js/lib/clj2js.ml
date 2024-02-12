@@ -64,7 +64,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "type"); arg ] ->
       Printf.sprintf "typeof %s" (compile arg) |> withContext
   | RBList [ Atom (_, "set!"); target; value ] ->
-      Printf.sprintf "%s = %s;" (compile target) (compile value) |> withContext
+      Printf.sprintf "(%s = %s)" (compile target) (compile value) |> withContext
   | RBList [ Atom (_, field); target ]
     when String.starts_with ~prefix:".-" field ->
       Printf.sprintf "%s.%s" (compile target)
