@@ -16,12 +16,13 @@
 
 ```clojure
 (ns app
- (:import [android.widget Toast])
+ (:import [android.widget Toast]
+ 	        [android.content Context])
 
-(defn- show [env text]
-  (.show 
-    (Toast/makeText env.context text Toast.LENGTH_LONG)))
+(defn- show [^Context context ^String text]
+  (.show
+    (Toast/makeText context text Toast.LENGTH_LONG)))
 
-(defn main [env]
-  (show env "Hello World")))
+(defn main [^Context context]
+  (show context "Hello World")))
 ```
