@@ -204,6 +204,9 @@ bar(2)|};
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';\n\
      import * as fs from 'fs/promises';";
+  assert_ "(ns app (:require [vendor.effects :as e] [js.foo.wrangler :as fs]))"
+    "import * as e from './vendor/effects.js';\n\
+     import * as fs from 'foo/wrangler';";
   ()
 
 let () =

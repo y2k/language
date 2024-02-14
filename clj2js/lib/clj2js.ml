@@ -85,8 +85,17 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                |> List.map (function
                     | SBList
                         [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ] ->
-                        Printf.sprintf "import * as %s from './%s.js';" alias
-                          (String.map (function '.' -> '/' | ch -> ch) name)
+                        let target =
+                          if String.starts_with name ~prefix:"js." then
+                            String.sub name 3 (String.length name - 3)
+                            |> String.map (function '.' -> '/' | ch -> ch)
+                          else
+                            Printf.sprintf "./%s.js"
+                              (String.map
+                                 (function '.' -> '/' | ch -> ch)
+                                 name)
+                        in
+                        Printf.sprintf "import * as %s from '%s';" alias target
                     | _ -> fail_node requiries)
                |> List.reduce (Printf.sprintf "%s\n%s")
            | x -> fail_node [ x ])
