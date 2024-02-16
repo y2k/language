@@ -207,6 +207,10 @@ bar(2)|};
   assert_ "(ns app (:require [vendor.effects :as e] [js.foo.wrangler :as fs]))"
     "import * as e from './vendor/effects.js';\n\
      import * as fs from 'foo/wrangler';";
+  assert_ {|(assoc! data.db 7 data.now)|} "data.db[7]=data.now";
+  assert_ "[:div.tgme]" {|["div.tgme"]|};
+  assert_ "{:div.tgme foo}" {|{"div.tgme": foo}|};
+  assert_ "{:div foo}" {|{"div": foo}|};
   ()
 
 let () =

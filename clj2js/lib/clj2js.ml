@@ -128,6 +128,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "...%s" (compile a) |> withContext
   | RBList [ Atom (_, "merge"); a; b ] ->
       Printf.sprintf "{ ...%s, ...%s }" (compile a) (compile b) |> withContext
+  | RBList [ Atom (_, "assoc!"); col; key; value ] ->
+      Printf.sprintf "%s[%s]=%s" (compile col) (compile key) (compile value)
+      |> withContext
   | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
     when String.starts_with ~prefix:":" key ->
       Printf.sprintf "{ ...%s, %s: %s }" (compile map)
