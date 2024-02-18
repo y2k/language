@@ -16,8 +16,21 @@ let () =
          Printf.sprintf "\"use strict\";\n%s\n%s" imports code)
     |> print_endline
   else
-    let target = Sys.argv.(0) in
+    let target = Sys.argv.(1) in
     let filename = Sys.argv.(2) in
     filename |> read_text_file
-    |> (if target = "js" then Clj2js.main filename else Clj2js.main_kt filename)
+    |> (match target with
+       | "js" -> Clj2js.main filename
+       | "sh" ->
+           fun str ->
+             let shebang = "#!/usr/bin/env clj2sh\n" in
+             let str =
+               if String.starts_with ~prefix:shebang str then
+                 String.sub str (String.length shebang)
+                   (String.length str - String.length shebang)
+               else str
+             in
+             "set -o xtrace\nset -e\n\n" ^ (Clj2js.main_sh filename) str
+       | "kt" -> Clj2js.main_kt filename
+       | t -> failwith @@ "Invalid target " ^ t)
     |> print_endline

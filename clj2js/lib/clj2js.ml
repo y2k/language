@@ -350,3 +350,4 @@ let main (filename : string) str =
   | Error error -> failwith ("Parse SEXP error: " ^ error)
 
 let main_kt (filename : string) str = Kt_target.main filename str
+let main_sh (filename : string) str = Bash_target.main filename str
