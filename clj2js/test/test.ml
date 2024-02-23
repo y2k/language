@@ -211,6 +211,7 @@ bar(2)|};
   assert_ "[:div.tgme]" {|["div.tgme"]|};
   assert_ "{:div.tgme foo}" {|{"div.tgme": foo}|};
   assert_ "{:div foo}" {|{"div": foo}|};
+  assert_ "(^export def foo (+ 1 2))" "export const foo = (1 + 2);";
   ()
 
 let () =

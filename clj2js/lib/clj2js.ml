@@ -178,8 +178,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        Printf.sprintf "(function() { try { %s } catch (%s) { %s } })()" try_body
          e_name catch_body)
       |> withContext
-  | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
-      Printf.sprintf "const %s = %s;" name (compile body) |> withContext
+  | RBList [ Atom (m, "def"); Atom (_, name); body ] ->
+      if m.symbol = "export" then
+        Printf.sprintf "export const %s = %s;" name (compile body) |> withContext
+      else Printf.sprintf "const %s = %s;" name (compile body) |> withContext
   | RBList [ Atom (_, "<"); a; b ] ->
       Printf.sprintf "(%s < %s)" (compile a) (compile b) |> withContext
   | RBList [ Atom (_, ">"); a; b ] ->
