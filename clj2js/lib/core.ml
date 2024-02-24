@@ -26,7 +26,12 @@ let pnode find_line_and_pos =
   in
   let patom_ = patom >>| fun (m, a) -> Atom (m, a) in
   let ptext_ =
-    A.char '"' *> A.take_while1 (function '"' -> false | _ -> true)
+    A.char '"'
+    *> ( A.many1
+           (A.char '\\' *> A.char '"'
+           >>| Fun.const "\\\""
+           <|> (A.satisfy (( <> ) '"') >>| String.make 1))
+       >>| fun x -> String.concat "" x )
     <* A.char '"'
   in
   let pmeta =
