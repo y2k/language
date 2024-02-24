@@ -226,6 +226,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s + %s")
       |> Printf.sprintf "(%s)" |> withContext
+  | RBList (Atom (_, "%") :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s %% %s")
+      |> Printf.sprintf "(%s)" |> withContext
   | RBList (Atom (_, "-") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s - %s")

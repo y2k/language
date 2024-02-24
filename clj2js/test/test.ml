@@ -213,6 +213,7 @@ bar(2)|};
   assert_ "{:div foo}" {|{"div": foo}|};
   assert_ "(^export def foo (+ 1 2))" "export const foo = (1 + 2);";
   assert_ {|(foo "foo\"bar")|} {|foo("foo\"bar")|};
+  assert_ "(% 1 2)" "(1 % 2)";
   ()
 
 let () =
