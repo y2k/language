@@ -1,0 +1,8 @@
+lib: [
+  "_build/install/default/lib/clj2js/META"
+  "_build/install/default/lib/clj2js/dune-package"
+  "_build/install/default/lib/clj2js/opam"
+]
+bin: [
+  "_build/install/default/bin/clj2js"
+]

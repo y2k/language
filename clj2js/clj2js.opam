@@ -2,6 +2,7 @@
 opam-version: "2.0"
 synopsis: "A short synopsis"
 description: "A longer description"
+maintainer: ["y2k"]
 license: "LICENSE"
 tags: ["topics" "to describe" "your" "project"]
 depends: [
