@@ -17,8 +17,45 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList
+      [
+        Atom (_, "gen-class");
+        Atom (_, ":name");
+        Atom (_, clsName);
+        Atom (_, ":extends");
+        Atom (_, superCls);
+        Atom (_, ":prefix");
+        Atom (_, prefix);
+        Atom (_, ":methods");
+        SBList methods;
+      ]
+    when String.starts_with ~prefix:"\"" prefix ->
+      let prefix = String.sub prefix 1 (String.length prefix - 2) in
+      let ms =
+        methods
+        |> List.map (function
+             | SBList [ Atom (_, mname); SBList args; Atom (_, rtype) ] ->
+                 let args_ =
+                   args
+                   |> List.mapi (fun i a ->
+                          match a with
+                          | Atom (_, a) -> Printf.sprintf "p%i: %s" i a
+                          | x -> fail_node [ x ])
+                   |> List.reduce (Printf.sprintf "%s, %s")
+                 in
+                 let args__ =
+                   args
+                   |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+                   |> List.reduce (Printf.sprintf "%s, %s")
+                 in
+                 Printf.sprintf "override fun %s(%s): %s = %s%s(this, %s)" mname
+                   args_ rtype prefix mname args__
+             | x -> fail_node [ x ])
+        |> List.reduce (Printf.sprintf "%s\n%s")
+      in
+      Printf.sprintf "class %s : %s() { %s }" clsName superCls ms |> withContext
   | RBList [ Atom (_, "as"); value; cls ] ->
-      Printf.sprintf "%s as %s" (compile value) (compile cls) |> withContext
+      Printf.sprintf "(%s as %s)" (compile value) (compile cls) |> withContext
   | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
       let imports =
         ns_params
