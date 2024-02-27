@@ -17,6 +17,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList [ Atom (_, "if"); c; a; b ] ->
+      Printf.sprintf "if (%s) { %s } else { %s }" (compile c) (compile a)
+        (compile b)
+      |> withContext
   | RBList
       [
         Atom (_, "gen-class");
@@ -78,9 +82,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s + %s")
       |> Printf.sprintf "(%s)" |> withContext
+  | RBList [ Atom (_, ">"); a; b ] ->
+      Printf.sprintf "(%s > %s)" (compile a) (compile b) |> withContext
   | RBList (Atom (l, "defn") :: Atom (_, fname) :: SBList args :: body) ->
       let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
       Printf.sprintf "val %s = %s" fname (compile fn) |> withContext
+  | RBList (Atom (l, "defn-") :: Atom (_, fname) :: SBList args :: body) ->
+      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
+      Printf.sprintf "private val %s = %s" fname (compile fn) |> withContext
   | RBList (Atom (_, "fn") :: SBList args :: body) ->
       let sargs =
         match args with
