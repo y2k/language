@@ -64,7 +64,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "type"); arg ] ->
       Printf.sprintf "typeof %s" (compile arg) |> withContext
   | RBList [ Atom (_, "set!"); target; value ] ->
-      Printf.sprintf "(%s = %s);" (compile target) (compile value) |> withContext
+      Printf.sprintf "(%s = %s);" (compile target) (compile value)
+      |> withContext
   | RBList [ Atom (_, field); target ]
     when String.starts_with ~prefix:".-" field ->
       Printf.sprintf "%s.%s" (compile target)
@@ -178,9 +179,20 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        Printf.sprintf "(function() { try { %s } catch (%s) { %s } })()" try_body
          e_name catch_body)
       |> withContext
+  | RBList
+      [
+        Atom (l, "def");
+        Atom (mn, fname);
+        RBList (Atom (_, "fn*") :: SBList args :: body);
+      ] ->
+      let modifier = match mn.symbol with ":private" -> "" | _ -> "export " in
+      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
+      Printf.sprintf "%sconst %s = %s;" modifier fname (compile fn)
+      |> withContext
   | RBList [ Atom (m, "def"); Atom (_, name); body ] ->
       if m.symbol = "export" then
-        Printf.sprintf "export const %s = %s;" name (compile body) |> withContext
+        Printf.sprintf "export const %s = %s;" name (compile body)
+        |> withContext
       else Printf.sprintf "const %s = %s;" name (compile body) |> withContext
   | RBList [ Atom (_, "<"); a; b ] ->
       Printf.sprintf "(%s < %s)" (compile a) (compile b) |> withContext
@@ -240,14 +252,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "(%s)" |> withContext
   | RBList [ Atom (_, "/"); a; b ] ->
       Printf.sprintf "(%s / %s)" (compile a) (compile b) |> withContext
-  | RBList (Atom (l, "defn") :: Atom (_, fname) :: SBList args :: body) ->
-      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
-      Printf.sprintf "export const %s = %s" fname (compile fn) |> withContext
   | RBList (Atom (_, "while") :: condition :: body) ->
       Printf.sprintf "while (%s) {%s}" (compile condition)
         (body |> List.map compile |> List.reduce (Printf.sprintf "%s;%s"))
       |> withContext
-  | RBList (Atom (_, "fn") :: SBList args :: body) ->
+  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         match args with
         | [] -> ""

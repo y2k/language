@@ -17,6 +17,15 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList (Atom (_, "str") :: args) ->
+      args |> List.map compile
+      |> List.fold_left (fun acc x -> acc ^ "+" ^ x) {|""|}
+      |> Printf.sprintf "(%s)" |> withContext
+  | RBList [ Atom (_, "="); a; b ] ->
+      compile a ^ " == " ^ compile b |> withContext
+  | RBList [ Atom (_, "get"); target; index ] ->
+      Printf.sprintf "geta(%s, %s)" (compile target) (compile index)
+      |> withContext
   | RBList [ Atom (_, "if"); c; a; b ] ->
       Printf.sprintf "if (%s) { %s } else { %s }" (compile c) (compile a)
         (compile b)
@@ -78,19 +87,55 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s\n%s")
       in
       Printf.sprintf "package %s\n%s\n" name imports |> withContext
-  | RBList (Atom (_, "+") :: xs) ->
-      xs |> List.map compile
-      |> List.reduce (Printf.sprintf "%s + %s")
-      |> Printf.sprintf "(%s)" |> withContext
+  | RBList (Atom (_, "+") :: args) ->
+      args |> List.map compile
+      |> List.reduce (Printf.sprintf "%s, %s")
+      |> Printf.sprintf "prelude.plus(%s)"
+      |> withContext
+  | RBList [ Atom (_, "-"); a; b ] ->
+      Printf.sprintf "prelude.minus(%s, %s)" (compile a) (compile b)
+      |> withContext
   | RBList [ Atom (_, ">"); a; b ] ->
       Printf.sprintf "(%s > %s)" (compile a) (compile b) |> withContext
-  | RBList (Atom (l, "defn") :: Atom (_, fname) :: SBList args :: body) ->
-      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
-      Printf.sprintf "val %s = %s" fname (compile fn) |> withContext
-  | RBList (Atom (l, "defn-") :: Atom (_, fname) :: SBList args :: body) ->
-      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
-      Printf.sprintf "private val %s = %s" fname (compile fn) |> withContext
-  | RBList (Atom (_, "fn") :: SBList args :: body) ->
+  | RBList
+      (* [ Atom (_, "def"); k; RBList (Atom (_, "fn*") :: SBList args :: body) ] -> *)
+      [ Atom (_, "def"); k; RBList (Atom (_, "fn*") :: SBList args :: body) ] ->
+      let sargs =
+        match args with
+        | [] -> ""
+        | _ ->
+            args
+            |> List.map (function
+                 | Atom (m, x) ->
+                     if m.symbol = "" then x ^ ":Any?" else x ^ ":" ^ m.symbol
+                 | x -> fail_node [ x ])
+            |> List.reduce (Printf.sprintf "%s, %s")
+      in
+      let sbody =
+        body |> List.map compile |> List.rev
+        |> List.mapi (fun i x -> if i = 0 then x else x)
+        |> List.rev
+        |> List.reduce (Printf.sprintf "%s; %s")
+      in
+      let modifier =
+        match k with
+        | Atom (l, _) when l.symbol = ":private" -> "private "
+        | _ -> ""
+      in
+      Printf.sprintf "%sfun %s(%s) : Any? = run { %s };" modifier (compile k)
+        sargs sbody
+      |> withContext
+  | RBList [ Atom (_, "def"); k; v ] ->
+      let modifier =
+        match k with
+        | Atom (l, _) when l.symbol = ":private" -> "private "
+        | _ -> ""
+      in
+      Printf.sprintf "%sval %s = %s;" modifier (compile k) (compile v)
+      |> withContext
+  | RBList (Atom (l, "fn") :: SBList args :: body) ->
+      Core.unpack_args (Atom (l, "fn*")) args body |> compile |> withContext
+  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         match args with
         | [] -> ""
@@ -101,7 +146,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                      if m.symbol = "" then x else x ^ ":" ^ m.symbol
                  | x -> fail_node [ x ])
             |> List.reduce (Printf.sprintf "%s, %s")
-            |> Printf.sprintf "%s -> "
+            |> Printf.sprintf "%s ->"
       in
       let sbody =
         body |> List.map compile |> List.rev
@@ -111,6 +156,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "{ %s %s }" sargs sbody |> withContext
   | RBList (Atom (_, "let") :: SBList vals :: body) ->
+      Core.unpack_let_args vals body |> compile |> withContext
+  | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec parse_vals nodes =
         match nodes with
         | Atom (_, val_name) :: val_body :: remain ->
@@ -171,6 +218,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
   (* Functions or Macro calls *)
+  | RBList [ (Atom (_, fname) as key); source ]
+    when String.starts_with ~prefix:":" fname ->
+      Printf.sprintf "getm(%s, %s)" (compile source) (compile key)
+      |> withContext
   | RBList (Atom (l, fname) :: args) ->
       (if String.starts_with ~prefix:"." fname then
          let mname = String.sub fname 1 (String.length fname - 1) in
@@ -210,29 +261,23 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> withContext
   | n -> fail_node [ n ]
 
-let main (filename : string) str =
+let main (filename : string) code =
   let prelude_macros =
-    {|(defmacro defn- [name args & body]
-        (list 'def name
-          (concat
-            (list 'fn args)
-            body)))
-      (defmacro do [& body] (concat (list 'let (vector)) body))
+    {|(defmacro do [& body] (concat (list 'let (vector)) body))
       (defmacro FIXME [& args]
         (list 'throw
-          (list 'Error.
+          (list 'Exception.
             (concat
               (list
                 'str
                 (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
               args))))
-      (defmacro str [& args] (concat (list '+ "") args))
     |}
-    |> A.parse_string ~consume:All (pnode (find_line_and_pos str))
+    |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
     |> Result.get_ok
   in
   let result =
-    str |> A.parse_string ~consume:All (pnode (find_line_and_pos str))
+    code |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
   in
   match result with
   | Ok result ->

@@ -22,26 +22,26 @@ let () =
     {|(defn fetch [request env context]
                 (.log console request)
                 (.log console request))|}
-    {|export const fetch = (request, env, context) => { console.log(request); return console.log(request) }|};
+    {|export const fetch = (request, env, context) => { console.log(request); return console.log(request) };|};
   assert_
     {|(defn fetch [request env context]
         (->
           a b))|}
-    "export const fetch = (request, env, context) => { return b(a) }";
+    "export const fetch = (request, env, context) => { return b(a) };";
   assert_
     {|(defn fetch [request env context]
         (->
          (.json request null)
          (.next (fn [text] (failwith "???")))))|}
-    {|export const fetch = (request, env, context) => { return request.json(null).next((text) => { return failwith("???") }) }|};
+    {|export const fetch = (request, env, context) => { return request.json(null).next((text) => { return failwith("???") }) };|};
   assert_
     {|(defn fetch [request env context]
         request)|}
-    "export const fetch = (request, env, context) => { return request }";
+    "export const fetch = (request, env, context) => { return request };";
   assert_
     {|(defn fetch-handler [request env context] request)
      (export-default {:fetch fetch-handler})|}
-    {|export const fetch-handler = (request, env, context) => { return request }
+    {|export const fetch-handler = (request, env, context) => { return request };
 export default {"fetch": fetch-handler}|};
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
@@ -150,7 +150,7 @@ bar(2)|};
   assert_ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
   assert_ "(defn- foo [x] x)" "const foo = (x) => { return x };";
-  assert_ "(defn foo [x] x)" "export const foo = (x) => { return x }";
+  assert_ "(defn foo [x] x)" "export const foo = (x) => { return x };";
   assert_ "(foo FIXME)"
     {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
   assert_ "(foo (FIXME A1 B2))"
@@ -219,18 +219,20 @@ bar(2)|};
 let () =
   assert_
     "(defn fetch [^java.lang.Integer request ^kotlin.List env context] request)"
-    "export const fetch = (request, env, context) => { return request }";
+    "export const fetch = (request, env, context) => { return request };";
   assert_ "(defn foo [^an.app.Ac act ^an.we.WeVi webView] act)"
-    "export const foo = (act, webView) => { return act }";
+    "export const foo = (act, webView) => { return act };";
   assert_ "(defn foo [ ^an.app.Ac act ^an.we.WeVi webView] act)"
-    "export const foo = (act, webView) => { return act }";
+    "export const foo = (act, webView) => { return act };";
   assert_ {|(defn foo [^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
-    "export const foo = (a, b) => { return a }";
+    "export const foo = (a, b) => { return a };";
   assert_ {|(defn foo [ ^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
-    "export const foo = (a, b) => { return a }";
+    "export const foo = (a, b) => { return a };";
   ()
 
 let () =
   assert_file "hotreload-client.clj";
   assert_file "sample1.clj";
   ()
+
+let () = Test_kt.main ()
