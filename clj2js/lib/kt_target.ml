@@ -17,6 +17,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList [ Atom (_, "__unsafe_inject_code"); Atom (_, code) ]
+    when String.get code 0 = '\"' ->
+      String.sub code 1 (String.length code - 2)
+      |> Scanf.unescaped |> withContext
   | RBList (Atom (_, "str") :: args) ->
       args |> List.map compile
       |> List.fold_left (fun acc x -> acc ^ "+" ^ x) {|""|}

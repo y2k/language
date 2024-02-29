@@ -23,4 +23,9 @@ let main () =
   assert_ {|(def ^:private foo 1)|} {|private val foo = 1;|};
   assert_ {|(.map (listOf "") (fn [x] x))|} {|listOf("").map({ x -> x })|};
   assert_ {|(str 1 "2" 3)|} {|(""+1+"2"+3)|};
+  assert_ {|(foo "a\"b")|} {|foo("a\"b")|};
+  assert_ {|(__unsafe_inject_code "fun getm() = error(\"require Map\")")|}
+    {|fun getm() = error("require Map")|};
+  assert_ {|(__unsafe_inject_code "fun foo() = \"a\\\"b\"")|}
+    {|fun foo() = "a\"b"|};
   ()
