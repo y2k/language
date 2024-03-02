@@ -39,8 +39,8 @@ let pnode find_line_and_pos =
     *> (ptext_
        <|> A.take_while1 (fun x ->
                (x >= 'A' && x <= 'z')
-               || x = '.' || x = '(' || x = ')' || x = '-' || x = '>' || x = ':')
-       )
+               || x = '.' || x = '(' || x = ')' || x = '-' || x = '>' || x = ':'
+               || x = '?'))
   in
   let patom_meta =
     A.map2 (pmeta <* pspace) patom ~f:(fun m (a, x) ->
@@ -172,6 +172,7 @@ let unpack_let_args args body =
 
 let rec expand_core_macro node =
   match node with
+  | RBList (Atom (_, "let") :: SBList vals :: body) -> unpack_let_args vals body
   | RBList (Atom (l, "defn") :: (Atom _ as name) :: SBList args :: body) ->
       RBList
         [
@@ -210,6 +211,7 @@ let rec expand_core_macro node =
           SBList [ Atom (unknown_location, "gen_1"); target ];
           loop body;
         ]
+      |> expand_core_macro
   | RBList (Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_
@@ -254,7 +256,7 @@ let rec expand_core_macro node =
             failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] "
             ^ __LOC__
       in
-      loop bindings
+      loop bindings |> expand_core_macro
   | RBList (Atom (l, "fn") :: SBList args :: body) -> (
       let rec loop new_args let_args = function
         | [] -> (new_args, let_args)
@@ -361,4 +363,50 @@ module MacroInterpretator = struct
         in
         body |> List.map execute
     | _ -> failwith "FIXME"
+end
+
+module Simplifier = struct
+  let rec compile_ (context : context) (node : cljexp) : context * cljexp =
+    let compileOut node = (context, node) in
+    let compile node = compile_ context node |> snd in
+    let withContext node = (context, node) in
+    match expand_core_macro node with
+    | Atom (loc, "FIXME") ->
+        RBList
+          [
+            Atom (loc, "throw");
+            RBList
+              [
+                Atom (unknown_location, "Error.");
+                Atom
+                  ( unknown_location,
+                    Printf.sprintf {|"Not implemented %s:%i:%i"|}
+                      context.filename loc.line loc.pos );
+              ];
+          ]
+        |> compileOut
+    | Atom _ as x -> x |> withContext
+    | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
+        ( { context with macros = StringMap.add name macro context.macros },
+          Atom (unknown_location, "comment") )
+    | RBList (Atom (l, fname) :: args)
+      when StringMap.exists (fun n _ -> n = fname) context.macros ->
+        MacroInterpretator.run { context with loc = l }
+          (StringMap.find fname context.macros)
+          args
+        |> List.map compile |> List.hd |> withContext
+    | SBList xs -> SBList (List.map compile xs) |> withContext
+    | CBList xs -> CBList (List.map compile xs) |> withContext
+    | RBList xs -> RBList (List.map compile xs) |> withContext
+
+  let simplify (code : string) =
+    code
+    |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
+    |> Result.fold ~ok:Fun.id ~error:(fun error ->
+           failwith ("Parse SEXP error: " ^ error))
+    |> List.map (fun x ->
+           compile_
+             { filename = ""; loc = unknown_location; macros = StringMap.empty }
+             x
+           |> snd)
 end

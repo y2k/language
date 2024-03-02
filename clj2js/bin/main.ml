@@ -20,6 +20,7 @@ let () =
     let filename = Sys.argv.(2) in
     filename |> read_text_file
     |> (match target with
+       | "json" -> Clj2js.main_json filename
        | "js" -> Clj2js.main filename
        | "sh" ->
            fun str ->

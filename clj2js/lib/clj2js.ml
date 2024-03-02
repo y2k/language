@@ -272,7 +272,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s; %s")
       in
       Printf.sprintf "(%s) => { %s }" sargs sbody |> withContext
-  | RBList (Atom (_, "let") :: SBList vals :: body) ->
+  | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec parse_vals nodes =
         match nodes with
         | Atom (_, val_name) :: val_body :: remain ->
@@ -366,3 +366,4 @@ let main (filename : string) str =
 
 let main_kt (filename : string) str = Kt_target.main filename str
 let main_sh (filename : string) str = Bash_target.main filename str
+let main_json (filename : string) str = Ast_target.main filename str

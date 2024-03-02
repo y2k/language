@@ -72,7 +72,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "class %s : %s() { %s }" clsName superCls ms |> withContext
   | RBList [ Atom (_, "as"); value; cls ] ->
-      Printf.sprintf "(%s as %s)" (compile value) (compile cls) |> withContext
+      let target = compile cls in
+      let target =
+        if String.starts_with ~prefix:"\"" target then
+          String.sub target 1 (String.length target - 2)
+        else target
+      in
+      Printf.sprintf "(%s as %s)" (compile value) target |> withContext
   | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
       let imports =
         ns_params
@@ -125,8 +131,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | Atom (l, _) when l.symbol = ":private" -> "private "
         | _ -> ""
       in
-      Printf.sprintf "%sfun %s(%s) : Any? = run { %s };" modifier (compile k)
-        sargs sbody
+      let ret_type =
+        match k with
+        | Atom (l, _) when String.length l.symbol > 0 -> ":" ^ l.symbol
+        | _ -> ""
+      in
+      Printf.sprintf "%sfun %s(%s)%s = run { %s };" modifier (compile k) sargs
+        ret_type sbody
       |> withContext
   | RBList [ Atom (_, "def"); k; v ] ->
       let modifier =
