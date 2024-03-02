@@ -102,7 +102,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, ">"); a; b ] ->
       Printf.sprintf "(%s > %s)" (compile a) (compile b) |> withContext
   | RBList
-      (* [ Atom (_, "def"); k; RBList (Atom (_, "fn*") :: SBList args :: body) ] -> *)
       [ Atom (_, "def"); k; RBList (Atom (_, "fn*") :: SBList args :: body) ] ->
       let sargs =
         match args with
@@ -119,7 +118,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         body |> List.map compile |> List.rev
         |> List.mapi (fun i x -> if i = 0 then x else x)
         |> List.rev
-        |> List.reduce (Printf.sprintf "%s; %s")
+        |> List.reduce (Printf.sprintf "%s\n%s")
       in
       let modifier =
         match k with
@@ -175,7 +174,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         body |> List.map compile |> List.rev
         |> List.mapi (fun i x -> if i = 0 then "" ^ x else x)
         |> List.rev
-        |> List.reduce (Printf.sprintf "%s; %s")
+        |> List.reduce (Printf.sprintf "%s\n%s")
       in
       "" ^ svals ^ sbody ^ "" |> withContext
   | RBList (Atom (_, "proxy") :: SBList supers :: _ :: body) ->

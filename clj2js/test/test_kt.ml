@@ -7,9 +7,11 @@ let assert_ code expected =
 
 let main () =
   assert_ {|(defn foo [^Int a ^Int b] (+ a b) (- a b))|}
-    {|fun foo(a:Int, b:Int) : Any? = run { prelude.plus(a, b); prelude.minus(a, b) };|};
+    {|fun foo(a:Int, b:Int) : Any? = run { prelude.plus(a, b)
+prelude.minus(a, b) };|};
   assert_ {|(defn foo [a b] (+ a b) (- a b))|}
-    {|fun foo(a:Any?, b:Any?) : Any? = run { prelude.plus(a, b); prelude.minus(a, b) };|};
+    {|fun foo(a:Any?, b:Any?) : Any? = run { prelude.plus(a, b)
+prelude.minus(a, b) };|};
   assert_ {|(defn foo [a b] (a b))|}
     {|fun foo(a:Any?, b:Any?) : Any? = run { a(b) };|};
   assert_ {|(defn foo [[a b]] (a b))|}
