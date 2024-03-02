@@ -69,11 +69,18 @@ let find_line_and_pos str index =
   in
   aux 0 1 1
 
+let string_to_sexp code =
+  code
+  |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
+  |> Result.fold ~ok:Fun.id ~error:(fun error ->
+         failwith ("Parse SEXP error: " ^ error))
+
 module StringMap = Map.Make (String)
 
 type context = {
   filename : string;
   loc : location;
+  start_line : int;
   macros : cljexp StringMap.t;
 }
 
@@ -104,40 +111,40 @@ end = struct
     "p__" ^ string_of_int !index
 end
 
-let unpack_args orign_prefix args body =
-  let rec loop new_args let_args = function
-    | [] -> (new_args, let_args)
-    | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
-    | SBList xs :: tail ->
-        let virt_arg = Atom (unknown_location, NameGenerator.get_new_var ()) in
-        let let_args =
-          xs
-          |> List.fold_left
-               (fun (i, acc) x ->
-                 ( i + 1,
-                   acc
-                   @ [
-                       x;
-                       RBList
-                         [
-                           Atom (unknown_location, "get");
-                           virt_arg;
-                           Atom (unknown_location, string_of_int i);
-                         ];
-                     ] ))
-               (0, let_args)
-          |> snd
-        in
-        loop (new_args @ [ virt_arg ]) let_args tail
-    | xs -> fail_node xs
-  in
-  match loop [] [] args with
-  | _, [] -> RBList (orign_prefix :: SBList args :: body)
-  | new_args, let_args ->
-      let body =
-        RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
-      in
-      RBList [ orign_prefix; SBList new_args; body ]
+(* let unpack_args orign_prefix args body =
+   let rec loop new_args let_args = function
+     | [] -> (new_args, let_args)
+     | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
+     | SBList xs :: tail ->
+         let virt_arg = Atom (unknown_location, NameGenerator.get_new_var ()) in
+         let let_args =
+           xs
+           |> List.fold_left
+                (fun (i, acc) x ->
+                  ( i + 1,
+                    acc
+                    @ [
+                        x;
+                        RBList
+                          [
+                            Atom (unknown_location, "get");
+                            virt_arg;
+                            Atom (unknown_location, string_of_int i);
+                          ];
+                      ] ))
+                (0, let_args)
+           |> snd
+         in
+         loop (new_args @ [ virt_arg ]) let_args tail
+     | xs -> fail_node xs
+   in
+   match loop [] [] args with
+   | _, [] -> RBList (orign_prefix :: SBList args :: body)
+   | new_args, let_args ->
+       let body =
+         RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
+       in
+       RBList [ orign_prefix; SBList new_args; body ] *)
 
 let unpack_let_args args body =
   let rec loop = function
@@ -346,7 +353,9 @@ module MacroInterpretator = struct
               | a, b -> fail_node [ a; b ])
           | Atom (_, "__FILENAME__") -> Atom (unknown_location, context.filename)
           | Atom (_, "__LINE__") ->
-              Atom (unknown_location, string_of_int context.loc.line)
+              Atom
+                ( unknown_location,
+                  string_of_int (context.loc.line - context.start_line) )
           | Atom (_, "__POSITION__") ->
               Atom (unknown_location, string_of_int context.loc.pos)
           | Atom (_, x) when String.starts_with ~prefix:"'" x ->
@@ -366,10 +375,9 @@ module MacroInterpretator = struct
 end
 
 module Simplifier = struct
-  let rec compile_ (context : context) (node : cljexp) : context * cljexp =
-    let compileOut node = (context, node) in
-    let compile node = compile_ context node |> snd in
-    let withContext node = (context, node) in
+  let rec simplify (context : context) (node : cljexp) : context * cljexp list =
+    let simplify_ node = simplify context node |> snd in
+    let withContext node = (context, [ node ]) in
     match expand_core_macro node with
     | Atom (loc, "FIXME") ->
         RBList
@@ -381,32 +389,52 @@ module Simplifier = struct
                 Atom
                   ( unknown_location,
                     Printf.sprintf {|"Not implemented %s:%i:%i"|}
-                      context.filename loc.line loc.pos );
+                      context.filename
+                      (loc.line - context.start_line)
+                      loc.pos );
               ];
           ]
-        |> compileOut
+        |> withContext
     | Atom _ as x -> x |> withContext
     | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
-        ( { context with macros = StringMap.add name macro context.macros },
-          Atom (unknown_location, "comment") )
+        (* print_endline @@ "DEFMACRO: " ^ name; *)
+        ({ context with macros = StringMap.add name macro context.macros }, [])
     | RBList (Atom (l, fname) :: args)
       when StringMap.exists (fun n _ -> n = fname) context.macros ->
-        MacroInterpretator.run { context with loc = l }
-          (StringMap.find fname context.macros)
-          args
-        |> List.map compile |> List.hd |> withContext
-    | SBList xs -> SBList (List.map compile xs) |> withContext
-    | CBList xs -> CBList (List.map compile xs) |> withContext
-    | RBList xs -> RBList (List.map compile xs) |> withContext
-
-  let simplify (code : string) =
-    code
-    |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
-    |> Result.fold ~ok:Fun.id ~error:(fun error ->
-           failwith ("Parse SEXP error: " ^ error))
-    |> List.map (fun x ->
-           compile_
-             { filename = ""; loc = unknown_location; macros = StringMap.empty }
-             x
-           |> snd)
+        (* print_endline @@ "CALL_MACRO: " ^ fname; *)
+        ( context,
+          MacroInterpretator.run { context with loc = l }
+            (StringMap.find fname context.macros)
+            args
+          |> List.concat_map simplify_ )
+    | SBList xs ->
+        (* SBList (List.map simplify_ xs) |> withContext *)
+        let context, body = List.fold_left_map simplify context xs in
+        (context, [ SBList (List.concat body) ])
+    | CBList xs ->
+        (* CBList (List.map simplify_ xs) |> withContext *)
+        let context, body = List.fold_left_map simplify context xs in
+        (context, [ CBList (List.concat body) ])
+    | RBList xs ->
+        let context, body = List.fold_left_map simplify context xs in
+        (context, [ RBList (List.concat body) ])
 end
+
+let parse_and_simplify filename code =
+  (* print_endline "================================================"; *)
+  let sexp =
+    match string_to_sexp ("(module " ^ code ^ ")") with
+    | [ x ] -> x
+    | _ -> failwith "Illegal state"
+  in
+  Simplifier.simplify
+    {
+      filename;
+      loc = unknown_location;
+      start_line = 17;
+      macros = StringMap.empty;
+    }
+    sexp
+  |> function
+  | ctx, [ x ] -> (ctx, x)
+  | _ -> failwith "Illegal state"

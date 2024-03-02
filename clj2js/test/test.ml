@@ -1,7 +1,11 @@
 let assert_ code expected =
-  let actual = Clj2js.main "main.clj" code in
+  let _ctx, actual = Clj2js.main "main.clj" code in
   if actual <> expected then (
     print_endline actual;
+    (* print_newline ();
+    print_endline "<MACROS>";
+    Clj2js__Core.StringMap.iter (fun k _v -> print_endline k) ctx.macros;
+    print_endline "</MACROS>"; *)
     print_newline ();
     failwith "actual <> expected")
 
@@ -172,7 +176,7 @@ bar(2)|};
   assert_ "(set! (.-bar (foo 2)) 1)" "(foo(2).bar = 1);";
   assert_ "(set! (.-bar (get xs 2)) 1)" "(xs[2].bar = 1);";
   assert_ "(defmacro foo [a b] (list a 1)) (foo c d)" "c(1)";
-  assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1);\nd(2)";
+  assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1)\nd(2)";
   assert_ "(type a)" "typeof a";
   assert_ {|(= (type a) "String")|} {|typeof a === "String"|};
   assert_ "(not a)" "!a";

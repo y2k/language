@@ -7,6 +7,6 @@ let rec cljexp_to_json = function
   | SBList xs -> `List (List.map cljexp_to_json xs)
   | CBList xs -> `List (List.map cljexp_to_json xs)
 
-let main _ code =
-  Simplifier.simplify code |> List.hd |> Core.expand_core_macro
-  |> cljexp_to_json |> Yojson.Safe.to_string
+let main filename code =
+  Core.parse_and_simplify filename code
+  |> snd |> cljexp_to_json |> Yojson.Safe.to_string

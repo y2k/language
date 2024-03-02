@@ -16,7 +16,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   let compileOut node = compile_ context node in
   let compile node = compile_ context node |> snd in
   let withContext node = (context, node) in
-  match expand_core_macro node with
+  match node with
   (* "Macro function" *)
   | Atom (loc, "FIXME") ->
       RBList
@@ -32,6 +32,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             ];
         ]
       |> compileOut
+  | RBList (Atom (_, "module") :: body) ->
+      body |> List.map compile
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> withContext
   | RBList [ Atom (l, "first"); body ] ->
       RBList
         [
@@ -186,7 +190,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         RBList (Atom (_, "fn*") :: SBList args :: body);
       ] ->
       let modifier = match mn.symbol with ":private" -> "" | _ -> "export " in
-      let fn = RBList (Atom (l, "fn") :: SBList args :: body) in
+      let fn = RBList (Atom (l, "fn*") :: SBList args :: body) in
       Printf.sprintf "%sconst %s = %s;" modifier fname (compile fn)
       |> withContext
   | RBList [ Atom (m, "def"); Atom (_, name); body ] ->
@@ -290,7 +294,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       "(function () { " ^ svals ^ sbody ^ " })()" |> withContext
   (* Functions or Macro calls *)
-  | RBList (Atom (l, fname) :: args) ->
+  | RBList (Atom (_, fname) :: args) ->
       (if String.starts_with ~prefix:"." fname then
          let mname = String.sub fname 1 (String.length fname - 1) in
          let this = List.hd args |> compile in
@@ -313,12 +317,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
          in
          fargs |> Printf.sprintf "new %s(%s)" cnst_name
-       else if StringMap.exists (fun n _ -> n = fname) context.macros then
-         MacroInterpretator.run { context with loc = l }
-           (StringMap.find fname context.macros)
-           args
-         |> List.map compile
-         |> List.reduce (Printf.sprintf "%s;\n%s")
+         (* else if StringMap.exists (fun n _ -> n = fname) context.macros then
+            MacroInterpretator.run { context with loc = l }
+              (StringMap.find fname context.macros)
+              args
+            |> List.map compile
+            |> List.reduce (Printf.sprintf "%s;\n%s") *)
        else
          let sargs =
            if List.length args = 0 then ""
@@ -329,7 +333,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> withContext
   | x -> fail_node [ x ]
 
-let main (filename : string) str =
+let main (filename : string) code =
   let prelude_macros =
     {|(defmacro defn- [name args & body]
         (list 'def name
@@ -348,21 +352,12 @@ let main (filename : string) str =
               args))))
       (defmacro str [& args] (concat (list '+ "") args))
     |}
-    |> A.parse_string ~consume:All (pnode (find_line_and_pos str))
-    |> Result.get_ok
   in
-  let result =
-    str |> A.parse_string ~consume:All (pnode (find_line_and_pos str))
-  in
-  match result with
-  | Ok result ->
-      List.concat [ prelude_macros; result ]
-      |> List.fold_left_map compile_
-           { filename; loc = unknown_location; macros = StringMap.empty }
-      |> snd
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> String.trim
-  | Error error -> failwith ("Parse SEXP error: " ^ error)
+  String.concat "\n" [ prelude_macros; code ]
+  |> Core.parse_and_simplify filename
+  |> fun (ctx, exp) ->
+  let a, b = compile_ ctx exp in
+  (a, String.trim b)
 
 let main_kt (filename : string) str = Kt_target.main filename str
 let main_sh (filename : string) str = Bash_target.main filename str

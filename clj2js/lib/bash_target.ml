@@ -5,7 +5,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let withContext node = (context, node) in
   (* expand_core_macro node |> show_cljexp |> print_endline; *)
-  match expand_core_macro node with
+  match node with
   | Atom (_, x) when String.uppercase_ascii x = x ->
       Printf.sprintf {|"${%s}"|} x |> withContext
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
@@ -70,32 +70,16 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       "" ^ svals ^ sbody ^ "" |> withContext
   (* Functions or Macro calls *)
-  | RBList (Atom (l, fname) :: args) ->
-      (if StringMap.exists (fun n _ -> n = fname) context.macros then
-         MacroInterpretator.run { context with loc = l }
-           (StringMap.find fname context.macros)
-           args
-         |> List.map compile
-         |> List.reduce (Printf.sprintf "%s;\n%s")
-       else
-         let sargs =
-           if List.length args = 0 then ""
-           else args |> List.map compile |> List.reduce (Printf.sprintf "%s %s")
-         in
-         fname ^ " " ^ sargs)
+  | RBList (Atom (_, fname) :: args) ->
+      (let sargs =
+         if List.length args = 0 then ""
+         else args |> List.map compile |> List.reduce (Printf.sprintf "%s %s")
+       in
+       fname ^ " " ^ sargs)
       |> withContext
   | n -> fail_node [ n ]
 
-let main (filename : string) str =
-  let result =
-    str |> A.parse_string ~consume:All (pnode (find_line_and_pos str))
-  in
-  match result with
-  | Ok result ->
-      List.concat [ result ]
-      |> List.fold_left_map compile_
-           { filename; loc = unknown_location; macros = StringMap.empty }
-      |> snd
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> String.trim
-  | Error error -> failwith ("Parse SEXP error: " ^ error)
+let main (filename : string) code =
+  Core.parse_and_simplify filename code
+  |> (fun (ctx, exp) -> compile_ ctx exp)
+  |> snd |> String.trim

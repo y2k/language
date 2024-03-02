@@ -4,7 +4,7 @@ open Core
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let withContext node = (context, node) in
-  match expand_core_macro node with
+  match node with
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> withContext
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> withContext
@@ -17,6 +17,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "listOf(%s)"
       |> withContext
   (* ========================== *)
+  | RBList (Atom (_, "module") :: body) ->
+      body |> List.map compile
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> withContext
   | RBList [ Atom (_, "__unsafe_inject_code"); Atom (_, code) ]
     when String.get code 0 = '\"' ->
       String.sub code 1 (String.length code - 2)
@@ -147,8 +151,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%sval %s = %s;" modifier (compile k) (compile v)
       |> withContext
-  | RBList (Atom (l, "fn") :: SBList args :: body) ->
-      Core.unpack_args (Atom (l, "fn*")) args body |> compile |> withContext
+  (* | RBList (Atom (l, "fn") :: SBList args :: body) ->
+      Core.unpack_args (Atom (l, "fn*")) args body |> compile |> withContext *)
   | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         match args with
@@ -169,8 +173,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s; %s")
       in
       Printf.sprintf "{ %s %s }" sargs sbody |> withContext
-  | RBList (Atom (_, "let") :: SBList vals :: body) ->
-      Core.unpack_let_args vals body |> compile |> withContext
+  (* | RBList (Atom (_, "let") :: SBList vals :: body) ->
+      Core.unpack_let_args vals body |> compile |> withContext *)
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec parse_vals nodes =
         match nodes with
@@ -236,7 +240,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     when String.starts_with ~prefix:":" fname ->
       Printf.sprintf "getm(%s, %s)" (compile source) (compile key)
       |> withContext
-  | RBList (Atom (l, fname) :: args) ->
+  | RBList (Atom (_, fname) :: args) ->
       (if String.starts_with ~prefix:"." fname then
          let mname = String.sub fname 1 (String.length fname - 1) in
          let this = List.hd args |> compile in
@@ -259,12 +263,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
          in
          fargs |> Printf.sprintf "%s(%s)" cnst_name
-       else if StringMap.exists (fun n _ -> n = fname) context.macros then
-         MacroInterpretator.run { context with loc = l }
-           (StringMap.find fname context.macros)
-           args
-         |> List.map compile
-         |> List.reduce (Printf.sprintf "%s;\n%s")
+         (* else if StringMap.exists (fun n _ -> n = fname) context.macros then
+            MacroInterpretator.run { context with loc = l }
+              (StringMap.find fname context.macros)
+              args
+            |> List.map compile
+            |> List.reduce (Printf.sprintf "%s;\n%s") *)
        else
          let sargs =
            if List.length args = 0 then ""
@@ -287,18 +291,8 @@ let main (filename : string) code =
                 (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
               args))))
     |}
-    |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
-    |> Result.get_ok
   in
-  let result =
-    code |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
-  in
-  match result with
-  | Ok result ->
-      List.concat [ prelude_macros; result ]
-      |> List.fold_left_map compile_
-           { filename; loc = unknown_location; macros = StringMap.empty }
-      |> snd
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> String.trim
-  | Error error -> failwith ("Parse SEXP error: " ^ error)
+  String.concat "\n" [ prelude_macros; code ]
+  |> Core.parse_and_simplify filename
+  |> (fun (ctx, exp) -> compile_ ctx exp)
+  |> snd |> String.trim

@@ -12,7 +12,7 @@ let () =
     | filename ->
         ( filename |> read_text_file |> Clj2js.main filename,
           Clj2js.prelude_imports ))
-    |> (fun (code, imports) ->
+    |> (fun ((_, code), imports) ->
          Printf.sprintf "\"use strict\";\n%s\n%s" imports code)
     |> print_endline
   else
@@ -21,7 +21,7 @@ let () =
     filename |> read_text_file
     |> (match target with
        | "json" -> Clj2js.main_json filename
-       | "js" -> Clj2js.main filename
+       | "js" -> fun code -> Clj2js.main filename code |> snd
        | "sh" ->
            fun str ->
              let shebang = "#!/usr/bin/env clj2sh\n" in
