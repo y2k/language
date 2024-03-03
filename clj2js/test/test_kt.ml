@@ -30,4 +30,7 @@ prelude.minus(a, b) };|};
   assert_ {|(__unsafe_inject_code "fun foo() = \"a\\\"b\"")|}
     {|fun foo() = "a\"b"|};
   assert_ {|(as x "(Int)->Int")|} {|(x as (Int)->Int)|};
+  assert_ {|(spread (.toTypedArray a))|} {|*a.toTypedArray()|};
+  assert_ {|(class android.app.AlarmManager)|}
+    {|android.app.AlarmManager::class.java|};
   ()

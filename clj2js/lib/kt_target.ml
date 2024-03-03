@@ -221,7 +221,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                      | xs -> xs |> List.reduce (Printf.sprintf "%s, %s")
                    in
                    let fbody =
-                     RBList (Atom (unknown_location, "let") :: SBList [] :: body)
+                     RBList
+                       (Atom (unknown_location, "let*") :: SBList [] :: body)
                      |> compile
                    in
                    ( [],
@@ -235,6 +236,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "object %s { %s }" super b |> withContext
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
+  | RBList [ Atom (_, "spread"); x ] ->
+      Printf.sprintf "*%s" (compile x) |> withContext
+  | RBList [ Atom (_, "class"); Atom (_, name) ] ->
+      Printf.sprintf "%s::class.java" name |> withContext
   (* Functions or Macro calls *)
   | RBList [ (Atom (_, fname) as key); source ]
     when String.starts_with ~prefix:":" fname ->
@@ -263,12 +268,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
          in
          fargs |> Printf.sprintf "%s(%s)" cnst_name
-         (* else if StringMap.exists (fun n _ -> n = fname) context.macros then
-            MacroInterpretator.run { context with loc = l }
-              (StringMap.find fname context.macros)
-              args
-            |> List.map compile
-            |> List.reduce (Printf.sprintf "%s;\n%s") *)
        else
          let sargs =
            if List.length args = 0 then ""
