@@ -220,7 +220,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "comment") :: _) -> "" |> withContext
   | RBList [ Atom (_, "export-default"); body ] ->
       Printf.sprintf "export default %s" (compile body) |> withContext
-  | CBList xs ->
+  | RBList (Atom (_, "hash-map") :: xs) ->
       let rec to_pairs = function
         | k :: v :: xs ->
             let a = compile k in

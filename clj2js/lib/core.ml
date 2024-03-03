@@ -179,6 +179,7 @@ let unpack_let_args args body =
 
 let rec expand_core_macro node =
   match node with
+  | CBList xs -> RBList (Atom (unknown_location, "hash-map") :: xs)
   | RBList (Atom (_, "let") :: SBList vals :: body) -> unpack_let_args vals body
   | RBList (Atom (l, "defn") :: (Atom _ as name) :: SBList args :: body) ->
       RBList
