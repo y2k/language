@@ -18,6 +18,7 @@ prelude.minus(a, b) };|};
   assert_ {|(defn foo [xs] (let [[a b] (foo 1 2)] (bar a b)))|}
     {|fun foo(xs:Any?) = run { val p__4 = foo(1, 2); val a = geta(p__4, 0); val b = geta(p__4, 1); bar(a, b) };|};
   assert_ {|(= a b)|} {|a == b|};
+  assert_ {|(not= a b)|} {|a != b|};
   assert_ {|(get xs 1)|} {|geta(xs, 1)|};
   assert_ {|(:foo bar)|} {|getm(bar, "foo")|};
   assert_ {|(def foo 1)|} {|val foo = 1;|};
@@ -33,4 +34,13 @@ prelude.minus(a, b) };|};
   assert_ {|(spread (.toTypedArray a))|} {|*a.toTypedArray()|};
   assert_ {|(class android.app.AlarmManager)|}
     {|android.app.AlarmManager::class.java|};
+  assert_
+    {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel]))|}
+    {|package im.y2k.chargetimer;
+import android.app.Activity;
+import android.app.NotificationChannel;|};
+  assert_ {|(ns prelude)|} {|package prelude;|};
+  assert_ "(and (= a 1) b)" "(a == 1 && b)";
+  assert_ "(or (= a 1) b)" "(a == 1 || b)";
+  assert_ "(.play r)" "r.play()";
   ()

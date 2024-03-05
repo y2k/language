@@ -31,6 +31,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "(%s)" |> withContext
   | RBList [ Atom (_, "="); a; b ] ->
       compile a ^ " == " ^ compile b |> withContext
+  | RBList [ Atom (_, "not="); a; b ] ->
+      compile a ^ " != " ^ compile b |> withContext
   | RBList [ Atom (_, "get"); target; index ] ->
       Printf.sprintf "geta(%s, %s)" (compile target) (compile index)
       |> withContext
@@ -98,9 +100,17 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                       | n -> fail_node [ n ])
                  |> List.reduce (Printf.sprintf "%s\n%s")
              | n -> fail_node [ n ])
-        |> List.reduce (Printf.sprintf "%s\n%s")
+        |> List.fold_left (Printf.sprintf "%s\n%s") ""
       in
-      Printf.sprintf "package %s\n%s\n" name imports |> withContext
+      Printf.sprintf "package %s;%s\n" name imports |> withContext
+  | RBList (Atom (_, "and") :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s && %s")
+      |> Printf.sprintf "(%s)" |> withContext
+  | RBList (Atom (_, "or") :: xs) ->
+      xs |> List.map compile
+      |> List.reduce (Printf.sprintf "%s || %s")
+      |> Printf.sprintf "(%s)" |> withContext
   | RBList (Atom (_, "+") :: args) ->
       args |> List.map compile
       |> List.reduce (Printf.sprintf "%s, %s")
