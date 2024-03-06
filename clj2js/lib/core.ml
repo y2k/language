@@ -228,20 +228,6 @@ let rec expand_core_macro node =
         | _ -> fail_node [ node ]
       in
       loop body
-  | RBList (Atom (_, "->") :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom (l, z) -> RBList [ Atom (l, z); acc ]
-             | RBList (a :: bs) -> RBList (a :: acc :: bs)
-             | xs -> fail_node [ xs ])
-  | RBList (Atom (_, "->>") :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
-             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
-             | xs -> fail_node [ xs ])
   | RBList (Atom (l, "if-let") :: tail) ->
       expand_core_macro (RBList (Atom (l, "if-let*") :: tail))
   | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
@@ -301,6 +287,26 @@ let rec expand_core_macro node =
             RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
           in
           RBList [ Atom (l, "fn*"); SBList new_args; body ])
+  | RBList (Atom (l, fname) :: target :: args)
+    when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
+      let mname = String.sub fname 1 (String.length fname - 1) in
+      RBList (Atom (l, ".") :: target :: Atom (unknown_location, mname) :: args)
+  | RBList (Atom (_, "->") :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom (l, z) -> RBList [ Atom (l, z); acc ]
+             | RBList (a :: bs) -> RBList (a :: acc :: bs)
+             | xs -> fail_node [ xs ])
+      |> expand_core_macro
+  | RBList (Atom (_, "->>") :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
+             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
+             | xs -> fail_node [ xs ])
+      |> expand_core_macro
   | _ -> node
 
 module MacroInterpretator = struct

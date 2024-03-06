@@ -70,11 +70,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "set!"); target; value ] ->
       Printf.sprintf "(%s = %s);" (compile target) (compile value)
       |> withContext
-  | RBList [ Atom (_, field); target ]
-    when String.starts_with ~prefix:".-" field ->
-      Printf.sprintf "%s.%s" (compile target)
-        (String.sub field 2 (String.length field - 2))
-      |> withContext
   | RBList (Atom (_, "ns") :: _ :: depencencies) ->
       depencencies
       |> List.map (function
@@ -294,22 +289,22 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       "(function () { " ^ svals ^ sbody ^ " })()" |> withContext
   (* Functions or Macro calls *)
+  | RBList [ Atom (_, "."); target; Atom (_, field) ]
+    when String.starts_with ~prefix:"-" field ->
+      Printf.sprintf "%s.%s" (compile target)
+        (String.sub field 1 (String.length field - 1))
+      |> withContext
+  | RBList (Atom (_, ".") :: target :: mname :: args) ->
+      let sargs =
+        match args with
+        | [] -> ""
+        | args ->
+            args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+      in
+      Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
+      |> withContext
   | RBList (Atom (_, fname) :: args) ->
-      (if String.starts_with ~prefix:"." fname then
-         let mname = String.sub fname 1 (String.length fname - 1) in
-         let this = List.hd args |> compile in
-         let sargs =
-           match args with
-           | [ _ ] -> "()"
-           | args ->
-               args
-               |> List.filteri (fun i _ -> i >= 1)
-               |> List.map compile
-               |> List.reduce (Printf.sprintf "%s, %s")
-               |> Printf.sprintf "(%s)"
-         in
-         this ^ "." ^ mname ^ sargs
-       else if String.ends_with ~suffix:"." fname then
+      (if String.ends_with ~suffix:"." fname then
          let cnst_name = String.sub fname 0 (String.length fname - 1) in
          let fargs =
            if List.length args = 0 then ""

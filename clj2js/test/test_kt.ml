@@ -43,4 +43,7 @@ import android.app.NotificationChannel;|};
   assert_ "(and (= a 1) b)" "(a == 1 && b)";
   assert_ "(or (= a 1) b)" "(a == 1 || b)";
   assert_ "(.play r)" "r.play()";
+  assert_ "(. r play)" "r.play()";
+  assert_ "(.-play r)" "r.play";
+  assert_ "(. r -play)" "r.play";
   ()

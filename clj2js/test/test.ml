@@ -3,9 +3,9 @@ let assert_ code expected =
   if actual <> expected then (
     print_endline actual;
     (* print_newline ();
-    print_endline "<MACROS>";
-    Clj2js__Core.StringMap.iter (fun k _v -> print_endline k) ctx.macros;
-    print_endline "</MACROS>"; *)
+       print_endline "<MACROS>";
+       Clj2js__Core.StringMap.iter (fun k _v -> print_endline k) ctx.macros;
+       print_endline "</MACROS>"; *)
     print_newline ();
     failwith "actual <> expected")
 
@@ -219,6 +219,10 @@ bar(2)|};
   assert_ {|(foo "foo\"bar")|} {|foo("foo\"bar")|};
   assert_ "(% 1 2)" "(1 % 2)";
   assert_ {|(foo "a\"b")|} {|foo("a\"b")|};
+  assert_ "(.play r)" "r.play()";
+  assert_ "(. r play)" "r.play()";
+  assert_ "(.-play r)" "r.play";
+  assert_ "(. r -play)" "r.play";
   ()
 
 let () =
