@@ -147,6 +147,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       let ret_type =
         match k with
+        | Atom (l, _) when l.symbol = ":private" -> ""
         | Atom (l, _) when String.length l.symbol > 0 -> ":" ^ l.symbol
         | _ -> ""
       in

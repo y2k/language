@@ -330,12 +330,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 
 let main (filename : string) code =
   let prelude_macros =
-    {|(defmacro defn- [name args & body]
-        (list 'def name
-          (concat
-            (list 'fn args)
-            body)))
-      (defmacro do [& body] (concat (list 'let (vector)) body))
+    {|(defmacro do [& body] (concat (list 'let (vector)) body))
       (defmacro println [& args] (concat (list 'console/info) args))
       (defmacro FIXME [& args]
         (list 'throw

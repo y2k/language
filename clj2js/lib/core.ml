@@ -438,7 +438,7 @@ let parse_and_simplify filename code =
     {
       filename;
       loc = unknown_location;
-      start_line = 17;
+      start_line = 12;
       macros = StringMap.empty;
     }
     sexp

@@ -46,4 +46,7 @@ import android.app.NotificationChannel;|};
   assert_ "(. r play)" "r.play()";
   assert_ "(.-play r)" "r.play";
   assert_ "(. r -play)" "r.play";
+  assert_ {|(defn foo [a b] a)|} {|fun foo(a:Any?, b:Any?) = run { a };|};
+  assert_ {|(defn- foo [a b] a)|}
+    {|private fun foo(a:Any?, b:Any?) = run { a };|};
   ()
