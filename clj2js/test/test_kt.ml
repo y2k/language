@@ -49,4 +49,5 @@ import android.app.NotificationChannel;|};
   assert_ {|(defn foo [a b] a)|} {|fun foo(a:Any?, b:Any?) = run { a };|};
   assert_ {|(defn- foo [a b] a)|}
     {|private fun foo(a:Any?, b:Any?) = run { a };|};
+  assert_ "(is node List<*>)" "(node is List<*>)";
   ()

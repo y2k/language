@@ -20,7 +20,7 @@ type context = {
   macros : cljexp StringMap.t;
 }
 
-val parse_and_simplify : string -> string -> context * cljexp
+val parse_and_simplify : int -> string -> string -> context * cljexp
 
 module List : sig
   include module type of List

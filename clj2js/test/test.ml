@@ -1,27 +1,24 @@
 let assert_ code expected =
+  print_endline "==| DEBUG |===============================================";
   let _ctx, actual = Clj2js.main "main.clj" code in
   if actual <> expected then (
     print_endline actual;
-    (* print_newline ();
-       print_endline "<MACROS>";
-       Clj2js__Core.StringMap.iter (fun k _v -> print_endline k) ctx.macros;
-       print_endline "</MACROS>"; *)
     print_newline ();
     failwith "actual <> expected")
 
 let assert_file filename =
-  let read_sample filename =
-    let channel = open_in ("../../../test/samples/" ^ filename) in
-    let size = in_channel_length channel in
-    let content = really_input_string channel size in
-    close_in channel;
-    content
-  in
-  let code = read_sample filename in
-  let expected = read_sample (filename ^ ".js") in
+  let path = "../../../test/samples/" ^ filename in
+  let open In_channel in
+  let code = with_open_bin path input_all in
+  let expected = with_open_bin (path ^ ".js") input_all in
   assert_ code expected
 
 let () =
+  assert_ {|(Response. "hello_world" 1 false)|}
+    {|new Response("hello_world", 1, false)|};
+  assert_ "(.json r)" "r.json()";
+  assert_ "(.json r a)" "r.json(a)";
+  assert_ "(.json r a b)" "r.json(a, b)";
   assert_
     {|(defn fetch [request env context]
                 (.log console request)
@@ -33,6 +30,16 @@ let () =
           a b))|}
     "export const fetch = (request, env, context) => { return b(a) };";
   assert_
+    {|(.next
+       (.json request null)
+       (fn [text] (failwith "???")))|}
+    {|request.json(null).next((text) => { return failwith("???") })|};
+  assert_
+    {|(->
+       (.json request null)
+       (.next (fn [text] (failwith "???"))))|}
+    {|request.json(null).next((text) => { return failwith("???") })|};
+  assert_
     {|(defn fetch [request env context]
         (->
          (.json request null)
@@ -42,13 +49,15 @@ let () =
     {|(defn fetch [request env context]
         request)|}
     "export const fetch = (request, env, context) => { return request };";
+  assert_ {|(export-default {:fetch fetch-handler})|}
+    {|export default {"fetch": fetch-handler}|};
   assert_
     {|(defn fetch-handler [request env context] request)
      (export-default {:fetch fetch-handler})|}
     {|export const fetch-handler = (request, env, context) => { return request };
 export default {"fetch": fetch-handler}|};
-  assert_ {|(Response. "hello_world" 1 false)|}
-    {|new Response("hello_world", 1, false)|};
+  assert_ "(println 1 2 3)" "console.info(1, 2, 3)";
+  assert_ "(foo (println 1 2 3))" "foo(console.info(1, 2, 3))";
   assert_
     {|(comment 1 2 3)
      (println 1 2 3)
@@ -99,9 +108,6 @@ map((x) => { return x }, xs)|};
     "(function () { const a = b?.c?.d?.e; return a })()";
   assert_ "(let [a b.c.d.e] a)"
     "(function () { const a = b.c.d.e; return a })()";
-  assert_ "(.json r)" "r.json()";
-  assert_ "(.json r a)" "r.json(a)";
-  assert_ "(.json r a b)" "r.json(a, b)";
   assert_ "(or a b 1 2)" "(a || b || 1 || 2)";
   assert_ "(foo 1)\n\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n;;(foo 2)\n(foo 3)" "foo(1)\nfoo(3)";
@@ -155,8 +161,8 @@ bar(2)|};
   assert_ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
   assert_ "(defn- foo [x] x)" "const foo = (x) => { return x };";
   assert_ "(defn foo [x] x)" "export const foo = (x) => { return x };";
-  assert_ "(foo FIXME)"
-    {|foo((function(){throw new Error("Not implemented main.clj:1:6")})())|};
+  assert_ "(foo (FIXME))"
+    {|foo((function(){throw new Error(("" + "FIXME main.clj:1:6 - "))})())|};
   assert_ "(foo (FIXME A1 B2))"
     {|foo((function(){throw new Error(("" + "FIXME main.clj:1:6 - " + A1 + B2))})())|};
   assert_ {|(println)|} {|console.info()|};
@@ -176,7 +182,8 @@ bar(2)|};
   assert_ "(set! (.-bar (foo 2)) 1)" "(foo(2).bar = 1);";
   assert_ "(set! (.-bar (get xs 2)) 1)" "(xs[2].bar = 1);";
   assert_ "(defmacro foo [a b] (list a 1)) (foo c d)" "c(1)";
-  assert_ "(defmacro foo [a b] (list a 1) (list b 2)) (foo c d)" "c(1)\nd(2)";
+  assert_ "(defmacro foo [a b] (list 'do (list a 1) (list b 2))) (foo c d)"
+    "(function () { c(1); return d(2) })()";
   assert_ "(type a)" "typeof a";
   assert_ {|(= (type a) "String")|} {|typeof a === "String"|};
   assert_ "(not a)" "!a";
@@ -191,9 +198,9 @@ bar(2)|};
   assert_ "(fn [xs] (let [a (get xs 0) b (get xs 1)] (+ a b)))"
     "(xs) => { return (function () { const a = xs[0]; const b = xs[1]; return \
      (a + b) })() }";
-  assert_ "(fn [[a b]] (+ a b))"
+  assert_ "(fn [[a b]] 0)"
     "(p__1) => { return (function () { const a = p__1[0]; const b = p__1[1]; \
-     return (a + b) })() }";
+     return 0 })() }";
   assert_ "(fn [c [a b] d] (+ a b c d))"
     "(c, p__2, d) => { return (function () { const a = p__2[0]; const b = \
      p__2[1]; return (a + b + c + d) })() }";
@@ -237,6 +244,8 @@ let () =
     "export const foo = (a, b) => { return a };";
   assert_ {|(defn foo [ ^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
     "export const foo = (a, b) => { return a };";
+  assert_ "(defn foo [a b] (let [x (str e)] x))"
+    {|export const foo = (a, b) => { return (function () { const x = ("" + e); return x })() };|};
   ()
 
 let () =

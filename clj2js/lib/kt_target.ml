@@ -3,43 +3,43 @@ open Core
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
-  let withContext node = (context, node) in
+  let with_context node = (context, node) in
   match node with
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
-      "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> withContext
-  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> withContext
+      "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
+  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) ->
-      x |> String.map (function '/' -> '.' | x -> x) |> withContext
+      x |> String.map (function '/' -> '.' | x -> x) |> with_context
   | SBList xs ->
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:""
       |> Printf.sprintf "listOf(%s)"
-      |> withContext
+      |> with_context
   (* ========================== *)
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, "__unsafe_inject_code"); Atom (_, code) ]
     when String.get code 0 = '\"' ->
       String.sub code 1 (String.length code - 2)
-      |> Scanf.unescaped |> withContext
+      |> Scanf.unescaped |> with_context
   | RBList (Atom (_, "str") :: args) ->
       args |> List.map compile
       |> List.fold_left (fun acc x -> acc ^ "+" ^ x) {|""|}
-      |> Printf.sprintf "(%s)" |> withContext
+      |> Printf.sprintf "(%s)" |> with_context
   | RBList [ Atom (_, "="); a; b ] ->
-      compile a ^ " == " ^ compile b |> withContext
+      compile a ^ " == " ^ compile b |> with_context
   | RBList [ Atom (_, "not="); a; b ] ->
-      compile a ^ " != " ^ compile b |> withContext
+      compile a ^ " != " ^ compile b |> with_context
   | RBList [ Atom (_, "get"); target; index ] ->
       Printf.sprintf "geta(%s, %s)" (compile target) (compile index)
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, "if"); c; a; b ] ->
       Printf.sprintf "if (%s) { %s } else { %s }" (compile c) (compile a)
         (compile b)
-      |> withContext
+      |> with_context
   | RBList
       [
         Atom (_, "gen-class");
@@ -76,7 +76,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              | x -> fail_node [ x ])
         |> List.reduce (Printf.sprintf "%s\n%s")
       in
-      Printf.sprintf "class %s : %s() { %s }" clsName superCls ms |> withContext
+      Printf.sprintf "class %s : %s() { %s }" clsName superCls ms
+      |> with_context
   | RBList [ Atom (_, "as"); value; cls ] ->
       let target = compile cls in
       let target =
@@ -84,7 +85,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
           String.sub target 1 (String.length target - 2)
         else target
       in
-      Printf.sprintf "(%s as %s)" (compile value) target |> withContext
+      Printf.sprintf "(%s as %s)" (compile value) target |> with_context
   | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
       let imports =
         ns_params
@@ -102,25 +103,25 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              | n -> fail_node [ n ])
         |> List.fold_left (Printf.sprintf "%s\n%s") ""
       in
-      Printf.sprintf "package %s;%s\n" name imports |> withContext
+      Printf.sprintf "package %s;%s\n" name imports |> with_context
   | RBList (Atom (_, "and") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s && %s")
-      |> Printf.sprintf "(%s)" |> withContext
+      |> Printf.sprintf "(%s)" |> with_context
   | RBList (Atom (_, "or") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s || %s")
-      |> Printf.sprintf "(%s)" |> withContext
+      |> Printf.sprintf "(%s)" |> with_context
   | RBList (Atom (_, "+") :: args) ->
       args |> List.map compile
       |> List.reduce (Printf.sprintf "%s, %s")
       |> Printf.sprintf "prelude.plus(%s)"
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, "-"); a; b ] ->
       Printf.sprintf "prelude.minus(%s, %s)" (compile a) (compile b)
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, ">"); a; b ] ->
-      Printf.sprintf "(%s > %s)" (compile a) (compile b) |> withContext
+      Printf.sprintf "(%s > %s)" (compile a) (compile b) |> with_context
   | RBList
       [ Atom (_, "def"); k; RBList (Atom (_, "fn*") :: SBList args :: body) ] ->
       let sargs =
@@ -153,7 +154,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%sfun %s(%s)%s = run { %s };" modifier (compile k) sargs
         ret_type sbody
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, "def"); k; v ] ->
       let modifier =
         match k with
@@ -161,9 +162,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | _ -> ""
       in
       Printf.sprintf "%sval %s = %s;" modifier (compile k) (compile v)
-      |> withContext
-  (* | RBList (Atom (l, "fn") :: SBList args :: body) ->
-      Core.unpack_args (Atom (l, "fn*")) args body |> compile |> withContext *)
+      |> with_context
   | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         match args with
@@ -183,9 +182,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.rev
         |> List.reduce (Printf.sprintf "%s; %s")
       in
-      Printf.sprintf "{ %s %s }" sargs sbody |> withContext
-  (* | RBList (Atom (_, "let") :: SBList vals :: body) ->
-      Core.unpack_let_args vals body |> compile |> withContext *)
+      Printf.sprintf "{ %s %s }" sargs sbody |> with_context
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec parse_vals nodes =
         match nodes with
@@ -202,7 +199,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.rev
         |> List.reduce (Printf.sprintf "%s\n%s")
       in
-      "" ^ svals ^ sbody ^ "" |> withContext
+      "" ^ svals ^ sbody ^ "" |> with_context
   | RBList (Atom (_, "proxy") :: SBList supers :: _ :: body) ->
       let super =
         match supers with
@@ -244,23 +241,26 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                | _ -> fail_node [ n ])
              ([], "")
       in
-      Printf.sprintf "object %s { %s }" super b |> withContext
+      Printf.sprintf "object %s { %s }" super b |> with_context
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
   | RBList [ Atom (_, "spread"); x ] ->
-      Printf.sprintf "*%s" (compile x) |> withContext
+      Printf.sprintf "*%s" (compile x) |> with_context
   | RBList [ Atom (_, "class"); Atom (_, name) ] ->
-      Printf.sprintf "%s::class.java" name |> withContext
+      Printf.sprintf "%s::class.java" name |> with_context
+  | RBList [ Atom (_, "is"); source; Atom (_, type_) ] ->
+      Printf.sprintf "(%s is %s)" (compile source) type_ |> with_context
   (* Functions or Macro calls *)
   | RBList [ (Atom (_, fname) as key); source ]
     when String.starts_with ~prefix:":" fname ->
       Printf.sprintf "getm(%s, %s)" (compile source) (compile key)
-      |> withContext
+      |> with_context
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
     when String.starts_with ~prefix:"-" field ->
       Printf.sprintf "%s.%s" (compile target)
         (String.sub field 1 (String.length field - 1))
-      |> withContext
+      |> with_context
+  | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   | RBList (Atom (_, ".") :: target :: mname :: args) ->
       let sargs =
         match args with
@@ -271,7 +271,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             |> Printf.sprintf "%s"
       in
       Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
-      |> withContext
+      |> with_context
   | RBList (Atom (_, fname) :: args) ->
       (if String.ends_with ~suffix:"." fname then
          let cnst_name = String.sub fname 0 (String.length fname - 1) in
@@ -288,7 +288,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
          in
          String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")")
-      |> withContext
+      |> with_context
   | n -> fail_node [ n ]
 
 let main (filename : string) code =
@@ -305,6 +305,6 @@ let main (filename : string) code =
     |}
   in
   String.concat "\n" [ prelude_macros; code ]
-  |> Core.parse_and_simplify filename
+  |> Core.parse_and_simplify 0 filename
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

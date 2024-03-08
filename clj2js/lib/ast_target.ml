@@ -11,5 +11,5 @@ let rec cljexp_to_json = function
   | CBList xs -> `List (List.map cljexp_to_json xs)
 
 let main filename code =
-  Core.parse_and_simplify filename code
+  Core.parse_and_simplify 0 filename code
   |> snd |> cljexp_to_json |> Yojson.Safe.to_string

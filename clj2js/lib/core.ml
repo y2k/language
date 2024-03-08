@@ -1,6 +1,43 @@
 open Angstrom
 module A = Angstrom
 
+(* module Simplifier = struct
+     let rec _simplify (context : context) (node : cljexp) : context * cljexp =
+       let _simplify_ node = _simplify context node |> snd in
+       let withContext node = (context, node) in
+       match expand_core_macro_ context node |> snd with
+       | Atom (loc, "FIXME") ->
+           RBList
+             [
+               Atom (loc, "throw");
+               RBList
+                 [
+                   Atom (unknown_location, "Error.");
+                   Atom
+                     ( unknown_location,
+                       Printf.sprintf {|"Not implemented %s:%i:%i"|}
+                         context.filename
+                         (loc.line - context.start_line)
+                         loc.pos );
+                 ];
+             ]
+           |> withContext
+       | Atom _ as x -> x |> withContext
+       | RBList (Atom (l, "defmacro") :: Atom (_, name) :: _) as macro ->
+           ( { context with macros = StringMap.add name macro context.macros },
+             RBList [ Atom (l, "comment") ] )
+       | SBList xs ->
+           let context, body = List.fold_left_map simplify context xs in
+           (context, [ SBList (List.concat body) ])
+       | CBList xs ->
+           let context, body = List.fold_left_map _simplify context xs in
+           (context, CBList body)
+       | RBList xs ->
+           let context, body = List.fold_left_map _simplify context xs in
+           (context, RBList body)
+       | x -> (context, x)
+   end *)
+
 type location = { line : int; pos : int; symbol : string } [@@deriving show]
 
 let unknown_location = { line = 0; pos = 0; symbol = "" }
@@ -111,204 +148,6 @@ end = struct
     "p__" ^ string_of_int !index
 end
 
-(* let unpack_args orign_prefix args body =
-   let rec loop new_args let_args = function
-     | [] -> (new_args, let_args)
-     | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
-     | SBList xs :: tail ->
-         let virt_arg = Atom (unknown_location, NameGenerator.get_new_var ()) in
-         let let_args =
-           xs
-           |> List.fold_left
-                (fun (i, acc) x ->
-                  ( i + 1,
-                    acc
-                    @ [
-                        x;
-                        RBList
-                          [
-                            Atom (unknown_location, "get");
-                            virt_arg;
-                            Atom (unknown_location, string_of_int i);
-                          ];
-                      ] ))
-                (0, let_args)
-           |> snd
-         in
-         loop (new_args @ [ virt_arg ]) let_args tail
-     | xs -> fail_node xs
-   in
-   match loop [] [] args with
-   | _, [] -> RBList (orign_prefix :: SBList args :: body)
-   | new_args, let_args ->
-       let body =
-         RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
-       in
-       RBList [ orign_prefix; SBList new_args; body ] *)
-
-let unpack_let_args args body =
-  let rec loop = function
-    | [] -> []
-    | (Atom _ as k) :: v :: tail -> k :: v :: loop tail
-    | SBList xs :: v :: tail ->
-        let temp_val = NameGenerator.get_new_var () in
-        let a = [ Atom (unknown_location, temp_val); v ] in
-        let b =
-          xs
-          |> List.fold_left
-               (fun (i, acc) x ->
-                 ( i + 1,
-                   acc
-                   @ [
-                       x;
-                       RBList
-                         [
-                           Atom (unknown_location, "get");
-                           Atom (unknown_location, temp_val);
-                           Atom (unknown_location, string_of_int i);
-                         ];
-                     ] ))
-               (0, a)
-          |> snd
-        in
-        b @ loop tail
-    | xs -> fail_node xs
-  in
-  let unpacked_args = loop args in
-  RBList (Atom (unknown_location, "let*") :: SBList unpacked_args :: body)
-
-let rec expand_core_macro node =
-  match node with
-  | CBList xs -> RBList (Atom (unknown_location, "hash-map") :: xs)
-  | RBList (Atom (_, "let") :: SBList vals :: body) -> unpack_let_args vals body
-  | RBList (Atom (l, "defn") :: (Atom _ as name) :: SBList args :: body) ->
-      RBList
-        [
-          Atom (l, "def");
-          name;
-          expand_core_macro (RBList (Atom (l, "fn") :: SBList args :: body));
-        ]
-  | RBList (Atom (l, "defn-") :: Atom (ln, name) :: SBList args :: body) ->
-      RBList
-        [
-          Atom (l, "def");
-          Atom ({ ln with symbol = ":private" }, name);
-          expand_core_macro (RBList (Atom (l, "fn") :: SBList args :: body));
-        ]
-  | RBList (Atom (l, "case") :: target :: body) ->
-      let rec loop = function
-        | cond :: then_ :: body ->
-            RBList
-              [
-                Atom (unknown_location, "if");
-                RBList
-                  [
-                    Atom (unknown_location, "=");
-                    Atom (unknown_location, "gen_1");
-                    cond;
-                  ];
-                then_;
-                loop body;
-              ]
-        | [ x ] -> x
-        | _ -> fail_node [ node ]
-      in
-      RBList
-        [
-          Atom (l, "let");
-          SBList [ Atom (unknown_location, "gen_1"); target ];
-          loop body;
-        ]
-      |> expand_core_macro
-  | RBList (Atom (_, "cond") :: body) ->
-      let rec loop = function
-        | [ Atom (_, ":else"); then_ ] -> then_
-        | cond :: then_ :: body ->
-            RBList [ Atom (unknown_location, "if"); cond; then_; loop body ]
-        | _ -> fail_node [ node ]
-      in
-      loop body
-  | RBList (Atom (l, "if-let") :: tail) ->
-      expand_core_macro (RBList (Atom (l, "if-let*") :: tail))
-  | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
-      let rec loop = function
-        | Atom (l, name) :: value :: tail ->
-            RBList
-              [
-                Atom (l, "let");
-                SBList [ Atom (unknown_location, name); value ];
-                RBList
-                  [
-                    Atom (unknown_location, "if");
-                    Atom (unknown_location, name);
-                    loop tail;
-                    else';
-                  ];
-              ]
-        | [] -> then'
-        | _ ->
-            failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] "
-            ^ __LOC__
-      in
-      loop bindings |> expand_core_macro
-  | RBList (Atom (l, "fn") :: SBList args :: body) -> (
-      let rec loop new_args let_args = function
-        | [] -> (new_args, let_args)
-        | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
-        | SBList xs :: tail ->
-            let virt_arg =
-              Atom (unknown_location, NameGenerator.get_new_var ())
-            in
-            let let_args =
-              xs
-              |> List.fold_left
-                   (fun (i, acc) x ->
-                     ( i + 1,
-                       acc
-                       @ [
-                           x;
-                           RBList
-                             [
-                               Atom (unknown_location, "get");
-                               virt_arg;
-                               Atom (unknown_location, string_of_int i);
-                             ];
-                         ] ))
-                   (0, let_args)
-              |> snd
-            in
-            loop (new_args @ [ virt_arg ]) let_args tail
-        | xs -> fail_node xs
-      in
-      match loop [] [] args with
-      | _, [] -> RBList (Atom (l, "fn*") :: SBList args :: body)
-      | new_args, let_args ->
-          let body =
-            RBList (Atom (unknown_location, "let") :: SBList let_args :: body)
-          in
-          RBList [ Atom (l, "fn*"); SBList new_args; body ])
-  | RBList (Atom (l, fname) :: target :: args)
-    when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
-      let mname = String.sub fname 1 (String.length fname - 1) in
-      RBList (Atom (l, ".") :: target :: Atom (unknown_location, mname) :: args)
-  | RBList (Atom (_, "->") :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom (l, z) -> RBList [ Atom (l, z); acc ]
-             | RBList (a :: bs) -> RBList (a :: acc :: bs)
-             | xs -> fail_node [ xs ])
-      |> expand_core_macro
-  | RBList (Atom (_, "->>") :: body) ->
-      body
-      |> List.reduce (fun acc x ->
-             match x with
-             | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
-             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
-             | xs -> fail_node [ xs ])
-      |> expand_core_macro
-  | _ -> node
-
 module MacroInterpretator = struct
   let compute_args (arg_names : cljexp list) (arg_values : cljexp list) :
       cljexp StringMap.t =
@@ -381,67 +220,215 @@ module MacroInterpretator = struct
     | _ -> failwith "FIXME"
 end
 
-module Simplifier = struct
-  let rec simplify (context : context) (node : cljexp) : context * cljexp list =
-    let simplify_ node = simplify context node |> snd in
-    let withContext node = (context, [ node ]) in
-    match expand_core_macro node with
-    | Atom (loc, "FIXME") ->
-        RBList
-          [
-            Atom (loc, "throw");
+let rec expand_core_macro (context : context) node : context * cljexp =
+  let expand_core_macro1 = expand_core_macro context in
+  let expand_core_macro2 x = expand_core_macro context x |> snd in
+  let with_context x = (context, x) in
+  match node with
+  | CBList xs ->
+      RBList (Atom (unknown_location, "hash-map") :: xs) |> with_context
+  | RBList (Atom (_, "let") :: SBList vals :: body) ->
+      let unpack_let_args args body =
+        let rec loop = function
+          | [] -> []
+          | (Atom _ as k) :: v :: tail -> k :: expand_core_macro2 v :: loop tail
+          | SBList xs :: v :: tail ->
+              let temp_val = NameGenerator.get_new_var () in
+              let a = [ Atom (unknown_location, temp_val); v ] in
+              let b =
+                xs
+                |> List.fold_left
+                     (fun (i, acc) x ->
+                       ( i + 1,
+                         acc
+                         @ [
+                             x;
+                             RBList
+                               [
+                                 Atom (unknown_location, "get");
+                                 Atom (unknown_location, temp_val);
+                                 Atom (unknown_location, string_of_int i);
+                               ];
+                           ] ))
+                     (0, a)
+                |> snd
+              in
+              b @ loop tail
+          | xs -> fail_node xs
+        in
+        RBList (Atom (unknown_location, "let*") :: SBList (loop args) :: body)
+      in
+      unpack_let_args vals (List.map expand_core_macro2 body) |> with_context
+  | RBList (Atom (l, "defn") :: (Atom _ as name) :: SBList args :: body) ->
+      RBList
+        [
+          Atom (l, "def");
+          name;
+          expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body));
+        ]
+      |> with_context
+  | RBList (Atom (l, "defn-") :: Atom (ln, name) :: SBList args :: body) ->
+      RBList
+        [
+          Atom (l, "def");
+          Atom ({ ln with symbol = ":private" }, name);
+          expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body));
+        ]
+      |> with_context
+  | RBList (Atom (l, "case") :: target :: body) ->
+      let rec loop = function
+        | cond :: then_ :: body ->
             RBList
               [
-                Atom (unknown_location, "Error.");
-                Atom
-                  ( unknown_location,
-                    Printf.sprintf {|"Not implemented %s:%i:%i"|}
-                      context.filename
-                      (loc.line - context.start_line)
-                      loc.pos );
-              ];
-          ]
-        |> withContext
-    | Atom _ as x -> x |> withContext
-    | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
-        (* print_endline @@ "DEFMACRO: " ^ name; *)
-        ({ context with macros = StringMap.add name macro context.macros }, [])
-    | RBList (Atom (l, fname) :: args)
-      when StringMap.exists (fun n _ -> n = fname) context.macros ->
-        (* print_endline @@ "CALL_MACRO: " ^ fname; *)
-        ( context,
-          MacroInterpretator.run { context with loc = l }
-            (StringMap.find fname context.macros)
-            args
-          |> List.concat_map simplify_ )
-    | SBList xs ->
-        (* SBList (List.map simplify_ xs) |> withContext *)
-        let context, body = List.fold_left_map simplify context xs in
-        (context, [ SBList (List.concat body) ])
-    | CBList xs ->
-        (* CBList (List.map simplify_ xs) |> withContext *)
-        let context, body = List.fold_left_map simplify context xs in
-        (context, [ CBList (List.concat body) ])
-    | RBList xs ->
-        let context, body = List.fold_left_map simplify context xs in
-        (context, [ RBList (List.concat body) ])
-end
+                Atom (unknown_location, "if");
+                RBList
+                  [
+                    Atom (unknown_location, "=");
+                    Atom (unknown_location, "gen_1");
+                    cond;
+                  ];
+                then_;
+                loop body;
+              ]
+        | [ x ] -> x
+        | _ -> fail_node [ node ]
+      in
+      RBList
+        [
+          Atom (l, "let");
+          SBList [ Atom (unknown_location, "gen_1"); target ];
+          loop body;
+        ]
+      |> expand_core_macro1
+  | RBList (Atom (_, "cond") :: body) ->
+      let rec loop = function
+        | [ Atom (_, ":else"); then_ ] -> then_
+        | cond :: then_ :: body ->
+            RBList [ Atom (unknown_location, "if"); cond; then_; loop body ]
+        | _ -> fail_node [ node ]
+      in
+      loop body |> with_context
+  | RBList (Atom (l, "if-let") :: tail) ->
+      expand_core_macro1 (RBList (Atom (l, "if-let*") :: tail))
+  | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
+      let rec loop = function
+        | Atom (l, name) :: value :: tail ->
+            RBList
+              [
+                Atom (l, "let");
+                SBList [ Atom (unknown_location, name); value ];
+                RBList
+                  [
+                    Atom (unknown_location, "if");
+                    Atom (unknown_location, name);
+                    loop tail;
+                    else';
+                  ];
+              ]
+        | [] -> then'
+        | _ ->
+            failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] "
+            ^ __LOC__
+      in
+      loop bindings |> expand_core_macro1
+  | RBList (Atom (l, "fn") :: SBList args :: body) ->
+      (let rec loop new_args let_args = function
+         | [] -> (new_args, let_args)
+         | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
+         | SBList xs :: tail ->
+             let virt_arg =
+               Atom (unknown_location, NameGenerator.get_new_var ())
+             in
+             let let_args =
+               xs
+               |> List.fold_left
+                    (fun (i, acc) x ->
+                      ( i + 1,
+                        acc
+                        @ [
+                            x;
+                            RBList
+                              [
+                                Atom (unknown_location, "get");
+                                virt_arg;
+                                Atom (unknown_location, string_of_int i);
+                              ];
+                          ] ))
+                    (0, let_args)
+               |> snd
+             in
+             loop (new_args @ [ virt_arg ]) let_args tail
+         | xs -> fail_node xs
+       in
+       let body = List.map expand_core_macro2 body in
+       match loop [] [] args with
+       | _, [] -> RBList (Atom (l, "fn*") :: SBList args :: body)
+       | new_args, let_args ->
+           RBList
+             [
+               Atom (l, "fn*");
+               SBList new_args;
+               RBList
+                 (Atom (unknown_location, "let*") :: SBList let_args :: body);
+             ])
+      |> with_context
+  | RBList (Atom (_, "->") :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom (l, z) -> RBList [ Atom (l, z); acc ]
+             | RBList (a :: bs) -> RBList (a :: acc :: bs)
+             | xs -> fail_node [ xs ])
+      |> expand_core_macro1
+  | RBList (Atom (_, "->>") :: body) ->
+      body
+      |> List.reduce (fun acc x ->
+             match x with
+             | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
+             | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
+             | xs -> fail_node [ xs ])
+      |> expand_core_macro1
+  | RBList (Atom (l, "defmacro") :: Atom (_, name) :: _) as macro ->
+      (* print_endline @@ "[LOG] defmacro: " ^ name; *)
+      ( { context with macros = StringMap.add name macro context.macros },
+        RBList [ Atom (l, "comment") ] )
+  | RBList ((Atom (_, "module") as x) :: body) ->
+      RBList (x :: (List.fold_left_map expand_core_macro context body |> snd))
+      |> with_context
+  | RBList (Atom (l, fname) :: target :: args)
+    when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
+      let mname = String.sub fname 1 (String.length fname - 1) in
+      RBList
+        (Atom (l, ".")
+        :: expand_core_macro2 target
+        :: Atom (unknown_location, mname)
+        :: List.map expand_core_macro2 args)
+      |> with_context
+  | RBList (Atom (l, fname) :: args)
+    when StringMap.exists (fun n _ -> n = fname) context.macros ->
+      (* print_endline @@ "[LOG] call macro: " ^ fname; *)
+      MacroInterpretator.run { context with loc = l }
+        (StringMap.find fname context.macros)
+        args
+      |> List.hd |> expand_core_macro1
+  | RBList ((Atom (_l, _fname) as x) :: args) ->
+      (* print_endline @@ "[LOG] call function: " ^ fname; *)
+      (* context.macros
+         |> StringMap.iter (fun n _ -> print_endline @@ "[LOG] Macro: " ^ n); *)
+      RBList (x :: List.map expand_core_macro2 args) |> with_context
+  (* | SBList body ->
+      RBList (Atom (unknown_location, "vector") :: body) |> with_context *)
+  | _ -> node |> with_context
 
-let parse_and_simplify filename code =
+let parse_and_simplify start_line filename code =
   (* print_endline "================================================"; *)
   let sexp =
     match string_to_sexp ("(module " ^ code ^ ")") with
     | [ x ] -> x
     | _ -> failwith "Illegal state"
   in
-  Simplifier.simplify
-    {
-      filename;
-      loc = unknown_location;
-      start_line = 12;
-      macros = StringMap.empty;
-    }
+  expand_core_macro
+    { filename; loc = unknown_location; start_line; macros = StringMap.empty }
     sexp
   |> function
-  | ctx, [ x ] -> (ctx, x)
-  | _ -> failwith "Illegal state"
+  | ctx, x -> (ctx, x)
