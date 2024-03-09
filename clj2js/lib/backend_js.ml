@@ -1,5 +1,5 @@
 module A = Angstrom
-open Core
+open Frontend
 
 let prelude =
   {|
@@ -335,12 +335,8 @@ let main (filename : string) code =
     |}
   in
   String.concat "\n" [ prelude_macros; code ]
-  |> Core.parse_and_simplify 12 filename
+  |> Frontend.parse_and_simplify 12 filename
   |> fun (ctx, exp) ->
   (* print_endline @@ show_cljexp exp ^ "\n"; *)
   let a, b = compile_ ctx exp in
   (a, String.trim b)
-
-let main_kt (filename : string) str = Kt_target.main filename str
-let main_sh (filename : string) str = Bash_target.main filename str
-let main_json (filename : string) str = Ast_target.main filename str

@@ -1,5 +1,5 @@
 module A = Angstrom
-open Core
+open Frontend
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
@@ -80,6 +80,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | n -> fail_node [ n ]
 
 let main (filename : string) code =
-  Core.parse_and_simplify 0 filename code
+  Frontend.parse_and_simplify 0 filename code
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

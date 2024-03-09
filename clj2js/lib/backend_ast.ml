@@ -1,5 +1,5 @@
 module A = Angstrom
-open Core
+open Frontend
 
 let rec cljexp_to_json = function
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
@@ -11,5 +11,5 @@ let rec cljexp_to_json = function
   | CBList xs -> `List (List.map cljexp_to_json xs)
 
 let main filename code =
-  Core.parse_and_simplify 0 filename code
+  Frontend.parse_and_simplify 0 filename code
   |> snd |> cljexp_to_json |> Yojson.Safe.to_string

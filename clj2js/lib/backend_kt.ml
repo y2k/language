@@ -1,5 +1,5 @@
 module A = Angstrom
-open Core
+open Frontend
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
@@ -207,7 +207,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | [] -> ""
         | x -> fail_node x
       in
-      let _, b =
+      let _, body2 =
         body
         |> List.fold_left
              (fun (attrs, out) n ->
@@ -241,7 +241,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                | _ -> fail_node [ n ])
              ([], "")
       in
-      Printf.sprintf "object %s { %s }" super b |> with_context
+      Printf.sprintf "object %s {%s}" super body2 |> with_context
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
   | RBList [ Atom (_, "spread"); x ] ->
@@ -305,6 +305,6 @@ let main (filename : string) code =
     |}
   in
   String.concat "\n" [ prelude_macros; code ]
-  |> Core.parse_and_simplify 0 filename
+  |> Frontend.parse_and_simplify 0 filename
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

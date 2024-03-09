@@ -1,5 +1,5 @@
 let assert_ code expected =
-  let actual = Clj2js.main_kt "main.clj" code in
+  let actual = Lib.main_kt "main.clj" code in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
@@ -50,4 +50,19 @@ import android.app.NotificationChannel;|};
   assert_ {|(defn- foo [a b] a)|}
     {|private fun foo(a:Any?, b:Any?) = run { a };|};
   assert_ "(is node List<*>)" "(node is List<*>)";
+  assert_
+    {|(gen-class
+:name JobService
+:extends android.app.JobService
+:prefix "_"
+:methods [[onStopJob [JobParameters] Boolean]])|}
+    {|class JobService : android.app.JobService() { override fun onStopJob(p0: JobParameters): Boolean = _onStopJob(this, p0) }|};
+  assert_
+    {|(proxy [] []
+JavascriptInterface
+(dispatch [_ ^String event ^Any payload]
+  (.runOnUiThread activity (fn [] (dispatch event payload)))))|}
+    {|object  {
+@JavascriptInterface
+fun dispatch (event:String, payload:Any) { activity.runOnUiThread({  dispatch(event, payload) }) }}|};
   ()

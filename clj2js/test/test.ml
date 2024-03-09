@@ -1,5 +1,9 @@
+module Clj2js = Lib
+
 let assert_ code expected =
-  let _ctx, actual = Clj2js.main "main.clj" code in
+  let _ctx, actual = Clj2js.main_js "main.clj" code in
+  let start = 65 in
+  let actual = String.sub actual start (String.length actual - start) in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
