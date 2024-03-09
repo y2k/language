@@ -56,7 +56,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
   | Atom (_, x) -> x |> with_context
-  | SBList xs ->
+  | SBList xs -> RBList (Atom (unknown_location, "vector") :: xs) |> compileOut
+  | RBList (Atom (_, "vector") :: xs) ->
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
@@ -73,27 +74,21 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "ns") :: _ :: depencencies) ->
       depencencies
       |> List.map (function
-           | RBList
-               [
-                 Atom (_, ":import");
-                 SBList [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ];
-               ] ->
-               Printf.sprintf "import * as %s from '%s';" alias
-                 (String.map (function '.' -> '/' | ch -> ch) name)
            | RBList (Atom (_, ":require") :: requiries) ->
                requiries
                |> List.map (function
                     | SBList
-                        [ Atom (_, name); Atom (_, ":as"); Atom (_, alias) ] ->
+                        [ Atom (_, package); Atom (_, ":as"); Atom (_, alias) ]
+                      ->
                         let target =
-                          if String.starts_with name ~prefix:"js." then
-                            String.sub name 3 (String.length name - 3)
+                          if String.starts_with package ~prefix:"js." then
+                            String.sub package 3 (String.length package - 3)
                             |> String.map (function '.' -> '/' | ch -> ch)
                           else
                             Printf.sprintf "./%s.js"
                               (String.map
                                  (function '.' -> '/' | ch -> ch)
-                                 name)
+                                 package)
                         in
                         Printf.sprintf "import * as %s from '%s';" alias target
                     | _ -> fail_node requiries)
@@ -342,7 +337,7 @@ let main (filename : string) code =
   String.concat "\n" [ prelude_macros; code ]
   |> Core.parse_and_simplify 12 filename
   |> fun (ctx, exp) ->
-  print_endline @@ show_cljexp exp ^ "\n";
+  (* print_endline @@ show_cljexp exp ^ "\n"; *)
   let a, b = compile_ ctx exp in
   (a, String.trim b)
 

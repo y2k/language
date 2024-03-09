@@ -1,5 +1,4 @@
 let assert_ code expected =
-  print_endline "==| DEBUG |===============================================";
   let _ctx, actual = Clj2js.main "main.clj" code in
   if actual <> expected then (
     print_endline actual;
@@ -167,8 +166,12 @@ bar(2)|};
     {|foo((function(){throw new Error(("" + "FIXME main.clj:1:6 - " + A1 + B2))})())|};
   assert_ {|(println)|} {|console.info()|};
   assert_ {|(println "hello" world 123)|} {|console.info("hello", world, 123)|};
-  assert_ "(import [fs.promises :as fs])" "import * as fs from 'fs/promises';";
-  assert_ "(require [vendor.effects :as e] [main :as app])"
+  (* assert_ "(ns a (:import [fs.promises fs]))" "import * as fs from 'fs/promises';"; *)
+  assert_ "(ns a (:require [js.fs.promises :as fs]))"
+    "import * as fs from 'fs/promises';";
+  assert_ "(ns a (:require [vendor.effects :as e]))"
+    "import * as e from './vendor/effects.js';";
+  assert_ "(ns a (:require [vendor.effects :as e] [main :as app]))"
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';";
   assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
@@ -207,11 +210,11 @@ bar(2)|};
   assert_ "(ns app (:require [vendor.effects :as e] [main :as app]))"
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';";
-  assert_ "(ns a (:import [fs.promises :as fs]))"
+  assert_ "(ns a (:require [js.fs.promises :as fs]))"
     "import * as fs from 'fs/promises';";
   assert_
-    "(ns app (:require [vendor.effects :as e] [main :as app]) (:import \
-     [fs.promises :as fs]))"
+    "(ns app (:require [vendor.effects :as e] [main :as app]) (:require \
+     [js.fs.promises :as fs]))"
     "import * as e from './vendor/effects.js';\n\
      import * as app from './main.js';\n\
      import * as fs from 'fs/promises';";
@@ -230,6 +233,11 @@ bar(2)|};
   assert_ "(. r play)" "r.play()";
   assert_ "(.-play r)" "r.play";
   assert_ "(. r -play)" "r.play";
+  assert_ {|{:headers {:get (fn [] "TG_SECRET_TOKEN")}}|}
+    {|{"headers": {"get": () => { return "TG_SECRET_TOKEN" }}}|};
+  assert_ {|(cond (str "c") (str "a") :else (str "b"))|}
+    {|(("" + "c") ? ("" + "a") : ("" + "b"))|};
+  assert_ {|[(str "a")]|} {|[("" + "a")]|};
   ()
 
 let () =

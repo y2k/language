@@ -1,43 +1,6 @@
 open Angstrom
 module A = Angstrom
 
-(* module Simplifier = struct
-     let rec _simplify (context : context) (node : cljexp) : context * cljexp =
-       let _simplify_ node = _simplify context node |> snd in
-       let withContext node = (context, node) in
-       match expand_core_macro_ context node |> snd with
-       | Atom (loc, "FIXME") ->
-           RBList
-             [
-               Atom (loc, "throw");
-               RBList
-                 [
-                   Atom (unknown_location, "Error.");
-                   Atom
-                     ( unknown_location,
-                       Printf.sprintf {|"Not implemented %s:%i:%i"|}
-                         context.filename
-                         (loc.line - context.start_line)
-                         loc.pos );
-                 ];
-             ]
-           |> withContext
-       | Atom _ as x -> x |> withContext
-       | RBList (Atom (l, "defmacro") :: Atom (_, name) :: _) as macro ->
-           ( { context with macros = StringMap.add name macro context.macros },
-             RBList [ Atom (l, "comment") ] )
-       | SBList xs ->
-           let context, body = List.fold_left_map simplify context xs in
-           (context, [ SBList (List.concat body) ])
-       | CBList xs ->
-           let context, body = List.fold_left_map _simplify context xs in
-           (context, CBList body)
-       | RBList xs ->
-           let context, body = List.fold_left_map _simplify context xs in
-           (context, RBList body)
-       | x -> (context, x)
-   end *)
-
 type location = { line : int; pos : int; symbol : string } [@@deriving show]
 
 let unknown_location = { line = 0; pos = 0; symbol = "" }
@@ -225,8 +188,11 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   let expand_core_macro2 x = expand_core_macro context x |> snd in
   let with_context x = (context, x) in
   match node with
+  | Atom _ -> node |> with_context
   | CBList xs ->
-      RBList (Atom (unknown_location, "hash-map") :: xs) |> with_context
+      RBList
+        (Atom (unknown_location, "hash-map") :: List.map expand_core_macro2 xs)
+      |> with_context
   | RBList (Atom (_, "let") :: SBList vals :: body) ->
       let unpack_let_args args body =
         let rec loop = function
@@ -307,7 +273,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
             RBList [ Atom (unknown_location, "if"); cond; then_; loop body ]
         | _ -> fail_node [ node ]
       in
-      loop body |> with_context
+      loop body |> expand_core_macro2 |> with_context
   | RBList (Atom (l, "if-let") :: tail) ->
       expand_core_macro1 (RBList (Atom (l, "if-let*") :: tail))
   | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
@@ -395,6 +361,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | RBList ((Atom (_, "module") as x) :: body) ->
       RBList (x :: (List.fold_left_map expand_core_macro context body |> snd))
       |> with_context
+  | RBList (Atom (_, "ns") :: _) as node -> node |> with_context
   | RBList (Atom (l, fname) :: target :: args)
     when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
       let mname = String.sub fname 1 (String.length fname - 1) in
@@ -416,12 +383,13 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       (* context.macros
          |> StringMap.iter (fun n _ -> print_endline @@ "[LOG] Macro: " ^ n); *)
       RBList (x :: List.map expand_core_macro2 args) |> with_context
-  (* | SBList body ->
-      RBList (Atom (unknown_location, "vector") :: body) |> with_context *)
-  | _ -> node |> with_context
+  | SBList body ->
+      RBList (Atom (unknown_location, "vector") :: body)
+      |> expand_core_macro2 |> with_context
+  | x -> fail_node [ x ]
 
 let parse_and_simplify start_line filename code =
-  (* print_endline "================================================"; *)
+  (* print_endline "==| DEBUG |=============================================="; *)
   let sexp =
     match string_to_sexp ("(module " ^ code ^ ")") with
     | [ x ] -> x
