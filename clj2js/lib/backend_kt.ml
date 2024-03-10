@@ -47,17 +47,35 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         Atom (_, clsName);
         Atom (_, ":extends");
         Atom (_, superCls);
+        Atom (_, ":constructors");
+        CBList [ SBList params; SBList _ ];
         Atom (_, ":prefix");
         Atom (_, prefix);
         Atom (_, ":methods");
         SBList methods;
-      ]
-    when String.starts_with ~prefix:"\"" prefix ->
+      ] ->
       let prefix = String.sub prefix 1 (String.length prefix - 2) in
+      let cnt_params =
+        match params with
+        | [] -> ""
+        | params ->
+            params
+            |> List.mapi (fun i x -> Printf.sprintf "p%i:%s" i (compile x))
+            |> List.reduce (Printf.sprintf "%s, %s")
+      in
+      let state =
+        match params with
+        | [] -> ""
+        | params ->
+            params
+            |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+            |> List.reduce (Printf.sprintf "%s, %s")
+            |> Printf.sprintf "val state = listOf<Any>(%s); "
+      in
       let ms =
         methods
         |> List.map (function
-             | SBList [ Atom (_, mname); SBList args; Atom (_, rtype) ] ->
+             | SBList [ Atom (m, mname); SBList args; Atom (_, rtype) ] ->
                  let args_ =
                    args
                    |> List.mapi (fun i a ->
@@ -71,12 +89,16 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                    |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
                    |> List.reduce (Printf.sprintf "%s, %s")
                  in
-                 Printf.sprintf "override fun %s(%s): %s = %s%s(this, %s)" mname
+                 let annot =
+                   match m.symbol with "Override" -> "override" | x -> "@" ^ x
+                 in
+                 Printf.sprintf "%s fun %s(%s): %s = %s%s(this, %s)" annot mname
                    args_ rtype prefix mname args__
              | x -> fail_node [ x ])
         |> List.reduce (Printf.sprintf "%s\n%s")
       in
-      Printf.sprintf "class %s : %s() { %s }" clsName superCls ms
+      Printf.sprintf "class %s(%s) : %s() { %s%s }" clsName cnt_params superCls
+        state ms
       |> with_context
   | RBList [ Atom (_, "as"); value; cls ] ->
       let target = compile cls in
@@ -261,6 +283,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (String.sub field 1 (String.length field - 1))
       |> with_context
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
+  (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: mname :: args) ->
       let sargs =
         match args with
@@ -272,28 +295,30 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
       |> with_context
-  | RBList (Atom (_, fname) :: args) ->
-      (if String.ends_with ~suffix:"." fname then
-         let cnst_name = String.sub fname 0 (String.length fname - 1) in
-         let fargs =
-           if List.length args = 0 then ""
-           else
-             args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-         in
-         fargs |> Printf.sprintf "%s(%s)" cnst_name
-       else
-         let sargs =
-           if List.length args = 0 then ""
-           else
-             args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-         in
-         String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")")
+  (* Constructor *)
+  | RBList (Atom (_, fname) :: args) when String.ends_with ~suffix:"." fname ->
+      (let cnst_name = String.sub fname 0 (String.length fname - 1) in
+       let fargs =
+         if List.length args = 0 then ""
+         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+       in
+       fargs |> Printf.sprintf "%s(%s)" cnst_name)
+      |> with_context
+  (* Function call *)
+  | RBList (head :: args) ->
+      (let sargs =
+         if List.length args = 0 then ""
+         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+       in
+       String.map (function '/' -> '.' | x -> x) (compile head)
+       ^ "(" ^ sargs ^ ")")
       |> with_context
   | n -> fail_node [ n ]
 
 let main (filename : string) code =
   let prelude_macros =
-    {|(defmacro do [& body] (concat (list 'let (vector)) body))
+    {|(defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
+      (defmacro do [& body] (concat (list 'let (vector)) body))
       (defmacro FIXME [& args]
         (list 'throw
           (list 'Exception.
@@ -304,7 +329,12 @@ let main (filename : string) code =
               args))))
     |}
   in
+  let prefix_lines_count =
+    String.fold_left
+      (fun acc c -> if c = '\n' then acc + 1 else acc)
+      1 prelude_macros
+  in
   String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify 0 filename
+  |> Frontend.parse_and_simplify prefix_lines_count filename
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

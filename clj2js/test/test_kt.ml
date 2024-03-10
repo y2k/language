@@ -14,9 +14,9 @@ prelude.minus(a, b) };|};
 prelude.minus(a, b) };|};
   assert_ {|(defn foo [a b] (a b))|} {|fun foo(a:Any?, b:Any?) = run { a(b) };|};
   assert_ {|(defn foo [[a b]] (a b))|}
-    {|fun foo(p__3:Any?) = run { val a = geta(p__3, 0); val b = geta(p__3, 1); a(b) };|};
+    {|fun foo(p__1:Any?) = run { val a = geta(p__1, 0); val b = geta(p__1, 1); a(b) };|};
   assert_ {|(defn foo [xs] (let [[a b] (foo 1 2)] (bar a b)))|}
-    {|fun foo(xs:Any?) = run { val p__4 = foo(1, 2); val a = geta(p__4, 0); val b = geta(p__4, 1); bar(a, b) };|};
+    {|fun foo(xs:Any?) = run { val p__1 = foo(1, 2); val a = geta(p__1, 0); val b = geta(p__1, 1); bar(a, b) };|};
   assert_ {|(= a b)|} {|a == b|};
   assert_ {|(not= a b)|} {|a != b|};
   assert_ {|(get xs 1)|} {|geta(xs, 1)|};
@@ -54,9 +54,18 @@ import android.app.NotificationChannel;|};
     {|(gen-class
 :name JobService
 :extends android.app.JobService
+:constructors {[] []}
 :prefix "_"
-:methods [[onStopJob [JobParameters] Boolean]])|}
-    {|class JobService : android.app.JobService() { override fun onStopJob(p0: JobParameters): Boolean = _onStopJob(this, p0) }|};
+:methods [[^Override onStopJob [JobParameters] Boolean]])|}
+    {|class JobService() : android.app.JobService() { override fun onStopJob(p0: JobParameters): Boolean = _onStopJob(this, p0) }|};
+  assert_
+    {|(gen-class
+:name JobService
+:extends Any
+:constructors {[Activity WebView] []}
+:prefix "_"
+:methods [[^JavascriptInterface foo [JobPar] Unit]])|}
+    {|class JobService(p0:Activity, p1:WebView) : Any() { val state = listOf<Any>(p0, p1); @JavascriptInterface fun foo(p0: JobPar): Unit = _foo(this, p0) }|};
   assert_
     {|(proxy [] []
 JavascriptInterface
@@ -65,4 +74,5 @@ JavascriptInterface
     {|object  {
 @JavascriptInterface
 fun dispatch (event:String, payload:Any) { activity.runOnUiThread({  dispatch(event, payload) }) }}|};
+  assert_ "((foo c d) a b)" "foo(c, d)(a, b)";
   ()

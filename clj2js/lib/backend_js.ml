@@ -285,12 +285,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s; %s")
       in
       "(function () { " ^ svals ^ sbody ^ " })()" |> with_context
-  (* Functions or Macro calls *)
+  (* Interop field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
     when String.starts_with ~prefix:"-" field ->
       Printf.sprintf "%s.%s" (compile target)
         (String.sub field 1 (String.length field - 1))
       |> with_context
+  (* Interop method *)
   | RBList (Atom (_, ".") :: target :: mname :: args) ->
       let sargs =
         match args with
@@ -300,22 +301,23 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
       |> with_context
-  | RBList (Atom (_, fname) :: args) ->
-      (if String.ends_with ~suffix:"." fname then
-         let cnst_name = String.sub fname 0 (String.length fname - 1) in
-         let fargs =
-           if List.length args = 0 then ""
-           else
-             args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-         in
-         fargs |> Printf.sprintf "new %s(%s)" cnst_name
-       else
-         let sargs =
-           if List.length args = 0 then ""
-           else
-             args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-         in
-         String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")")
+  (* Constructor *)
+  | RBList (Atom (_, fname) :: args) when String.ends_with ~suffix:"." fname ->
+      (let cnst_name = String.sub fname 0 (String.length fname - 1) in
+       let fargs =
+         if List.length args = 0 then ""
+         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+       in
+       fargs |> Printf.sprintf "new %s(%s)" cnst_name)
+      |> with_context
+  (* Functino call *)
+  | RBList (head :: args) ->
+      (let sargs =
+         if List.length args = 0 then ""
+         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
+       in
+       String.map (function '/' -> '.' | x -> x) (compile head)
+       ^ "(" ^ sargs ^ ")")
       |> with_context
   | x -> fail_node [ x ]
 
@@ -334,8 +336,13 @@ let main (filename : string) code =
       (defmacro str [& args] (concat (list '+ "") args))
     |}
   in
+  let prefix_lines_count =
+    String.fold_left
+      (fun acc c -> if c = '\n' then acc + 1 else acc)
+      1 prelude_macros
+  in
   String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify 12 filename
+  |> Frontend.parse_and_simplify prefix_lines_count filename
   |> fun (ctx, exp) ->
   (* print_endline @@ show_cljexp exp ^ "\n"; *)
   let a, b = compile_ ctx exp in

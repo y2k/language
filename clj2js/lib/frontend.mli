@@ -1,9 +1,9 @@
-type location = { line : int; pos : int; symbol : string } [@@deriving show]
+type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 
-val unknown_location : location
+val unknown_location : meta
 
 type cljexp =
-  | Atom of location * string
+  | Atom of meta * string
   | RBList of cljexp list
   | SBList of cljexp list
   | CBList of cljexp list
@@ -15,7 +15,7 @@ module StringMap : Map.S with type key = string
 
 type context = {
   filename : string;
-  loc : location;
+  loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
 }

@@ -1,12 +1,12 @@
 open Angstrom
 module A = Angstrom
 
-type location = { line : int; pos : int; symbol : string } [@@deriving show]
+type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 
 let unknown_location = { line = 0; pos = 0; symbol = "" }
 
 type cljexp =
-  | Atom of location * string
+  | Atom of meta * string
   | RBList of cljexp list
   | SBList of cljexp list
   | CBList of cljexp list
@@ -79,7 +79,7 @@ module StringMap = Map.Make (String)
 
 type context = {
   filename : string;
-  loc : location;
+  loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
 }
@@ -103,8 +103,10 @@ let fail_node es =
 
 module NameGenerator : sig
   val get_new_var : unit -> string
+  val reset : unit -> unit
 end = struct
   let index = ref 0
+  let reset () = index := 0
 
   let get_new_var () =
     index := !index + 1;
@@ -241,7 +243,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
           expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body));
         ]
       |> with_context
-  | RBList (Atom (_, "gen-class") :: _) as x -> with_context x
+  | RBList [ Atom (_, "__inject_raw_sexp"); x ] -> with_context x
   | RBList ((Atom (_, "proxy") as _a) :: _b :: _c :: body) ->
       let body =
         body
@@ -374,6 +376,9 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       RBList (x :: (List.fold_left_map expand_core_macro context body |> snd))
       |> with_context
   | RBList (Atom (_, "ns") :: _) as node -> node |> with_context
+  | RBList ((RBList _ as h) :: args) ->
+      RBList (expand_core_macro2 h :: List.map expand_core_macro2 args)
+      |> with_context
   | RBList (Atom (l, fname) :: target :: args)
     when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
       let mname = String.sub fname 1 (String.length fname - 1) in
@@ -401,6 +406,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | x -> fail_node [ x ]
 
 let parse_and_simplify start_line filename code =
+  NameGenerator.reset ();
   (* print_endline "==| DEBUG |=============================================="; *)
   let sexp =
     match string_to_sexp ("(module " ^ code ^ ")") with
