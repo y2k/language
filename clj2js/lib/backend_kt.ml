@@ -1,6 +1,13 @@
 module A = Angstrom
 open Frontend
 
+let prelude_code =
+  {|private fun __prelude_plus(a: Any?, b: Any?) = (a as Int) + (b as Int)
+private fun __prelude_minus(a: Any?, b: Any?) = (a as Int) - (b as Int)
+private fun __prelude_getm(x: Any?, y: String): Any? = if (x is Map<*, *>) x.get(y) else error("require Map")
+private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]
+|}
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
@@ -34,7 +41,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "not="); a; b ] ->
       compile a ^ " != " ^ compile b |> with_context
   | RBList [ Atom (_, "get"); target; index ] ->
-      Printf.sprintf "geta(%s, %s)" (compile target) (compile index)
+      Printf.sprintf "__prelude_geta(%s, %s)" (compile target) (compile index)
       |> with_context
   | RBList [ Atom (_, "if"); c; a; b ] ->
       Printf.sprintf "if (%s) { %s } else { %s }" (compile c) (compile a)
@@ -60,7 +67,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | [] -> ""
         | params ->
             params
-            |> List.mapi (fun i x -> Printf.sprintf "p%i:%s" i (compile x))
+            |> List.mapi (fun i x ->
+                   let type1 = compile x in
+                   let type2 =
+                     if String.starts_with ~prefix:"\"" type1 then
+                       String.sub type1 1 (String.length type1 - 2)
+                     else type1
+                   in
+                   Printf.sprintf "p%i:%s" i type2)
             |> List.reduce (Printf.sprintf "%s, %s")
       in
       let state =
@@ -125,7 +139,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              | n -> fail_node [ n ])
         |> List.fold_left (Printf.sprintf "%s\n%s") ""
       in
-      Printf.sprintf "package %s;%s\n" name imports |> with_context
+      Printf.sprintf "package %s;%s\n%s\n" name imports prelude_code
+      |> with_context
   | RBList (Atom (_, "and") :: xs) ->
       xs |> List.map compile
       |> List.reduce (Printf.sprintf "%s && %s")
@@ -137,10 +152,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "+") :: args) ->
       args |> List.map compile
       |> List.reduce (Printf.sprintf "%s, %s")
-      |> Printf.sprintf "prelude.plus(%s)"
+      |> Printf.sprintf "__prelude_plus(%s)"
       |> with_context
   | RBList [ Atom (_, "-"); a; b ] ->
-      Printf.sprintf "prelude.minus(%s, %s)" (compile a) (compile b)
+      Printf.sprintf "__prelude_minus(%s, %s)" (compile a) (compile b)
       |> with_context
   | RBList [ Atom (_, ">"); a; b ] ->
       Printf.sprintf "(%s > %s)" (compile a) (compile b) |> with_context
@@ -222,48 +237,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce (Printf.sprintf "%s\n%s")
       in
       "" ^ svals ^ sbody ^ "" |> with_context
-  | RBList (Atom (_, "proxy") :: SBList supers :: _ :: body) ->
-      let super =
-        match supers with
-        | Atom (_, n) :: _ -> ": " ^ n ^ "()"
-        | [] -> ""
-        | x -> fail_node x
-      in
-      let _, body2 =
-        body
-        |> List.fold_left
-             (fun (attrs, out) n ->
-               match n with
-               | Atom (_, attr_name) -> (attr_name :: attrs, out)
-               | RBList (Atom (_, fname) :: SBList (_this_ :: args) :: body) ->
-                   let attrs_s =
-                     attrs
-                     |> List.map (fun x -> "@" ^ x)
-                     |> List.fold_left (Printf.sprintf "%s\n%s") ""
-                   in
-                   let fargs =
-                     args
-                     |> List.map (function
-                          | Atom (m, x) -> x ^ ":" ^ m.symbol
-                          | n -> fail_node [ n ])
-                     |> function
-                     | [] -> ""
-                     | xs -> xs |> List.reduce (Printf.sprintf "%s, %s")
-                   in
-                   let fbody =
-                     RBList
-                       (Atom (unknown_location, "let*") :: SBList [] :: body)
-                     |> compile
-                   in
-                   ( [],
-                     out
-                     ^ Printf.sprintf "%s\n%sfun %s (%s) { %s }" attrs_s
-                         (if super = "" then "" else " override ")
-                         fname fargs fbody )
-               | _ -> fail_node [ n ])
-             ([], "")
-      in
-      Printf.sprintf "object %s {%s}" super body2 |> with_context
   | RBList (Atom (_, "defmacro") :: Atom (_, name) :: _) as macro ->
       ({ context with macros = StringMap.add name macro context.macros }, "")
   | RBList [ Atom (_, "spread"); x ] ->
@@ -275,7 +248,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions or Macro calls *)
   | RBList [ (Atom (_, fname) as key); source ]
     when String.starts_with ~prefix:":" fname ->
-      Printf.sprintf "getm(%s, %s)" (compile source) (compile key)
+      Printf.sprintf "__prelude_getm(%s, %s)" (compile source) (compile key)
       |> with_context
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
     when String.starts_with ~prefix:"-" field ->

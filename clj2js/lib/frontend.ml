@@ -244,17 +244,6 @@ let rec expand_core_macro (context : context) node : context * cljexp =
         ]
       |> with_context
   | RBList [ Atom (_, "__inject_raw_sexp"); x ] -> with_context x
-  | RBList ((Atom (_, "proxy") as _a) :: _b :: _c :: body) ->
-      let body =
-        body
-        |> List.map (function
-             | Atom _ as x -> x
-             | RBList ((Atom _ as x) :: args :: body) ->
-                 let body = body |> List.map expand_core_macro2 in
-                 RBList (x :: args :: body)
-             | x -> fail_node [ x ])
-      in
-      RBList (_a :: _b :: _c :: body) |> with_context
   | RBList (Atom (l, "case") :: target :: body) ->
       let rec loop = function
         | cond :: then_ :: body ->

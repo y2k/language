@@ -7,20 +7,20 @@ let assert_ code expected =
 
 let main () =
   assert_ {|(defn ^String foo [^Int a ^Int b] (+ a b) (- a b))|}
-    {|fun foo(a:Int, b:Int):String = run { prelude.plus(a, b)
-prelude.minus(a, b) };|};
-  assert_ {|(defn foo [a b] (+ a b) (- a b))|}
-    {|fun foo(a:Any?, b:Any?) = run { prelude.plus(a, b)
-prelude.minus(a, b) };|};
+    {|fun foo(a:Int, b:Int):String = run { __prelude_plus(a, b)
+__prelude_minus(a, b) };|};
+  assert_ {|(defn foo [a b] (foo a b) (bar a b))|}
+    {|fun foo(a:Any?, b:Any?) = run { foo(a, b)
+bar(a, b) };|};
   assert_ {|(defn foo [a b] (a b))|} {|fun foo(a:Any?, b:Any?) = run { a(b) };|};
   assert_ {|(defn foo [[a b]] (a b))|}
-    {|fun foo(p__1:Any?) = run { val a = geta(p__1, 0); val b = geta(p__1, 1); a(b) };|};
+    {|fun foo(p__1:Any?) = run { val a = __prelude_geta(p__1, 0); val b = __prelude_geta(p__1, 1); a(b) };|};
   assert_ {|(defn foo [xs] (let [[a b] (foo 1 2)] (bar a b)))|}
-    {|fun foo(xs:Any?) = run { val p__1 = foo(1, 2); val a = geta(p__1, 0); val b = geta(p__1, 1); bar(a, b) };|};
+    {|fun foo(xs:Any?) = run { val p__1 = foo(1, 2); val a = __prelude_geta(p__1, 0); val b = __prelude_geta(p__1, 1); bar(a, b) };|};
   assert_ {|(= a b)|} {|a == b|};
   assert_ {|(not= a b)|} {|a != b|};
-  assert_ {|(get xs 1)|} {|geta(xs, 1)|};
-  assert_ {|(:foo bar)|} {|getm(bar, "foo")|};
+  assert_ {|(get xs 1)|} {|__prelude_geta(xs, 1)|};
+  assert_ {|(:foo bar)|} {|__prelude_getm(bar, "foo")|};
   assert_ {|(def foo 1)|} {|val foo = 1;|};
   assert_ {|(def ^:private foo 1)|} {|private val foo = 1;|};
   assert_ {|(.map (listOf "") (fn [x] x))|} {|listOf("").map({ x -> x })|};
@@ -38,8 +38,11 @@ prelude.minus(a, b) };|};
     {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel]))|}
     {|package im.y2k.chargetimer;
 import android.app.Activity;
-import android.app.NotificationChannel;|};
-  assert_ {|(ns prelude)|} {|package prelude;|};
+import android.app.NotificationChannel;
+private fun __prelude_plus(a: Any?, b: Any?) = (a as Int) + (b as Int)
+private fun __prelude_minus(a: Any?, b: Any?) = (a as Int) - (b as Int)
+private fun __prelude_getm(x: Any?, y: String): Any? = if (x is Map<*, *>) x.get(y) else error("require Map")
+private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]|};
   assert_ "(and (= a 1) b)" "(a == 1 && b)";
   assert_ "(or (= a 1) b)" "(a == 1 || b)";
   assert_ "(.play r)" "r.play()";
@@ -62,17 +65,9 @@ import android.app.NotificationChannel;|};
     {|(gen-class
 :name JobService
 :extends Any
-:constructors {[Activity WebView] []}
+:constructors {[Activity "()->WebView"] []}
 :prefix "_"
 :methods [[^JavascriptInterface foo [JobPar] Unit]])|}
-    {|class JobService(p0:Activity, p1:WebView) : Any() { val state = listOf<Any>(p0, p1); @JavascriptInterface fun foo(p0: JobPar): Unit = _foo(this, p0) }|};
-  assert_
-    {|(proxy [] []
-JavascriptInterface
-(dispatch [_ ^String event ^Any payload]
-  (.runOnUiThread activity (fn [] (dispatch event payload)))))|}
-    {|object  {
-@JavascriptInterface
-fun dispatch (event:String, payload:Any) { activity.runOnUiThread({  dispatch(event, payload) }) }}|};
+    {|class JobService(p0:Activity, p1:()->WebView) : Any() { val state = listOf<Any>(p0, p1); @JavascriptInterface fun foo(p0: JobPar): Unit = _foo(this, p0) }|};
   assert_ "((foo c d) a b)" "foo(c, d)(a, b)";
   ()
