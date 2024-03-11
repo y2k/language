@@ -6,6 +6,7 @@ let prelude_code =
 private fun __prelude_minus(a: Any?, b: Any?) = (a as Int) - (b as Int)
 private fun __prelude_getm(x: Any?, y: String): Any? = if (x is Map<*, *>) x.get(y) else error("require Map")
 private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]
+private fun __prelude_geta(x: String, y: Int): Char = x[y]
 |}
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
@@ -40,6 +41,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       compile a ^ " == " ^ compile b |> with_context
   | RBList [ Atom (_, "not="); a; b ] ->
       compile a ^ " != " ^ compile b |> with_context
+  | RBList [ Atom (_, "get"); target; Atom (_, i) ]
+    when String.starts_with ~prefix:":" i ->
+      Printf.sprintf {|__prelude_getm(%s, "%s")|} (compile target)
+        (String.sub i 1 (String.length i - 1))
+      |> with_context
   | RBList [ Atom (_, "get"); target; index ] ->
       Printf.sprintf "__prelude_geta(%s, %s)" (compile target) (compile index)
       |> with_context
@@ -47,6 +53,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "if (%s) { %s } else { %s }" (compile c) (compile a)
         (compile b)
       |> with_context
+  | RBList (Atom (_, "vector") :: xs) ->
+      let args =
+        match xs with
+        | [] -> ""
+        | xs -> xs |> List.map compile |> List.reduce (Printf.sprintf "%s,%s")
+      in
+      Printf.sprintf "listOf(%s)" args |> with_context
   | RBList
       [
         Atom (_, "gen-class");
@@ -192,6 +205,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "%sfun %s(%s)%s = run { %s };" modifier (compile k) sargs
         ret_type sbody
       |> with_context
+  | RBList (Atom (_, "hash-map") :: xs) ->
+      let rec loop = function
+        | [ a; b ] -> Printf.sprintf "%s to %s" (compile a) (compile b)
+        | a :: b :: tail ->
+            Printf.sprintf "%s to %s" (compile a) (compile b) ^ "," ^ loop tail
+        | _ -> ""
+      in
+      Printf.sprintf "mapOf(%s)" (loop xs) |> with_context
   | RBList [ Atom (_, "def"); k; v ] ->
       let modifier =
         match k with
@@ -269,13 +290,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
       |> with_context
   (* Constructor *)
-  | RBList (Atom (_, fname) :: args) when String.ends_with ~suffix:"." fname ->
-      (let cnst_name = String.sub fname 0 (String.length fname - 1) in
-       let fargs =
-         if List.length args = 0 then ""
-         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-       in
-       fargs |> Printf.sprintf "%s(%s)" cnst_name)
+  | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
+      (if List.length args = 0 then ""
+       else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
+      |> Printf.sprintf "%s(%s)" cnst_name
       |> with_context
   (* Function call *)
   | RBList (head :: args) ->

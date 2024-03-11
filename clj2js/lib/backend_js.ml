@@ -302,13 +302,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
       |> with_context
   (* Constructor *)
-  | RBList (Atom (_, fname) :: args) when String.ends_with ~suffix:"." fname ->
-      (let cnst_name = String.sub fname 0 (String.length fname - 1) in
-       let fargs =
-         if List.length args = 0 then ""
-         else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
-       in
-       fargs |> Printf.sprintf "new %s(%s)" cnst_name)
+  | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
+      (if List.length args = 0 then ""
+       else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
+      |> Printf.sprintf "new %s(%s)" cnst_name
       |> with_context
   (* Functino call *)
   | RBList (head :: args) ->

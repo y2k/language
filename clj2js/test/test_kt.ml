@@ -42,7 +42,8 @@ import android.app.NotificationChannel;
 private fun __prelude_plus(a: Any?, b: Any?) = (a as Int) + (b as Int)
 private fun __prelude_minus(a: Any?, b: Any?) = (a as Int) - (b as Int)
 private fun __prelude_getm(x: Any?, y: String): Any? = if (x is Map<*, *>) x.get(y) else error("require Map")
-private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]|};
+private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]
+private fun __prelude_geta(x: String, y: Int): Char = x[y]|};
   assert_ "(and (= a 1) b)" "(a == 1 && b)";
   assert_ "(or (= a 1) b)" "(a == 1 || b)";
   assert_ "(.play r)" "r.play()";
@@ -70,4 +71,11 @@ private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]|};
 :methods [[^JavascriptInterface foo [JobPar] Unit]])|}
     {|class JobService(p0:Activity, p1:()->WebView) : Any() { val state = listOf<Any>(p0, p1); @JavascriptInterface fun foo(p0: JobPar): Unit = _foo(this, p0) }|};
   assert_ "((foo c d) a b)" "foo(c, d)(a, b)";
+  assert_ "[]" "listOf()";
+  assert_ "[1 2 3]" "listOf(1,2,3)";
+  assert_ "{}" {|mapOf()|};
+  assert_ "{:a 1 :b c}" {|mapOf("a" to 1,"b" to c)|};
+  assert_ {|(:a b)|} {|__prelude_getm(b, "a")|};
+  assert_ "(Foo.)" "Foo()";
+  assert_ "(Foo. a 1)" "Foo(a, 1)";
   ()

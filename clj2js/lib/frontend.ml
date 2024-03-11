@@ -384,6 +384,17 @@ let rec expand_core_macro (context : context) node : context * cljexp =
         (StringMap.find fname context.macros)
         args
       |> List.hd |> expand_core_macro1
+  | RBList [ Atom (l, name); x ] when String.starts_with ~prefix:":" name ->
+      RBList [ Atom (l, "get"); x; Atom (unknown_location, name) ]
+      |> with_context
+  (* Desugar Construtors *)
+  | RBList (Atom (l, name) :: xs)
+    when name <> "." && String.ends_with ~suffix:"." name ->
+      RBList
+        (Atom (l, "new")
+        :: Atom (unknown_location, String.sub name 0 (String.length name - 1))
+        :: List.map expand_core_macro2 xs)
+      |> with_context
   | RBList ((Atom (_l, _fname) as x) :: args) ->
       (* print_endline @@ "[LOG] call function: " ^ fname; *)
       (* context.macros

@@ -3,4 +3,5 @@ let () =
   Test_js.test2 ();
   Test_js.test3 ();
   Test_kt.main ();
+  Test_ast.main ();
   ()

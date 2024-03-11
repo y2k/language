@@ -245,6 +245,7 @@ bar(2)|};
   assert_ "((foo c d) a b)" "foo(c, d)(a, b)";
   assert_ {|(let [[a b] c] a)|}
     {|(function () { const p__1 = c; const a = p__1[0]; const b = p__1[1]; return a })()|};
+  assert_ {|(:a b)|} {|b["a"]|};
   ()
 
 let test2 () =
@@ -261,6 +262,8 @@ let test2 () =
     "export const foo = (a, b) => { return a };";
   assert_ "(defn foo [a b] (let [x (str e)] x))"
     {|export const foo = (a, b) => { return (function () { const x = ("" + e); return x })() };|};
+  assert_ "(Foo.)" "new Foo()";
+  assert_ "(Foo. a 1)" "new Foo(a, 1)";
   ()
 
 let test3 () =
