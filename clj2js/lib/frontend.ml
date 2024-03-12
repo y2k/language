@@ -133,7 +133,12 @@ module MacroInterpretator = struct
     | RBList (_ :: _ :: SBList macro_arg_names :: body) ->
         let rec execute (node : cljexp) : cljexp =
           let args = compute_args macro_arg_names macro_args in
+          (* print_endline @@ "LOG: " ^ show_cljexp node; *)
           match node with
+          | RBList [ Atom (_, "vec"); Atom (_, xs) ] -> (
+              match StringMap.find xs args with
+              | RBList xs -> SBList xs
+              | x -> fail_node [ x ])
           | RBList [ Atom (_, "concat"); a; b ] -> (
               match (execute a, execute b) with
               | RBList a2, RBList b2 -> RBList (List.concat [ a2; b2 ])
