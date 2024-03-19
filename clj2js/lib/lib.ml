@@ -8,3 +8,4 @@ let main_js (filename : string) code =
 let main_kt (filename : string) code = Backend_kt.main filename code
 let main_sh (filename : string) code = Backend_bash.main filename code
 let main_json (filename : string) code = Backend_ast.main filename code
+let main_java (filename : string) code = Backend_java.main filename code

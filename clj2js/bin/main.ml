@@ -7,20 +7,22 @@ let read_code_file filename =
 let () =
   let target = Sys.argv.(1) in
   let filename = Sys.argv.(2) in
-  filename |> read_code_file
-  |> (match target with
-     | "json" -> Clj2js.main_json filename
-     | "js" -> fun code -> Clj2js.main_js filename code |> snd
-     | "sh" ->
-         fun str ->
-           let shebang = "#!/usr/bin/env clj2sh\n" in
-           let str =
-             if String.starts_with ~prefix:shebang str then
-               String.sub str (String.length shebang)
-                 (String.length str - String.length shebang)
-             else str
-           in
-           "set -o xtrace\nset -e\n\n" ^ (Clj2js.main_sh filename) str
-     | "kt" -> Clj2js.main_kt filename
-     | t -> failwith @@ "Invalid target " ^ t)
-  |> print_endline
+  let compiler =
+    match target with
+    | "json" -> Clj2js.main_json filename
+    | "js" -> fun code -> Clj2js.main_js filename code |> snd
+    | "sh" ->
+        fun str ->
+          let shebang = "#!/usr/bin/env clj2sh\n" in
+          let str =
+            if String.starts_with ~prefix:shebang str then
+              String.sub str (String.length shebang)
+                (String.length str - String.length shebang)
+            else str
+          in
+          "set -o xtrace\nset -e\n\n" ^ (Clj2js.main_sh filename) str
+    | "kt" -> Clj2js.main_kt filename
+    | "java" -> Clj2js.main_java filename
+    | t -> failwith @@ "Invalid target " ^ t
+  in
+  filename |> read_code_file |> compiler |> print_endline

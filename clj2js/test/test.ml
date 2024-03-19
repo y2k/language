@@ -4,4 +4,5 @@ let () =
   Test_js.test3 ();
   Test_kt.main ();
   Test_ast.main ();
+  Test_java.main ();
   ()
