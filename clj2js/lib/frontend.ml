@@ -412,14 +412,29 @@ let rec expand_core_macro (context : context) node : context * cljexp =
 
 let parse_and_simplify start_line filename code =
   NameGenerator.reset ();
-  (* print_endline "==| DEBUG |=============================================="; *)
+  (* print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
-    match string_to_sexp ("(module " ^ code ^ ")") with
+    (* match string_to_sexp code with
     | [ x ] -> x
-    | _ -> failwith "Illegal state"
+    | xs -> RBList (Atom (unknown_location, "module") :: xs) *)
+    RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
   expand_core_macro
     { filename; loc = unknown_location; start_line; macros = StringMap.empty }
     sexp
   |> function
-  | ctx, x -> (ctx, x)
+  | ctx, x ->
+      let x =
+        match x with
+        | RBList (Atom (l, "module") :: xs) -> (
+            let xs =
+              xs
+              |> List.filter (function
+                   | RBList [ Atom (_, "comment") ] -> false
+                   | _ -> true)
+            in
+            match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
+        | x -> x
+      in
+      (* print_endline (show_cljexp x); *)
+      (ctx, x)

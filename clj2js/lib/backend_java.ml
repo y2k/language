@@ -80,10 +80,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         sargs sbody
       |> with_context
   (* Придумать что делать с этой копипастой *)
-  | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
+      |> Printf.sprintf "class Application {%s}"
       |> with_context
   (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: mname :: args) ->
@@ -124,5 +124,7 @@ let main (filename : string) code =
   in
   String.concat "\n" [ prelude_macros; code ]
   |> Frontend.parse_and_simplify prefix_lines_count filename
-  |> (fun (ctx, exp) -> compile_ ctx exp)
+  |> (fun (ctx, exp) ->
+       (* print_endline (show_cljexp exp); *)
+       compile_ ctx exp)
   |> snd |> String.trim

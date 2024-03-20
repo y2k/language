@@ -17,6 +17,21 @@
         context (:context env)
         r (.registerReceiver context null (android.content.IntentFilter. "android.intent.action.BATTERY_CHANGED"))
         level (.getIntExtra r "level" -1)]
+
+;; a.foo(1, 2)
+;; .foo(a, 1, 2)
+;; (.foo ^HashMap a 1 2)
+;;
+;; updateStopLossRange
+;; updateTakeProfitRange
+
+;;
+;; (.registerReceiver context ...)
+;; (Context/registerReceiver ...)
+;; (Context/registerReceiver_ context ...)
+;; (. Context/registerReceiver context ...)
+;;
+
     (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", " (.toString level) ")") null)))
 
 (defn job_scheduled [env]
