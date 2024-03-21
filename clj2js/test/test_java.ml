@@ -9,7 +9,7 @@ let assert_file filename =
   let path = "../../../test/samples/" ^ filename in
   let open In_channel in
   let code = with_open_bin path input_all in
-  let expected = with_open_bin (path ^ ".js") input_all in
+  let expected = with_open_bin (path ^ ".java") input_all in
   assert_ code expected
 
 let test_file () =

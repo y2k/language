@@ -55,6 +55,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.rev |> String.concat ""
       in
       Printf.sprintf "let(()->{%s%s});" svals sbody |> with_context
+  (* Function defenition *)
   | RBList
       [
         Atom (_, "def");
@@ -79,7 +80,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "public static %s %s(%s){%s}" (get_type fname_meta) fname
         sargs sbody
       |> with_context
-  (* Придумать что делать с этой копипастой *)
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
