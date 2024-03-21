@@ -14,17 +14,18 @@ let assert_file filename =
 
 let test_file () =
   assert_file "main.shared.clj";
+  (* assert_file "interpreter.clj"; *)
   ()
 
 let main () =
   assert_ {|(defn ^int foo [^int a ^int b] a)|}
-    {|public static int foo(int a, int b){return a}|};
+    {|public static int foo(final int a,final int b){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(defn foo [a b] (foo a b) (bar a b))|}
-    {|public static Object foo(Object a, Object b){foo(a,b);return bar(a,b)}|};
+    {|public static Object foo(final Object a,final Object b){try{return bar(a,b);}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(defn foo [a b] (a b))|}
-    {|public static Object foo(Object a, Object b){return a(b)}|};
+    {|public static Object foo(final Object a,final Object b){try{return a(b);}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(defn foo [[a b]] (a b))|}
-    {|public static Object foo(Object p__1){return let(()->{Object a=get(p__1,0);Object b=get(p__1,1);return a(b);});}|};
+    {|public static Object foo(final Object p__1){try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(= a b)|} {|Objects.equals(a,b)|};
   assert_ {|(not= a b)|} {|!Objects.equals(a,b)|};
   assert_ {|(+ a b)|} {|(a+b)|};
@@ -36,6 +37,27 @@ let main () =
   assert_ {|(>= a b)|} {|(a>=b)|};
   assert_ {|(<= a b)|} {|(a<=b)|};
   assert_ {|[1 2 3]|} {|List.of(1,2,3)|};
+  assert_ {|(:webview env)|} {|get(env,"webview")|};
+  assert_ {|(foo a b 1)|} {|foo(a,b,1)|};
+  assert_ {|(.foo a b 1)|} {|a.foo(b,1)|};
+  assert_ {|(Foo. a b 1)|} {|new Foo(a,b,1)|};
+  assert_ {|(String/valueOf level)|} {|String.valueOf(level)|};
+  assert_ {|(.join String "" [1 2 3])|} {|String.join("",List.of(1,2,3))|};
+  assert_ {|(if a b c)|} {|final Object p__1;if(a){p__1=b;}else{p__1=c;}p__1|};
+  assert_ {|(if (if a1 a2 a3) (if b1 b2 b3) (if c1 c2 c3))|}
+    {|final Object p__1;if(a1){p__1=a2;}else{p__1=a3;}final Object p__4;if(p__1){final Object p__2;if(b1){p__2=b2;}else{p__2=b3;}p__4=p__2;}else{final Object p__3;if(c1){p__3=c2;}else{p__3=c3;}p__4=p__3;}p__4|};
+  assert_ {|(let [^Context wv (foo)] wv)|}
+    {|final var wv=(Context)foo();final var p__1=wv;p__1|};
+  assert_ {|{:a b :c d}|} {|Map.of("a",b,"c",d)|};
+  assert_ {|(fn [x] x)|}
+    {|(x)->{try{return x;}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(fn [[a b]] (a b))|}
+    {|(p__1)->{try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(foo (if a b c))|}
+    {|final Object p__1;if(a){p__1=b;}else{p__1=c;}foo(p__1)|};
+  assert_ {|(foo (fn [[a b]] (= a b)))|}
+    {|foo((p__1)->{try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;}catch(Exception e){throw new RuntimeException(e);}})|};
+  (*  *)
   (* assert_ {|(defn ^String foo [^int a ^int b] (+ a b) (- a b))|}
      {|public static String foo(int a, int b) { return __prelude_plus(a, b)
       __prelude_minus(a, b) };|}; *)

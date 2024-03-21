@@ -82,6 +82,7 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
+  out_var : string;
 }
 
 module List = struct
@@ -101,10 +102,7 @@ let fail_node es =
   |> prerr_endline;
   failwith "Invalid node"
 
-module NameGenerator : sig
-  val get_new_var : unit -> string
-  val reset : unit -> unit
-end = struct
+module NameGenerator = struct
   let index = ref 0
   let reset () = index := 0
 
@@ -414,13 +412,16 @@ let parse_and_simplify start_line filename code =
   NameGenerator.reset ();
   (* print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
-    (* match string_to_sexp code with
-    | [ x ] -> x
-    | xs -> RBList (Atom (unknown_location, "module") :: xs) *)
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
   expand_core_macro
-    { filename; loc = unknown_location; start_line; macros = StringMap.empty }
+    {
+      filename;
+      loc = unknown_location;
+      start_line;
+      macros = StringMap.empty;
+      out_var = "";
+    }
     sexp
   |> function
   | ctx, x ->

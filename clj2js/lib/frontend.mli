@@ -18,7 +18,13 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
+  out_var : string;
 }
+
+module NameGenerator : sig
+  val get_new_var : unit -> string
+  val reset : unit -> unit
+end
 
 val parse_and_simplify : int -> string -> string -> context * cljexp
 
