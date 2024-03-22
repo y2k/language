@@ -73,6 +73,102 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         out_var c_ctx.out_var a_stmt out_var a_ctx.out_var b_stmt out_var
         b_ctx.out_var
       |> with_context2 out_var
+  | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
+      let imports =
+        ns_params
+        |> List.map (function
+             | RBList (Atom (_, ":import") :: imports) ->
+                 imports
+                 |> List.map (function
+                      | SBList (Atom (_, pkg) :: classes) ->
+                          List.map compile2 classes
+                          |> List.map (fun c ->
+                                 Printf.sprintf "import %s.%s;" pkg c)
+                          |> List.reduce (Printf.sprintf "%s%s")
+                      | n -> fail_node [ n ])
+                 |> List.reduce (Printf.sprintf "%s%s")
+             | n -> fail_node [ n ])
+        |> List.fold_left (Printf.sprintf "%s%s") ""
+      in
+      Printf.sprintf "package %s;%s%s" name imports "" |> with_context
+  | RBList [ Atom (_, "is"); x; Atom (_, type_) ] ->
+      let out_var = Printf.sprintf "(%s instanceof %s)" (compile2 x) type_ in
+      "" |> with_context2 out_var
+  | RBList [ Atom (_, "as"); x; Atom (_, type_) ] ->
+      let out_var = Printf.sprintf "(%s)%s" type_ (compile2 x) in
+      "" |> with_context2 out_var
+  | RBList
+      [
+        Atom (_, "gen-class");
+        Atom (_, ":name");
+        Atom (_, clsName);
+        Atom (_, ":extends");
+        Atom (_, superCls);
+        Atom (_, ":constructors");
+        CBList [ SBList params; SBList _ ];
+        Atom (_, ":prefix");
+        Atom (_, prefix);
+        Atom (_, ":methods");
+        SBList methods;
+      ] ->
+      let prefix = String.sub prefix 1 (String.length prefix - 2) in
+      let cnt_params =
+        match params with
+        | [] -> ""
+        | params ->
+            params
+            |> List.mapi (fun i x ->
+                   let type1 = compile2 x in
+                   let type2 =
+                     if String.starts_with ~prefix:"\"" type1 then
+                       String.sub type1 1 (String.length type1 - 2)
+                     else type1
+                   in
+                   Printf.sprintf "%s p%i" type2 i)
+            |> List.reduce (Printf.sprintf "%s,%s")
+      in
+      let state =
+        match params with
+        | [] -> ""
+        | params ->
+            params
+            |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+            |> List.reduce (Printf.sprintf "%s,%s")
+            |> Printf.sprintf "public %s(%s){state=java.util.List.of(%s);}"
+                 clsName cnt_params
+      in
+      let ms =
+        methods
+        |> List.map (function
+             | SBList [ Atom (m, mname); SBList args; Atom (_, rtype) ] ->
+                 let args_ =
+                   args
+                   |> List.mapi (fun i a ->
+                          match a with
+                          | Atom (_, a) -> Printf.sprintf "%s p%i" a i
+                          | x -> fail_node [ x ])
+                   |> List.reduce (Printf.sprintf "%s, %s")
+                 in
+                 let args__ =
+                   args
+                   |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+                   |> List.reduce (Printf.sprintf "%s,%s")
+                 in
+                 let annot = match m.symbol with x -> "@" ^ x in
+                 let return_ =
+                   if rtype = "void" then ""
+                   else Printf.sprintf "return (%s)" rtype
+                 in
+                 Printf.sprintf "%s public %s %s(%s){%s%s%s(this,%s);}" annot
+                   rtype mname args_ return_ prefix mname args__
+             | x -> fail_node [ x ])
+        |> List.reduce (Printf.sprintf "%s%s")
+      in
+      Printf.sprintf
+        "public static class %s extends %s{public java.util.List<Object> \
+         state;%s%s}"
+        clsName superCls state ms
+      |> with_context
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec parse_vals nodes =
         match nodes with
@@ -100,7 +196,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
   (* Lambda *)
-  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
+  | RBList (Atom (m, "fn*") :: SBList args :: body) ->
       let get_type am = if am.symbol = "" then "" else am.symbol ^ " " in
       let sargs =
         args
@@ -122,11 +218,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             (Printf.sprintf "%s%s" s s2, ctx2)
       in
       let sbody, ctx2 = loop_body body in
+      let returns = if m.symbol = "void" then "" else "return " in
       let out_var =
         Printf.sprintf
-          "(%s)->{try{%sreturn %s;}catch(Exception e){throw new \
+          "(%s)->{try{%s%s%s;}catch(Exception e){throw new \
            RuntimeException(e);}}"
-          sargs sbody ctx2.out_var
+          sargs sbody returns ctx2.out_var
       in
       "" |> with_context2 out_var
   (* Function defenition *)
@@ -136,7 +233,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         Atom (fname_meta, fname);
         RBList (Atom (_, "fn*") :: SBList args :: body);
       ] ->
-      let get_type am = if am.symbol = "" then "Object" else am.symbol in
+      let get_type am =
+        if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol
+      in
       let sargs =
         args
         |> List.map (function
@@ -158,10 +257,24 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             (Printf.sprintf "%s%s" s s2, ctx2)
       in
       let sbody, ctx2 = loop_body body in
+      let vis =
+        if fname_meta.symbol = ":private" then "private" else "public"
+      in
       Printf.sprintf
-        "public static %s %s(%s){try{%sreturn %s;}catch(Exception e){throw new \
+        "%s static %s %s(%s){try{%sreturn %s;}catch(Exception e){throw new \
          RuntimeException(e);}}"
-        (get_type fname_meta) fname sargs sbody ctx2.out_var
+        vis (get_type fname_meta) fname sargs sbody ctx2.out_var
+      |> with_context
+  | RBList (Atom (_, "module") :: (RBList (Atom (_, "ns") :: _) as ns) :: body)
+    ->
+      let ns_ = compile ns in
+      let cls_name =
+        String.capitalize_ascii (String.sub context.filename 0 1)
+        ^ String.sub context.filename 1 (String.length context.filename - 5)
+      in
+      body |> List.map compile
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
       |> with_context
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
@@ -232,7 +345,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | x -> fail_node [ x ]
 
 let main (filename : string) code =
-  let prelude_macros = {|(defmacro not= [a b] (list 'not (list '= a b)))|} in
+  let prelude_macros =
+    {|(defmacro not= [a b] (list 'not (list '= a b)))
+      (defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
+      (defmacro fn! [& body] (concat (list ^void 'fn) body))|}
+  in
   let prefix_lines_count =
     String.fold_left
       (fun acc c -> if c = '\n' then acc + 1 else acc)

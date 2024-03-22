@@ -14,10 +14,15 @@ let assert_file filename =
 
 let test_file () =
   assert_file "main.shared.clj";
+  (* assert_file "main.android.clj"; *)
   (* assert_file "interpreter.clj"; *)
   ()
 
 let main () =
+  assert_ {|(defn foo [a] a)|}
+    {|public static Object foo(final Object a){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(defn- foo [a] a)|}
+    {|private static Object foo(final Object a){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(defn ^int foo [^int a ^int b] a)|}
     {|public static int foo(final int a,final int b){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
   assert_ {|(defn foo [a b] (foo a b) (bar a b))|}
@@ -57,6 +62,25 @@ let main () =
     {|final Object p__1;if(a){p__1=b;}else{p__1=c;}foo(p__1)|};
   assert_ {|(foo (fn [[a b]] (= a b)))|}
     {|foo((p__1)->{try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;}catch(Exception e){throw new RuntimeException(e);}})|};
+  assert_ "(is a List)" "(a instanceof List)";
+  assert_ "(as a List)" "(List)a";
+  assert_
+    {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel])) (defn foo [x] x)|}
+    {|package im.y2k.chargetimer;import android.app.Activity;import android.app.NotificationChannel;class Main {public static Object foo(final Object x){try{return x;}catch(Exception e){throw new RuntimeException(e);}}}|};
+  assert_
+    {|(gen-class
+:name WebViewJsListener
+:extends Object
+:constructors {[Activity WebView] []}
+:prefix "wv_"
+:methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String]])|}
+    {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){return (String)wv_bar(this,p0,p1);}}|};
+  assert_ {|(fn [] (bar b c))|}
+    {|()->{try{return bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(^void fn [] (bar b c))|}
+    {|()->{try{bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(fn! [] (bar b c))|}
+    {|()->{try{bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
   (*  *)
   (* assert_ {|(defn ^String foo [^int a ^int b] (+ a b) (- a b))|}
      {|public static String foo(int a, int b) { return __prelude_plus(a, b)
@@ -79,11 +103,6 @@ let main () =
         assert_ {|(spread (.toTypedArray a))|} {|*a.toTypedArray()|};
         assert_ {|(class android.app.AlarmManager)|}
           {|android.app.AlarmManager::class.java|};
-        assert_
-          {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel]))|}
-          {|package im.y2k.chargetimer;
-      import android.app.Activity;
-      import android.app.NotificationChannel;
       private fun __prelude_plus(a: Any?, b: Any?) = (a as Int) + (b as Int)
       private fun __prelude_minus(a: Any?, b: Any?) = (a as Int) - (b as Int)
       private fun __prelude_getm(x: Any?, y: String): Any? = if (x is Map<*, *>) x.get(y) else error("require Map")

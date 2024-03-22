@@ -172,8 +172,8 @@ module MacroInterpretator = struct
                   string_of_int (context.loc.line - context.start_line) )
           | Atom (_, "__POSITION__") ->
               Atom (unknown_location, string_of_int context.loc.pos)
-          | Atom (_, x) when String.starts_with ~prefix:"'" x ->
-              Atom (unknown_location, String.sub x 1 (String.length x - 1))
+          | Atom (m, x) when String.starts_with ~prefix:"'" x ->
+              Atom (m, String.sub x 1 (String.length x - 1))
           | Atom (_, x) when StringMap.exists (fun k _ -> k = x) args ->
               StringMap.find x args
           | Atom (_, x)
@@ -380,6 +380,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
         :: Atom (unknown_location, mname)
         :: List.map expand_core_macro2 args)
       |> with_context
+  (* Expand user macro *)
   | RBList (Atom (l, fname) :: args)
     when StringMap.exists (fun n _ -> n = fname) context.macros ->
       (* print_endline @@ "[LOG] call macro: " ^ fname; *)
