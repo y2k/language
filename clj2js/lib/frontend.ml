@@ -214,12 +214,13 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                          acc
                          @ [
                              x;
-                             RBList
-                               [
-                                 Atom (unknown_location, "get");
-                                 Atom (unknown_location, temp_val);
-                                 Atom (unknown_location, string_of_int i);
-                               ];
+                             expand_core_macro2
+                               (RBList
+                                  [
+                                    Atom (unknown_location, "get");
+                                    Atom (unknown_location, temp_val);
+                                    Atom (unknown_location, string_of_int i);
+                                  ]);
                            ] ))
                      (0, a)
                 |> snd
@@ -390,7 +391,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       |> List.hd |> expand_core_macro1
   | RBList [ Atom (l, name); x ] when String.starts_with ~prefix:":" name ->
       RBList [ Atom (l, "get"); x; Atom (unknown_location, name) ]
-      |> with_context
+      |> expand_core_macro2 |> with_context
   (* Desugar Construtors *)
   | RBList (Atom (l, name) :: xs)
     when name <> "." && String.ends_with ~suffix:"." name ->

@@ -1,12 +1,15 @@
-;; (ns im.y2k.chargetimer
-;;   (:import [android.content Context]
-;;            [com.google.gson Gson]))
+(ns im.y2k.chargetimer
+  (:import [android.content Context]
+           [com.google.gson Gson]
+           [java.io File Reader FileReader InputStreamReader]
+           [java.util List Objects]
+           [java.util.function Function]))
 
 ;; (__unsafe_inject_code "data class Env(val bindings: Map<String, Object> = emptyMap())")
 
 (defn run_code [^Context context webview ^String event]
   (let [^File f1 (File. (.getFilesDir context) "sample.json")
-        ^Reader json (if (.exists f1) (FileReader. f1) (InputStreamReader. (.open (.getAssets context) "sample.json")))
+        ^Reader json (if (.exists f1) (checked! (FileReader. f1)) (InputStreamReader. (checked! (.open (.getAssets context) "sample.json"))))
         code (.fromJson (Gson.) json List.class)
         ^"List<List<Object>>" event_handlers (inter (Env.) code)
         ^"Function<Object,Object>" handler (get (.anyMatch (.stream event_handlers) (fn [[name]] (= name event))) 1)]

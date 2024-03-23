@@ -1,5 +1,5 @@
 let assert_ code expected =
-  let actual = Lib.main_java "main.clj" code in
+  let actual = Lib.main_java "src/main.shared.clj" code in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
@@ -13,24 +13,24 @@ let assert_file filename =
   assert_ code expected
 
 let test_file () =
-  assert_file "main.shared.clj";
+  (* assert_file "main.shared.clj"; *)
   (* assert_file "main.android.clj"; *)
   (* assert_file "interpreter.clj"; *)
   ()
 
 let main () =
   assert_ {|(defn foo [a] a)|}
-    {|public static Object foo(final Object a){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|public static Object foo(final Object a){return a;}|};
   assert_ {|(defn- foo [a] a)|}
-    {|private static Object foo(final Object a){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
-  assert_ {|(defn ^int foo [^int a ^int b] a)|}
-    {|public static int foo(final int a,final int b){try{return a;}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|private static Object foo(final Object a){return a;}|};
+  assert_ {|(defn ^String foo [^int a ^int b] a)|}
+    {|public static String foo(final int a,final int b){return a;}|};
   assert_ {|(defn foo [a b] (foo a b) (bar a b))|}
-    {|public static Object foo(final Object a,final Object b){try{return bar(a,b);}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|public static Object foo(final Object a,final Object b){foo(a,b);return bar(a,b);}|};
   assert_ {|(defn foo [a b] (a b))|}
-    {|public static Object foo(final Object a,final Object b){try{return a(b);}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|public static Object foo(final Object a,final Object b){return a(b);}|};
   assert_ {|(defn foo [[a b]] (a b))|}
-    {|public static Object foo(final Object p__1){try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|public static Object foo(final Object p__1){final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
   assert_ {|(= a b)|} {|Objects.equals(a,b)|};
   assert_ {|(not= a b)|} {|!Objects.equals(a,b)|};
   assert_ {|(+ a b)|} {|(a+b)|};
@@ -42,7 +42,7 @@ let main () =
   assert_ {|(>= a b)|} {|(a>=b)|};
   assert_ {|(<= a b)|} {|(a<=b)|};
   assert_ {|[1 2 3]|} {|List.of(1,2,3)|};
-  assert_ {|(:webview env)|} {|get(env,"webview")|};
+  assert_ {|(:webview env)|} {|y2k.RT.get(env,"webview")|};
   assert_ {|(foo a b 1)|} {|foo(a,b,1)|};
   assert_ {|(.foo a b 1)|} {|a.foo(b,1)|};
   assert_ {|(Foo. a b 1)|} {|new Foo(a,b,1)|};
@@ -54,19 +54,18 @@ let main () =
   assert_ {|(let [^Context wv (foo)] wv)|}
     {|final var wv=(Context)foo();final var p__1=wv;p__1|};
   assert_ {|{:a b :c d}|} {|Map.of("a",b,"c",d)|};
-  assert_ {|(fn [x] x)|}
-    {|(x)->{try{return x;}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(fn [x] x)|} {|(x)->{return x;}|};
   assert_ {|(fn [[a b]] (a b))|}
-    {|(p__1)->{try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}catch(Exception e){throw new RuntimeException(e);}}|};
+    {|(p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
   assert_ {|(foo (if a b c))|}
     {|final Object p__1;if(a){p__1=b;}else{p__1=c;}foo(p__1)|};
   assert_ {|(foo (fn [[a b]] (= a b)))|}
-    {|foo((p__1)->{try{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;}catch(Exception e){throw new RuntimeException(e);}})|};
+    {|foo((p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;})|};
   assert_ "(is a List)" "(a instanceof List)";
   assert_ "(as a List)" "(List)a";
   assert_
     {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel])) (defn foo [x] x)|}
-    {|package im.y2k.chargetimer;import android.app.Activity;import android.app.NotificationChannel;class Main {public static Object foo(final Object x){try{return x;}catch(Exception e){throw new RuntimeException(e);}}}|};
+    {|package im.y2k.chargetimer;import android.app.Activity;import android.app.NotificationChannel;class Main_shared {public static Object foo(final Object x){return x;}}|};
   assert_
     {|(gen-class
 :name WebViewJsListener
@@ -75,12 +74,21 @@ let main () =
 :prefix "wv_"
 :methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String]])|}
     {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){return (String)wv_bar(this,p0,p1);}}|};
-  assert_ {|(fn [] (bar b c))|}
-    {|()->{try{return bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
-  assert_ {|(^void fn [] (bar b c))|}
-    {|()->{try{bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
-  assert_ {|(fn! [] (bar b c))|}
-    {|()->{try{bar(b,c);}catch(Exception e){throw new RuntimeException(e);}}|};
+  assert_ {|(fn [] (bar b c))|} {|()->{return bar(b,c);}|};
+  assert_ {|(^void fn [] (bar b c))|} {|()->{bar(b,c);}|};
+  assert_ {|(fn! [] (bar b c))|} {|()->{bar(b,c);}|};
+  assert_ {|(defn a [] (b) (c) (d))|}
+    {|public static Object a(){b();c();return d();}|};
+  assert_ {|(let [a 1] (b) (c) (d))|}
+    {|final var a=1;b();c();final var p__1=d();p__1|};
+  assert_ "(class java.lang.String)" "java.lang.String.class";
+  assert_ {|(checked! (foo))|} {|y2k.RT.try_(()->{return foo();})|};
+  assert_ {|(get xs 1)|} {|y2k.RT.get(xs,1)|};
+  assert_ {|(let [[a] b] a)|}
+    {|final var p__1=b;final var a=y2k.RT.get(p__1,0);final var p__2=a;p__2|};
+  assert_ {|(let [a (:b c)] a)|}
+    {|final var a=y2k.RT.get(c,"b");final var p__1=a;p__1|};
+  assert_ {|(str a "b" 3)|} {|y2k.RT.str(a,"b",3)|};
   (*  *)
   (* assert_ {|(defn ^String foo [^int a ^int b] (+ a b) (- a b))|}
      {|public static String foo(int a, int b) { return __prelude_plus(a, b)

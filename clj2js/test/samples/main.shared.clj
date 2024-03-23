@@ -1,6 +1,12 @@
+(ns im.y2k.chargetimer
+  (:import [android.content Context]
+           [android.media AudioManager]
+           [android.webkit WebView]
+           [java.util List]))
+
 (defn play_alarm [env]
   (let [^Context context (:context env)
-        ^AudioManager am (.getSystemService context (.loadClass (.getClassLoader (.getClass "")) "android.media.AudioManager"))
+        am (.getSystemService context (class AudioManager))
         sound_stream_id 5
         max (.getStreamMaxVolume am sound_stream_id)]
     (.setStreamVolume am sound_stream_id max 0)

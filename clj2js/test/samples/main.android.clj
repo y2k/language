@@ -3,7 +3,9 @@
            [android.webkit WebView JavascriptInterface]
            [android.content Intent Context IntentFilter BroadcastReceiver ComponentName]
            [android.media AudioManager RingtoneManager]
-           [android.app.job JobScheduler JobParameters JobInfo]))
+           [android.app.job JobScheduler JobParameters JobInfo]
+           [java.util List Objects]
+           [java.util.function BiFunction]))
 
 (gen-class
  :name WebViewJsListener
@@ -15,7 +17,7 @@
 (defn- wv_dispatch [^WebViewJsListener self ^String event ^String payload]
   (let [activity (as (get self.state 0) Activity)
         wv (get self.state 1)]
-    (.runOnUiThread! activity (fn [] (InterpreterKt/run_code activity wv event)))))
+    (.runOnUiThread! activity (fn! [] (InterpreterKt/run_code activity wv event)))))
 
 (defn main [^Activity context ^WebView webview]
   (let [webSettings (.getSettings webview)]
@@ -48,32 +50,32 @@
 ;;           r (.getRingtone RingtoneManager context notification)]
 ;;       (.play r))))
 
-;; (defn- make_dispatch [^Activity activity ^WebView webView]
-;;   (fn [^String event ^Any payload]
-;;     (case event
+(defn ^"BiFunction<String,Object,Object>" make_dispatch [^Activity activity ^WebView webView]
+  (fn [^String event ^Object payload]
+    (case event
 
-;;       :start_job
-;;       (let [job_info (->
-;;                       (JobInfo.Builder. 123 (ComponentName. activity "im.y2k.chargetimer.ChargeJobService"))
-;;                       (.setPeriodic 300000)
-;;                       (.setRequiresCharging true)
-;;                       .build)
-;;             job_scheduler (as (.getSystemService activity Context.JOB_SCHEDULER_SERVICE) JobScheduler)]
-;;         (.schedule job_scheduler job_info))
+      :start_job
+      (let [job_info (->
+                      (JobInfo.Builder. 123 (ComponentName. activity "im.y2k.chargetimer.ChargeJobService"))
+                      (.setPeriodic 300000)
+                      (.setRequiresCharging true)
+                      .build)
+            job_scheduler (as (.getSystemService activity Context.JOB_SCHEDULER_SERVICE) JobScheduler)]
+        (.schedule job_scheduler job_info))
 
-;;       :stop_job
-;;       (.cancel
-;;        (as (.getSystemService activity Context.JOB_SCHEDULER_SERVICE) JobScheduler)
-;;        123)
+      :stop_job
+      (.cancel!
+       (.getSystemService activity (class JobScheduler))
+       123)
 
-;;       :get_job_info
-;;       (let [callback (FIXME)
-;;             service (as (.getSystemService activity Context.JOB_SCHEDULER_SERVICE) JobScheduler)
-;;             m (android.app.job.JobInfo/getMinPeriodMillis)
-;;             reason (.getPendingJob service 123)]
-;;         (.evaluateJavascript webView (str callback "('" m " / " reason "')") null))
+      :get_job_info
+      (let [callback "(FIXME)"
+            service (as (.getSystemService activity Context.JOB_SCHEDULER_SERVICE) JobScheduler)
+            m (android.app.job.JobInfo/getMinPeriodMillis)
+            reason (.getPendingJob service 123)]
+        (.evaluateJavascript! webView (str callback "('" m " / " reason "')") null))
 
-;;       null)))
+      null)))
 
 ;; (gen-class
 ;;  :name BatteryBroadcastReceiver

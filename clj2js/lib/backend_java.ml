@@ -191,10 +191,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.mapi (fun i (ctx2, x) ->
                if i = 0 then
                  Printf.sprintf "%sfinal var %s=%s;" x out_var ctx2.out_var
-               else x)
+               else Printf.sprintf "%s;%s" ctx2.out_var x)
         |> List.rev |> String.concat ""
       in
       Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
+  | RBList [ Atom (_, "class"); Atom (_, name) ] ->
+      "" |> with_context2 (Printf.sprintf "%s.class" name)
   (* Lambda *)
   | RBList (Atom (m, "fn*") :: SBList args :: body) ->
       let get_type am = if am.symbol = "" then "" else am.symbol ^ " " in
@@ -220,13 +222,35 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let sbody, ctx2 = loop_body body in
       let returns = if m.symbol = "void" then "" else "return " in
       let out_var =
-        Printf.sprintf
-          "(%s)->{try{%s%s%s;}catch(Exception e){throw new \
-           RuntimeException(e);}}"
-          sargs sbody returns ctx2.out_var
+        Printf.sprintf "(%s)->{%s%s%s;}" sargs sbody returns ctx2.out_var
       in
       "" |> with_context2 out_var
-  (* Function defenition *)
+  | RBList (Atom (_, "module") :: (RBList (Atom (_, "ns") :: _) as ns) :: body)
+    ->
+      let ns_ = compile ns in
+      let name_start_pos =
+        (String.rindex_opt context.filename '/' |> Option.value ~default:(-1))
+        + 1
+      in
+      let filename =
+        String.sub context.filename name_start_pos
+          (String.length context.filename - name_start_pos)
+      in
+      let cls_name =
+        String.capitalize_ascii (String.sub filename 0 1)
+        ^ String.sub filename 1 (String.length filename - 5)
+        |> String.map (function '.' -> '_' | x -> x)
+      in
+      body |> List.map compile
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
+      |> with_context
+  | RBList (Atom (_, "module") :: body) ->
+      body |> List.map compile
+      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> Printf.sprintf "class Application {%s}"
+      |> with_context
+  (* Function definition *)
   | RBList
       [
         Atom (_, "def");
@@ -248,38 +272,19 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let rec loop_body = function
         | [] -> fail_node []
         | [ x ] ->
-            let ctx2, s = compile_ context x in
-            let s = if s = "" then "" else s in
-            (Printf.sprintf "%s" s, ctx2)
+            let ctx2, stm = compile_ context x in
+            (Printf.sprintf "%s" stm, ctx2)
         | x :: xs ->
-            let _, s = compile_ context x in
-            let s2, ctx2 = loop_body xs in
-            (Printf.sprintf "%s%s" s s2, ctx2)
+            let ctx1, stm1 = compile_ context x in
+            let stm2, ctx2 = loop_body xs in
+            (Printf.sprintf "%s%s;%s" stm1 ctx1.out_var stm2, ctx2)
       in
       let sbody, ctx2 = loop_body body in
       let vis =
         if fname_meta.symbol = ":private" then "private" else "public"
       in
-      Printf.sprintf
-        "%s static %s %s(%s){try{%sreturn %s;}catch(Exception e){throw new \
-         RuntimeException(e);}}"
-        vis (get_type fname_meta) fname sargs sbody ctx2.out_var
-      |> with_context
-  | RBList (Atom (_, "module") :: (RBList (Atom (_, "ns") :: _) as ns) :: body)
-    ->
-      let ns_ = compile ns in
-      let cls_name =
-        String.capitalize_ascii (String.sub context.filename 0 1)
-        ^ String.sub context.filename 1 (String.length context.filename - 5)
-      in
-      body |> List.map compile
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
-      |> with_context
-  | RBList (Atom (_, "module") :: body) ->
-      body |> List.map compile
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> Printf.sprintf "class Application {%s}"
+      Printf.sprintf "%s static %s %s(%s){%sreturn %s;}" vis
+        (get_type fname_meta) fname sargs sbody ctx2.out_var
       |> with_context
   (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: Atom (_, mname) :: args) ->
@@ -348,7 +353,11 @@ let main (filename : string) code =
   let prelude_macros =
     {|(defmacro not= [a b] (list 'not (list '= a b)))
       (defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
-      (defmacro fn! [& body] (concat (list ^void 'fn) body))|}
+      (defmacro fn! [& body] (concat (list ^void 'fn) body))
+      (defmacro str [& xs] (concat (list 'y2k.RT/str) xs))
+      (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
+      (defmacro get [target key] (list 'y2k.RT/get target key))
+      |}
   in
   let prefix_lines_count =
     String.fold_left
