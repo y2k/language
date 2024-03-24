@@ -13,7 +13,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       let r = "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" in
       ({ context with out_var = r }, "")
-  | Atom (_, x) -> ({ context with out_var = x }, "")
+  | Atom (_, x) when String.starts_with ~prefix:"\"" x ->
+      ({ context with out_var = x }, "")
+  | Atom (_, x) ->
+      let x = String.map (function '/' -> '.' | x -> x) x in
+      ({ context with out_var = x }, "")
   | RBList [ Atom (_, "+"); a; b ] ->
       "" |> with_context2 (Printf.sprintf "(%s+%s)" (compile2 a) (compile2 b))
   | RBList [ Atom (_, "-"); a; b ] ->
@@ -357,6 +361,7 @@ let main (filename : string) code =
       (defmacro str [& xs] (concat (list 'y2k.RT/str) xs))
       (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
       (defmacro get [target key] (list 'y2k.RT/get target key))
+      (defmacro println [& xs] (list 'System.out/println (concat (list 'str) xs)))
       |}
   in
   let prefix_lines_count =
