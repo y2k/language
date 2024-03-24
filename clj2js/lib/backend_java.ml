@@ -66,7 +66,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
-      let out_var = Printf.sprintf "Map.of(%s)" args in
+      let out_var = Printf.sprintf "java.util.Map.of(%s)" args in
       args_init |> with_context2 out_var
   | RBList [ Atom (_, "if"); c; a; b ] ->
       let c_ctx, c_stmt = compile_ context c in
@@ -163,8 +163,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                    if rtype = "void" then ""
                    else Printf.sprintf "return (%s)" rtype
                  in
-                 Printf.sprintf "%s public %s %s(%s){%s%s%s(this,%s);}" annot
-                   rtype mname args_ return_ prefix mname args__
+                 let call_super =
+                   if annot = "@Override" then
+                     Printf.sprintf "super.%s(%s);" mname args__
+                   else ""
+                 in
+                 Printf.sprintf "%s public %s %s(%s){%s%s%s%s(this,%s);}" annot
+                   rtype mname args_ call_super return_ prefix mname args__
              | x -> fail_node [ x ])
         |> List.reduce (Printf.sprintf "%s%s")
       in

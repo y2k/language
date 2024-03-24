@@ -53,7 +53,7 @@ let main () =
     {|final Object p__1;if(a1){p__1=a2;}else{p__1=a3;}final Object p__4;if(p__1){final Object p__2;if(b1){p__2=b2;}else{p__2=b3;}p__4=p__2;}else{final Object p__3;if(c1){p__3=c2;}else{p__3=c3;}p__4=p__3;}p__4|};
   assert_ {|(let [^Context wv (foo)] wv)|}
     {|final var wv=(Context)foo();final var p__1=wv;p__1|};
-  assert_ {|{:a b :c d}|} {|Map.of("a",b,"c",d)|};
+  assert_ {|{:a b :c d}|} {|java.util.Map.of("a",b,"c",d)|};
   assert_ {|(fn [x] x)|} {|(x)->{return x;}|};
   assert_ {|(fn [[a b]] (a b))|}
     {|(p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
@@ -73,7 +73,7 @@ let main () =
 :constructors {[Activity WebView] []}
 :prefix "wv_"
 :methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String]])|}
-    {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){return (String)wv_bar(this,p0,p1);}}|};
+    {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){super.bar(p0,p1);return (String)wv_bar(this,p0,p1);}}|};
   assert_ {|(fn [] (bar b c))|} {|()->{return bar(b,c);}|};
   assert_ {|(^void fn [] (bar b c))|} {|()->{bar(b,c);}|};
   assert_ {|(fn! [] (bar b c))|} {|()->{bar(b,c);}|};
