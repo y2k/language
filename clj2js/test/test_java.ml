@@ -72,8 +72,8 @@ let main () =
 :extends Object
 :constructors {[Activity WebView] []}
 :prefix "wv_"
-:methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String]])|}
-    {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){super.bar(p0,p1);return (String)wv_bar(this,p0,p1);}}|};
+:methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String][baz [int int] String]])|}
+    {|public static class WebViewJsListener extends Object{public java.util.List<Object> state;public WebViewJsListener(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){super.bar(p0,p1);return (String)wv_bar(this,p0,p1);}public String baz(int p0, int p1){return (String)wv_baz(this,p0,p1);}}|};
   assert_ {|(fn [] (bar b c))|} {|()->{return bar(b,c);}|};
   assert_ {|(^void fn [] (bar b c))|} {|()->{bar(b,c);}|};
   assert_ {|(fn! [] (bar b c))|} {|()->{bar(b,c);}|};

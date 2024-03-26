@@ -158,17 +158,19 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                    |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
                    |> List.reduce (Printf.sprintf "%s,%s")
                  in
-                 let annot = match m.symbol with x -> "@" ^ x in
+                 let annot =
+                   match m.symbol with "" -> "" | x -> "@" ^ x ^ " "
+                 in
                  let return_ =
                    if rtype = "void" then ""
                    else Printf.sprintf "return (%s)" rtype
                  in
                  let call_super =
-                   if annot = "@Override" then
+                   if annot = "@Override " then
                      Printf.sprintf "super.%s(%s);" mname args__
                    else ""
                  in
-                 Printf.sprintf "%s public %s %s(%s){%s%s%s%s(this,%s);}" annot
+                 Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot
                    rtype mname args_ call_super return_ prefix mname args__
              | x -> fail_node [ x ])
         |> List.reduce (Printf.sprintf "%s%s")
