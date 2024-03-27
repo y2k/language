@@ -412,7 +412,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
 
 let parse_and_simplify start_line filename code =
   NameGenerator.reset ();
-  (* print_endline "==| DEBUG |==============================================\n"; *)
+  print_endline "==| DEBUG |==============================================\n";
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
@@ -439,5 +439,5 @@ let parse_and_simplify start_line filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      (* print_endline (show_cljexp x); *)
+      print_endline (show_cljexp x);
       (ctx, x)

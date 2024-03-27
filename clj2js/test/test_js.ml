@@ -246,6 +246,8 @@ bar(2)|};
   assert_ {|(let [[a b] c] a)|}
     {|(function () { const p__1 = c; const a = p__1[0]; const b = p__1[1]; return a })()|};
   assert_ {|(:a b)|} {|b["a"]|};
+  assert_ {|(jvm! (def a 1) (def b 2))|} {||};
+  assert_ {|(js! (def a 1) (def b 2))|} "const a = 1;\nconst b = 2;";
   ()
 
 let test2 () =

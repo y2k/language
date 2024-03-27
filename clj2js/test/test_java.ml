@@ -96,6 +96,25 @@ let main () =
   assert_ {|(println a 1 "b")|} {|System.out.println(y2k.RT.str(a,1,"b"))|};
   assert_ {|(let [[^Aa a ^Bb b] c] a)|}
     {|final var p__1=c;final var a=(Aa)y2k.RT.get(p__1,0);final var b=(Bb)y2k.RT.get(p__1,1);final var p__2=a;p__2|};
+  assert_ {|(comment (defn a [] 1) (defn b [] 2))|} {||};
+  assert_ {|(defn c [] 3) (comment (defn a [] 1) (defn b [] 2)) (defn d [] 4)|}
+    {|public static Object c(){return 3;}
+
+public static Object d(){return 4;}|};
+  assert_ {|(defn a [] 1) (defn b [] 2)|}
+    {|public static Object a(){return 1;}
+public static Object b(){return 2;}|};
+  assert_ {|(jvm! (defn a [] 1) (defn b [] 2))|}
+    {|public static Object a(){return 1;}
+public static Object b(){return 2;}|};
+  assert_ {|(js! (defn a [] 1) (defn b [] 2))|} {||};
+  assert_ {|(jvm! (ns im.y2k.c3 (:import [a1.b2 Foo Bar])))|}
+    {|package im.y2k.c3;import a1.b2.Foo;import a1.b2.Bar;class Main_shared {}|};
+  assert_
+    {|(jvm! (ns im.y2k.chargetimer (:import [a.b Ab])))
+(jvm! (defn- show_notification [env] (FIXME)))
+|}
+    {||};
   (* Files *)
   test_file ();
   ()

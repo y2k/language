@@ -208,6 +208,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
   | RBList [ Atom (_, "class"); Atom (_, name) ] ->
       "" |> with_context2 (Printf.sprintf "%s.class" name)
+  | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   (* Lambda *)
   | RBList (Atom (m, "fn*") :: SBList args :: body) ->
       let get_type am = if am.symbol = "" then "" else am.symbol ^ " " in
@@ -253,13 +254,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> String.map (function '.' -> '_' | x -> x)
       in
       body |> List.map compile
-      |> List.reduce (Printf.sprintf "%s\n%s")
+      |> List.reduce_opt (Printf.sprintf "%s\n%s")
+      |> Option.value ~default:""
       |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
       |> with_context
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
-      |> Printf.sprintf "class Application {%s}"
+      (* |> Printf.sprintf "class Application {%s}" *)
       |> with_context
   (* Function definition *)
   | RBList
@@ -369,7 +371,9 @@ let main (filename : string) code =
       (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
       (defmacro get [target key] (list 'y2k.RT/get target key))
       (defmacro println [& xs] (list 'System.out/println (concat (list 'str) xs)))
-      |}
+      (defmacro js! [& body] (list 'comment body))
+      (defmacro jvm! [& body] (concat (list 'module) body))
+    |}
   in
   let prefix_lines_count =
     String.fold_left

@@ -331,6 +331,8 @@ let main (filename : string) code =
                 (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
               args))))
       (defmacro str [& args] (concat (list '+ "") args))
+      (defmacro jvm! [& body] (list 'comment body))
+      (defmacro js! [& body] (concat (list 'module) body))
     |}
   in
   let prefix_lines_count =
