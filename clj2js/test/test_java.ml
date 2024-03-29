@@ -1,5 +1,9 @@
 let assert_ code expected =
-  let actual = Lib.main_java "src/main.shared.clj" code in
+  let prelude =
+    In_channel.with_open_bin "../../../test/samples/prelude.java.clj"
+      In_channel.input_all
+  in
+  let actual = Lib.main_java "src/main.shared.clj" prelude code in
   if actual <> expected then (
     print_endline actual;
     print_newline ();
@@ -92,8 +96,7 @@ let main () =
   assert_ {|Context/AUDIO_SERVICE|} {|Context.AUDIO_SERVICE|};
   assert_ {|(foo Context/AUDIO_SERVICE)|} {|foo(Context.AUDIO_SERVICE)|};
   assert_ {|(foo "Context/AUDIO_SERVICE")|} {|foo("Context/AUDIO_SERVICE")|};
-  assert_ {|(println a)|} {|System.out.println(y2k.RT.str(a))|};
-  assert_ {|(println a 1 "b")|} {|System.out.println(y2k.RT.str(a,1,"b"))|};
+  assert_ {|(println a 1 "b")|} {|System.out.println(y2k.RT.str(a,1,"b"));null|};
   assert_ {|(let [[^Aa a ^Bb b] c] a)|}
     {|final var p__1=c;final var a=(Aa)y2k.RT.get(p__1,0);final var b=(Bb)y2k.RT.get(p__1,1);final var p__2=a;p__2|};
   assert_ {|(comment (defn a [] 1) (defn b [] 2))|} {||};
@@ -108,13 +111,18 @@ public static Object b(){return 2;}|};
     {|public static Object a(){return 1;}
 public static Object b(){return 2;}|};
   assert_ {|(js! (defn a [] 1) (defn b [] 2))|} {||};
-  assert_ {|(jvm! (ns im.y2k.c3 (:import [a1.b2 Foo Bar])))|}
-    {|package im.y2k.c3;import a1.b2.Foo;import a1.b2.Bar;class Main_shared {}|};
+  assert_ {|(jvm! (ns im.y2k.c3 (:import [a1.b2 Foo Bar])) (defn foo [a] a))|}
+    {|package im.y2k.c3;import a1.b2.Foo;import a1.b2.Bar;class Main_shared {public static Object foo(final Object a){return a;}}|};
   assert_
     {|(jvm! (ns im.y2k.chargetimer (:import [a.b Ab])))
-(jvm! (defn- show_notification [env] (FIXME)))
+(jvm! (defn- show_notification [env] env))
 |}
-    {||};
+    {|package im.y2k.chargetimer;import a.b.Ab;class Main_shared {private static Object show_notification(final Object env){return env;}}|};
+  assert_ {|(if a b (println c))|}
+    {|final Object p__1;if(a){p__1=b;}else{System.out.println(y2k.RT.str(c));p__1=null;}p__1|};
+  assert_ {|(do (foo) (bar))|} "foo();bar()";
+  assert_ {|(let [a (.b c 123)] (println "a") (foo))|}
+    {|final var a=c.b(123);System.out.println(y2k.RT.str("a"));final var p__1=foo();p__1|};
   (* Files *)
   test_file ();
   ()

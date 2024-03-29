@@ -22,7 +22,9 @@ let () =
           in
           "set -o xtrace\nset -e\n\n" ^ (Clj2js.main_sh filename) str
     | "kt" -> Clj2js.main_kt filename
-    | "java" -> Clj2js.main_java filename
+    | "java" ->
+        let prelude = read_code_file Sys.argv.(3) in
+        Clj2js.main_java filename prelude
     | t -> failwith @@ "Invalid target " ^ t
   in
   filename |> read_code_file |> compiler |> print_endline

@@ -366,8 +366,13 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       ( { context with macros = StringMap.add name macro context.macros },
         RBList [ Atom (l, "comment") ] )
   | RBList ((Atom (_, "module") as x) :: body) ->
-      RBList (x :: (List.fold_left_map expand_core_macro context body |> snd))
-      |> with_context
+      let xs =
+        x :: (List.fold_left_map expand_core_macro context body |> snd)
+        |> List.concat_map (function
+             | RBList (Atom (_, "module") :: xs) -> xs
+             | x -> [ x ])
+      in
+      RBList xs |> with_context
   | RBList (Atom (_, "ns") :: _) as node -> node |> with_context
   | RBList ((RBList _ as h) :: args) ->
       RBList (expand_core_macro2 h :: List.map expand_core_macro2 args)
@@ -412,7 +417,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
 
 let parse_and_simplify start_line filename code =
   NameGenerator.reset ();
-  print_endline "==| DEBUG |==============================================\n";
+  (* print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
@@ -439,5 +444,5 @@ let parse_and_simplify start_line filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      print_endline (show_cljexp x);
+      (* print_endline (show_cljexp x); *)
       (ctx, x)

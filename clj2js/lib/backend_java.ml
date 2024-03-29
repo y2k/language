@@ -2,8 +2,8 @@ module A = Angstrom
 open Frontend
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
-  let compile node = compile_ context node |> snd in
-  let compile2 node =
+  let compile_smt node = compile_ context node |> snd in
+  let compile_exp node =
     let ctx2, _ = compile_ context node in
     ctx2.out_var
   in
@@ -19,27 +19,44 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let x = String.map (function '/' -> '.' | x -> x) x in
       ({ context with out_var = x }, "")
   | RBList [ Atom (_, "+"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s+%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s+%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "-"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s-%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s-%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "*"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s*%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s*%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "/"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s/%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s/%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, ">"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s>%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s>%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "<"); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s<%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s<%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, ">="); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s>=%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s>=%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "<="); a; b ] ->
-      "" |> with_context2 (Printf.sprintf "(%s<=%s)" (compile2 a) (compile2 b))
+      ""
+      |> with_context2
+           (Printf.sprintf "(%s<=%s)" (compile_exp a) (compile_exp b))
   | RBList [ Atom (_, "not"); x ] ->
-      "" |> with_context2 (Printf.sprintf "!%s" (compile2 x))
+      "" |> with_context2 (Printf.sprintf "!%s" (compile_exp x))
   | RBList [ Atom (_, "="); a; b ] ->
       ""
       |> with_context2
-           (Printf.sprintf "Objects.equals(%s,%s)" (compile2 a) (compile2 b))
+           (Printf.sprintf "Objects.equals(%s,%s)" (compile_exp a)
+              (compile_exp b))
   | RBList (Atom (_, "vector") :: xs) ->
       let args_init =
         xs
@@ -48,7 +65,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce_opt ( ^ ) |> Option.value ~default:""
       in
       let args =
-        xs |> List.map compile2
+        xs |> List.map compile_exp
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
@@ -62,7 +79,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce_opt ( ^ ) |> Option.value ~default:""
       in
       let args =
-        xs |> List.map compile2
+        xs |> List.map compile_exp
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
@@ -85,7 +102,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                  imports
                  |> List.map (function
                       | SBList (Atom (_, pkg) :: classes) ->
-                          List.map compile2 classes
+                          List.map compile_exp classes
                           |> List.map (fun c ->
                                  Printf.sprintf "import %s.%s;" pkg c)
                           |> List.reduce (Printf.sprintf "%s%s")
@@ -96,10 +113,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "package %s;%s%s" name imports "" |> with_context
   | RBList [ Atom (_, "is"); x; Atom (_, type_) ] ->
-      let out_var = Printf.sprintf "(%s instanceof %s)" (compile2 x) type_ in
+      let out_var = Printf.sprintf "(%s instanceof %s)" (compile_exp x) type_ in
       "" |> with_context2 out_var
   | RBList [ Atom (_, "as"); x; Atom (_, type_) ] ->
-      let out_var = Printf.sprintf "(%s)%s" type_ (compile2 x) in
+      let out_var = Printf.sprintf "(%s)%s" type_ (compile_exp x) in
       "" |> with_context2 out_var
   | RBList
       [
@@ -122,7 +139,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | params ->
             params
             |> List.mapi (fun i x ->
-                   let type1 = compile2 x in
+                   let type1 = compile_exp x in
                    let type2 =
                      if String.starts_with ~prefix:"\"" type1 then
                        String.sub type1 1 (String.length type1 - 2)
@@ -195,16 +212,21 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       let svals = parse_vals vals in
       let out_var = NameGenerator.get_new_var () in
-      let sbody =
-        body
-        |> List.map (compile_ context)
-        |> List.rev
-        |> List.mapi (fun i (ctx2, x) ->
-               if i = 0 then
-                 Printf.sprintf "%sfinal var %s=%s;" x out_var ctx2.out_var
-               else Printf.sprintf "%s;%s" ctx2.out_var x)
-        |> List.rev |> String.concat ""
+      let rec body_loop = function
+        | [ x ] ->
+            let ctx2, x = compile_ context x in
+            Printf.sprintf "%sfinal var %s=%s;" x out_var ctx2.out_var
+        | x :: xs ->
+            let ctx2, x = compile_ context x in
+            let stm_of_exp =
+              match ctx2.out_var with "null" -> "" | x -> x ^ ";"
+            in
+            let a = Printf.sprintf "%s%s" x stm_of_exp in
+            let b = body_loop xs in
+            a ^ b
+        | [] -> fail_node []
       in
+      let sbody = body_loop body in
       Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
   | RBList [ Atom (_, "class"); Atom (_, name) ] ->
       "" |> with_context2 (Printf.sprintf "%s.class" name)
@@ -239,7 +261,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       "" |> with_context2 out_var
   | RBList (Atom (_, "module") :: (RBList (Atom (_, "ns") :: _) as ns) :: body)
     ->
-      let ns_ = compile ns in
+      let ns_ = compile_smt ns in
       let name_start_pos =
         (String.rindex_opt context.filename '/' |> Option.value ~default:(-1))
         + 1
@@ -253,16 +275,26 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         ^ String.sub filename 1 (String.length filename - 5)
         |> String.map (function '.' -> '_' | x -> x)
       in
-      body |> List.map compile
+      body |> List.map compile_smt
       |> List.reduce_opt (Printf.sprintf "%s\n%s")
       |> Option.value ~default:""
       |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
       |> with_context
   | RBList (Atom (_, "module") :: body) ->
-      body |> List.map compile
+      body |> List.map compile_smt
       |> List.reduce (Printf.sprintf "%s\n%s")
-      (* |> Printf.sprintf "class Application {%s}" *)
       |> with_context
+  | RBList (Atom (_, "do") :: body) ->
+      let rec loop ctx = function
+        | [ x ] -> ({ ctx with out_var = compile_exp x }, compile_smt x)
+        | x :: xs ->
+            let stm = compile_smt x in
+            let exp = compile_exp x in
+            let ctx2, other = loop ctx xs in
+            (ctx2, Printf.sprintf "%s%s;%s" stm exp other)
+        | [] -> fail_node []
+      in
+      loop context body
   (* Function definition *)
   | RBList
       [
@@ -327,16 +359,18 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       if is_void then
         with_context2 "(Void)null"
-          (args_init ^ Printf.sprintf "%s.%s(%s);" (compile2 target) mname sargs)
+          (args_init
+          ^ Printf.sprintf "%s.%s(%s);" (compile_exp target) mname sargs)
       else
         with_context2
-          (Printf.sprintf "%s.%s(%s)" (compile2 target) mname sargs)
+          (Printf.sprintf "%s.%s(%s)" (compile_exp target) mname sargs)
           args_init
   (* Constructor *)
   | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
       let a =
         if List.length args = 0 then ""
-        else args |> List.map compile2 |> List.reduce (Printf.sprintf "%s,%s")
+        else
+          args |> List.map compile_exp |> List.reduce (Printf.sprintf "%s,%s")
       in
       let out_var = Printf.sprintf "new %s(%s)" cnst_name a in
       "" |> with_context2 out_var
@@ -362,19 +396,19 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Default *)
   | x -> fail_node [ x ]
 
-let main (filename : string) code =
-  let prelude_macros =
-    {|(defmacro not= [a b] (list 'not (list '= a b)))
-      (defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
-      (defmacro fn! [& body] (concat (list ^void 'fn) body))
-      (defmacro str [& xs] (concat (list 'y2k.RT/str) xs))
-      (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
-      (defmacro get [target key] (list 'y2k.RT/get target key))
-      (defmacro println [& xs] (list 'System.out/println (concat (list 'str) xs)))
-      (defmacro js! [& body] (list 'comment body))
-      (defmacro jvm! [& body] (concat (list 'module) body))
-    |}
-  in
+let main (filename : string) prelude_macros code =
+  (* let prelude_macros =
+       {|(defmacro not= [a b] (list 'not (list '= a b)))
+         (defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
+         (defmacro fn! [& body] (concat (list ^void 'fn) body))
+         (defmacro str [& xs] (concat (list 'y2k.RT/str) xs))
+         (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
+         (defmacro get [target key] (list 'y2k.RT/get target key))
+         (defmacro println [& xs] (list 'do (list 'System.out/println (concat (list 'str) xs)) 'null))
+         (defmacro js! [& body] (list 'comment body))
+         (defmacro jvm! [& body] (concat (list 'module) body))
+       |}
+     in *)
   let prefix_lines_count =
     String.fold_left
       (fun acc c -> if c = '\n' then acc + 1 else acc)
