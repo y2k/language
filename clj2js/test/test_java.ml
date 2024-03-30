@@ -1,6 +1,6 @@
 let assert_ code expected =
   let prelude =
-    In_channel.with_open_bin "../../../test/samples/prelude.java.clj"
+    In_channel.with_open_bin "../../../test/samples/prelude/java/src/prelude.clj"
       In_channel.input_all
   in
   let actual = Lib.main_java "src/main.shared.clj" prelude code in

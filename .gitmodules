@@ -1,0 +1,3 @@
+[submodule "clj2js/test/samples/prelude"]
+	path = clj2js/test/samples/prelude
+	url = git@github.com:y2k/prelude.git
