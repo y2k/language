@@ -10,7 +10,26 @@ let () =
   let compiler =
     match target with
     | "json" -> Clj2js.main_json filename
-    | "js" -> fun code -> Clj2js.main_js filename code |> snd
+    | "js" ->
+        let prelude_macros =
+          if Array.length Sys.argv > 3 then read_code_file Sys.argv.(3)
+          else
+            {|(defmacro do [& body] (concat (list 'let (vector)) body))
+          (defmacro println [& args] (concat (list 'console/info) args))
+          (defmacro FIXME [& args]
+            (list 'throw
+              (list 'Error.
+                (concat
+                  (list
+                    'str
+                    (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
+                  args))))
+          (defmacro str [& args] (concat (list '+ "") args))
+          (defmacro jvm! [& body] (list 'comment body))
+          (defmacro js! [& body] (concat (list 'module) body))
+        |}
+        in
+        fun code -> Clj2js.main_js filename prelude_macros code |> snd
     | "sh" ->
         fun str ->
           let shebang = "#!/usr/bin/env clj2sh\n" in

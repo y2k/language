@@ -1,7 +1,11 @@
 module Clj2js = Lib
 
 let assert_ code expected =
-  let _ctx, actual = Clj2js.main_js "main.clj" code in
+  let prelude =
+    In_channel.with_open_bin "../../../test/samples/prelude/js/src/prelude.clj"
+      In_channel.input_all
+  in
+  let _ctx, actual = Clj2js.main_js "main.clj" prelude code in
   let start = 65 in
   let actual = String.sub actual start (String.length actual - start) in
   if actual <> expected then (

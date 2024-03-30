@@ -318,23 +318,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | x -> fail_node [ x ]
 
-let main (filename : string) code =
-  let prelude_macros =
-    {|(defmacro do [& body] (concat (list 'let (vector)) body))
-      (defmacro println [& args] (concat (list 'console/info) args))
-      (defmacro FIXME [& args]
-        (list 'throw
-          (list 'Error.
-            (concat
-              (list
-                'str
-                (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
-              args))))
-      (defmacro str [& args] (concat (list '+ "") args))
-      (defmacro jvm! [& body] (list 'comment body))
-      (defmacro js! [& body] (concat (list 'module) body))
-    |}
-  in
+let main (filename : string) prelude_macros code =
   let prefix_lines_count =
     String.fold_left
       (fun acc c -> if c = '\n' then acc + 1 else acc)
