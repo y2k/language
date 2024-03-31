@@ -174,8 +174,11 @@ module MacroInterpretator = struct
               Atom (unknown_location, string_of_int context.loc.pos)
           | Atom (m, x) when String.starts_with ~prefix:"'" x ->
               Atom (m, String.sub x 1 (String.length x - 1))
-          | Atom (_, x) when StringMap.exists (fun k _ -> k = x) args ->
-              StringMap.find x args
+          (* Args *)
+          | Atom (m, x) when StringMap.exists (fun k _ -> k = x) args -> (
+              StringMap.find x args |> function
+              | Atom (_, arg_val) -> Atom (m, arg_val)
+              | x -> x)
           | Atom (_, x)
             when String.starts_with ~prefix:"\"" x
                  && String.ends_with ~suffix:"\"" x ->
@@ -308,6 +311,19 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       (let rec loop new_args let_args = function
          | [] -> (new_args, let_args)
          | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
+         | CBList map_items :: _ ->
+             let virt_arg =
+               Atom (unknown_location, NameGenerator.get_new_var ())
+             in
+             let rec loop2 = function
+               | arg :: key :: tail ->
+                   arg
+                   :: RBList [ Atom (unknown_location, "get"); virt_arg; key ]
+                   :: loop2 tail
+               | [] -> []
+               | xs -> fail_node xs
+             in
+             ([ virt_arg ], loop2 map_items)
          | SBList xs :: tail ->
              let virt_arg =
                Atom (unknown_location, NameGenerator.get_new_var ())

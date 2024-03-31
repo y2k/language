@@ -55,7 +55,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Core forms *)
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
-  | Atom (_, x) -> x |> with_context
+  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
+  | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   | SBList xs -> RBList (Atom (unknown_location, "vector") :: xs) |> compileOut
   | RBList (Atom (_, "vector") :: xs) ->
       xs |> List.map compile
@@ -173,6 +174,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        Printf.sprintf "(function() { try { %s } catch (%s) { %s } })()" try_body
          e_name catch_body)
       |> with_context
+  (* Functions *)
   | RBList
       [
         Atom (l, "def");
@@ -183,11 +185,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let fn = RBList (Atom (l, "fn*") :: SBList args :: body) in
       Printf.sprintf "%sconst %s = %s;" modifier fname (compile fn)
       |> with_context
-  | RBList [ Atom (m, "def"); Atom (_, name); body ] ->
-      if m.symbol = "export" then
-        Printf.sprintf "export const %s = %s;" name (compile body)
-        |> with_context
-      else Printf.sprintf "const %s = %s;" name (compile body) |> with_context
+  (* Constants *)
+  | RBList [ Atom (dm, "def"); Atom (sm, name); body ] ->
+      (match (dm.symbol, sm.symbol) with
+      | _, ":private" -> Printf.sprintf "const %s = %s;" name (compile body)
+      | "export", _ ->
+          Printf.sprintf "export const %s = %s;" name (compile body)
+      | _ -> Printf.sprintf "export const %s = %s;" name (compile body))
+      |> with_context
   | RBList [ Atom (_, "<"); a; b ] ->
       Printf.sprintf "(%s < %s)" (compile a) (compile b) |> with_context
   | RBList [ Atom (_, ">"); a; b ] ->

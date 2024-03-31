@@ -21,6 +21,10 @@ let assert_file filename =
   assert_ code expected
 
 let test1 () =
+  assert_ {|(def LI_SP 600)|} {|export const LI_SP = 600;|};
+  assert_ {|(def ^:private LI_SP 600)|} {|const LI_SP = 600;|};
+  assert_ {|(def- LI_SP 600)|} {|const LI_SP = 600;|};
+  assert_ {|m/LI_SP|} {|m.LI_SP|};
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
   assert_ "(.json r)" "r.json()";
@@ -110,7 +114,7 @@ map((x) => { return x }, xs)|};
   assert_ "(and a (and 1 2 3) c d)" "(a && (1 && 2 && 3) && c && d)";
   assert_ "(< x 1)(> y 2)" "(x < 1)\n(y > 2)";
   assert_ "(<= x 1)(>= y 2)" "(x <= 1)\n(y >= 2)";
-  assert_ "(def foo (+ 1 2))" "const foo = (1 + 2);";
+  assert_ "(def foo (+ 1 2))" "export const foo = (1 + 2);";
   assert_ "(let [a b?.c?.d?.e] a)"
     "(function () { const a = b?.c?.d?.e; return a })()";
   assert_ "(let [a b.c.d.e] a)"
@@ -251,7 +255,10 @@ bar(2)|};
     {|(function () { const p__1 = c; const a = p__1[0]; const b = p__1[1]; return a })()|};
   assert_ {|(:a b)|} {|b["a"]|};
   assert_ {|(jvm! (def a 1) (def b 2))|} {||};
-  assert_ {|(js! (def a 1) (def b 2))|} "const a = 1;\nconst b = 2;";
+  assert_ {|(js! (def a 1) (def b 2))|}
+    "export const a = 1;\nexport const b = 2;";
+  assert_ {|(fn [{a :url b :props}] [a b])|}
+    {|(p__1) => { return (function () { const a = p__1["url"]; const b = p__1["props"]; return [a, b] })() }|};
   ()
 
 let test2 () =
