@@ -6,7 +6,7 @@ let assert_ code expected =
       In_channel.input_all
   in
   let _ctx, actual = Clj2js.main_js "main.clj" prelude code in
-  let start = 65 in
+  let start = 50 in
   let actual = String.sub actual start (String.length actual - start) in
   if actual <> expected then (
     print_endline actual;
@@ -259,6 +259,10 @@ bar(2)|};
     "export const a = 1;\nexport const b = 2;";
   assert_ {|(fn [{a :url b :props}] [a b])|}
     {|(p__1) => { return (function () { const a = p__1["url"]; const b = p__1["props"]; return [a, b] })() }|};
+  assert_ {|(atom 1)|} {|RT.atom(1)|};
+  assert_ {|(deref x)|} {|RT.deref(x)|};
+  assert_ {|(reset! x 2)|} {|RT.reset(x, 2)|};
+  assert_ {|(swap! x (fn [x] x))|} {|RT.swap(x, (x) => { return x })|};
   ()
 
 let test2 () =

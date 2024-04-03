@@ -10,7 +10,8 @@ let prelude =
    (defn deref [a] (get a 0))
 |}
 
-let prelude_imports = "import { atom, reset, deref } from './prelude.js';"
+let prelude_imports = "import * as RT from './prelude.js';"
+(* let prelude_imports = "import { atom, reset, deref } from './prelude.js';" *)
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compileOut node = compile_ context node in
