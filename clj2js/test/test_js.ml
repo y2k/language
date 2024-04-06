@@ -263,6 +263,10 @@ bar(2)|};
   assert_ {|(deref x)|} {|RT.deref(x)|};
   assert_ {|(reset! x 2)|} {|RT.reset(x, 2)|};
   assert_ {|(swap! x (fn [x] x))|} {|RT.swap(x, (x) => { return x })|};
+  assert_ {|(fn [a {b :b} c] (a b c))|}
+    {|(a, p__1, c) => { return (function () { const b = p__1["b"]; return a(b, c) })() }|};
+  assert_ {|(fn [a [b c] d] (a b c d))|}
+    {|(a, p__1, d) => { return (function () { const b = p__1[0]; const c = p__1[1]; return a(b, c, d) })() }|};
   ()
 
 let test2 () =

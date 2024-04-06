@@ -311,7 +311,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       (let rec loop new_args let_args = function
          | [] -> (new_args, let_args)
          | (Atom _ as x) :: tail -> loop (new_args @ [ x ]) let_args tail
-         | CBList map_items :: _ ->
+         | CBList map_items :: tail ->
              let virt_arg =
                Atom (unknown_location, NameGenerator.get_new_var ())
              in
@@ -323,7 +323,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                | [] -> []
                | xs -> fail_node xs
              in
-             ([ virt_arg ], loop2 map_items)
+             loop (new_args @ [ virt_arg ]) (loop2 map_items) tail
          | SBList xs :: tail ->
              let virt_arg =
                Atom (unknown_location, NameGenerator.get_new_var ())
@@ -351,7 +351,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
        in
        let body = List.map expand_core_macro2 body in
        match loop [] [] args with
-       | _, [] -> RBList (Atom (l, "fn*") :: SBList args :: body)
+       | new_args, [] -> RBList (Atom (l, "fn*") :: SBList new_args :: body)
        | new_args, let_args ->
            RBList
              [
