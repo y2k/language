@@ -207,7 +207,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> List.reduce (Printf.sprintf "%s && %s")
       |> Printf.sprintf "(%s)" |> with_context
   | RBList (Atom (_, "or") :: xs) ->
-      xs |> List.map compile
+      xs
+      |> List.map (function
+           | Atom _ as x -> compile x
+           | x -> compile x |> Printf.sprintf "(%s)")
       |> List.reduce (Printf.sprintf "%s || %s")
       |> Printf.sprintf "(%s)" |> with_context
   | RBList [ Atom (_, "if"); c; a; b ] ->
@@ -259,14 +262,21 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (body |> List.map compile |> List.reduce (Printf.sprintf "%s;%s"))
       |> with_context
   | RBList (Atom (_, "fn*") :: SBList args :: body) ->
-      let sargs =
-        match args with
+      let rec loop_args = function
+        | Atom (_, "&") :: Atom (_, x) :: _ -> Printf.sprintf "...%s" x
+        | Atom (_, x) :: [] -> x
+        | Atom (_, x) :: xs -> Printf.sprintf "%s, %s" x (loop_args xs)
         | [] -> ""
-        | _ ->
-            args
-            |> List.map (function Atom (_, x) -> x | x -> fail_node [ x ])
-            |> List.reduce (Printf.sprintf "%s, %s")
+        | n -> fail_node n
       in
+      let sargs = loop_args args in
+      (* match args with
+         | [] -> ""
+         | _ ->
+             args
+             |> List.map (function Atom (_, x) -> x | x -> fail_node [ x ])
+             |> List.reduce (Printf.sprintf "%s, %s") *)
+      (* in *)
       let sbody =
         body |> List.map compile |> List.rev
         |> List.mapi (fun i x -> if i = 0 then "return " ^ x else x)

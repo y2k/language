@@ -120,6 +120,7 @@ map((x) => { return x }, xs)|};
   assert_ "(let [a b.c.d.e] a)"
     "(function () { const a = b.c.d.e; return a })()";
   assert_ "(or a b 1 2)" "(a || b || 1 || 2)";
+  assert_ "(or a (fn [x] x) 1)" "(a || ((x) => { return x }) || 1)";
   assert_ "(foo 1)\n\n\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n;;(foo 2)\n(foo 3)" "foo(1)\nfoo(3)";
   assert_ "(foo 1)\n;;(foo 2.1)\n;;(foo 2.2)\n(foo 3)" "foo(1)\nfoo(3)";
@@ -267,6 +268,8 @@ bar(2)|};
     {|(a, p__1, c) => { return (function () { const b = p__1["b"]; return a(b, c) })() }|};
   assert_ {|(fn [a [b c] d] (a b c d))|}
     {|(a, p__1, d) => { return (function () { const b = p__1[0]; const c = p__1[1]; return a(b, c, d) })() }|};
+  assert_ {|(defn a [b c & d] (foo b c d))|}
+    {|export const a = (b, c, ...d) => { return foo(b, c, d) };|};
   ()
 
 let test2 () =
