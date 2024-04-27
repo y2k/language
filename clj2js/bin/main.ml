@@ -11,25 +11,18 @@ let () =
     match target with
     | "json" -> Clj2js.main_json filename
     | "js" ->
-        let prelude_macros =
-          if Array.length Sys.argv > 3 then read_code_file Sys.argv.(3)
-          else
-            {|(defmacro do [& body] (concat (list 'let (vector)) body))
-          (defmacro println [& args] (concat (list 'console/info) args))
-          (defmacro FIXME [& args]
-            (list 'throw
-              (list 'Error.
-                (concat
-                  (list
-                    'str
-                    (str "FIXME " __FILENAME__ ":" __LINE__ ":" (- __POSITION__ 1) " - "))
-                  args))))
-          (defmacro str [& args] (concat (list '+ "") args))
-          (defmacro jvm! [& body] (list 'comment body))
-          (defmacro js! [& body] (concat (list 'module) body))
-        |}
-        in
-        fun code -> Clj2js.main_js filename prelude_macros code |> snd
+        let prelude_macros = read_code_file Sys.argv.(3) in
+        let prelude_path = Filename.chop_extension Sys.argv.(3) ^ ".js" in
+        fun code ->
+          Lib__Linter.run_resolve
+            (fun name ->
+              let path =
+                Filename.concat (Filename.dirname filename) (name ^ ".clj")
+              in
+              (* prerr_endline @@ Sys.getenv "PWD" ^ " | " ^ filename; *)
+              In_channel.with_open_bin path In_channel.input_all)
+            (fun _ ->
+              Clj2js.main_js prelude_path filename prelude_macros code |> snd)
     | "sh" ->
         fun str ->
           let shebang = "#!/usr/bin/env clj2sh\n" in

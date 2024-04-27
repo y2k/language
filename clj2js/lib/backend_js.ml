@@ -10,7 +10,7 @@ let prelude =
    (defn deref [a] (get a 0))
 |}
 
-let prelude_imports = "import * as RT from './prelude.js';"
+let prelude_imports prelude_path = "import * as RT from '" ^ prelude_path ^ "';"
 (* let prelude_imports = "import { atom, reset, deref } from './prelude.js';" *)
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
@@ -83,7 +83,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                         [ Atom (_, package); Atom (_, ":as"); Atom (_, alias) ]
                       ->
                         let target =
-                          if String.starts_with package ~prefix:"js." then
+                          if String.starts_with ~prefix:"\"" package then
+                            String.sub package 1 (String.length package - 2)
+                            ^ ".js"
+                          else if String.starts_with package ~prefix:"js." then
                             String.sub package 3 (String.length package - 3)
                             |> String.map (function '.' -> '/' | ch -> ch)
                           else
@@ -340,9 +343,9 @@ let main (filename : string) prelude_macros code =
       (fun acc c -> if c = '\n' then acc + 1 else acc)
       1 prelude_macros
   in
-  String.concat "\n" [ prelude_macros; code ]
+  ( String.concat "\n" [ prelude_macros; code ]
   |> Frontend.parse_and_simplify prefix_lines_count filename
+  |> fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp) )
   |> fun (ctx, exp) ->
-  (* print_endline @@ show_cljexp exp ^ "\n"; *)
   let a, b = compile_ ctx exp in
   (a, String.trim b)

@@ -102,6 +102,12 @@ let fail_node es =
   |> prerr_endline;
   failwith "Invalid node"
 
+let failnode prefix es =
+  es |> List.map show_cljexp |> List.fold_left ( ^ ) ""
+  |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
+  |> prerr_endline;
+  failwith ("Invalid node [" ^ prefix ^ "]")
+
 module NameGenerator = struct
   let index = ref 0
   let reset () = index := 0

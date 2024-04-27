@@ -1,6 +1,6 @@
-(let [pTags (-> (.querySelectorAll document "p") Array/from (.filter (fn [x] (= x.innerText "Tags"))) first)
+(let [pTags (-> (.querySelectorAll document "p") Array.from (.filter (fn [x] (= x.innerText "Tags"))) first)
       parent pTags.parentElement.nextElementSibling.firstElementChild
-      children (Array/from parent.children)]
+      children (.from Array parent.children)]
   (.sort children
          (fn [n1 n2]
            (defn- tag_count [n]

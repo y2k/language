@@ -5,8 +5,8 @@ let assert_ code expected =
     In_channel.with_open_bin "../../../test/samples/prelude/js/src/prelude.clj"
       In_channel.input_all
   in
-  let _ctx, actual = Clj2js.main_js "main.clj" prelude code in
-  let start = 50 in
+  let _ctx, actual = Clj2js.main_js "" "main.clj" prelude code in
+  let start = 38 in
   let actual = String.sub actual start (String.length actual - start) in
   if actual <> expected then (
     print_endline actual;
@@ -20,11 +20,34 @@ let assert_file filename =
   let expected = with_open_bin (path ^ ".js") input_all in
   assert_ code expected
 
+let with_extenal_files files f =
+  Lib__Linter.run_resolve
+    (fun path ->
+      match List.assoc_opt path files with
+      | Some x -> x
+      | None -> failwith @@ "file not found: " ^ path)
+    f
+
 let test1 () =
   assert_ {|(def LI_SP 600)|} {|export const LI_SP = 600;|};
   assert_ {|(def ^:private LI_SP 600)|} {|const LI_SP = 600;|};
   assert_ {|(def- LI_SP 600)|} {|const LI_SP = 600;|};
-  assert_ {|m/LI_SP|} {|m.LI_SP|};
+
+  with_extenal_files
+    [ ("../vendor/effects/src/effects", "(def foo 1)") ]
+    (fun _ ->
+      assert_
+        {|(ns app (:require ["../vendor/effects/src/effects" :as e])) (e/foo)|}
+        {|import * as e from '../vendor/effects/src/effects.js';
+e.foo()|});
+
+  with_extenal_files
+    [ ("a", "(def a 2)(def LI_SP 1)(def b 3)") ]
+    (fun _ ->
+      assert_ {|(ns _ (:require [a :as m])) m/LI_SP|}
+        {|import * as m from './a.js';
+m.LI_SP|});
+
   assert_ {|(Response. "hello_world" 1 false)|}
     {|new Response("hello_world", 1, false)|};
   assert_ "(.json r)" "r.json()";

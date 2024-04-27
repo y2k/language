@@ -10,6 +10,7 @@ type cljexp =
 [@@deriving show]
 
 val fail_node : cljexp list -> 'a
+val failnode : string -> cljexp list -> 'a
 
 module StringMap : Map.S with type key = string
 
