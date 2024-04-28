@@ -6,7 +6,7 @@
      :body request})
    (.then (fn [r] (.text r)))
    (.then (fn [cmd]
-            (let [result (try (eval cmd) (catch e (str e)))]
+            (let [result (try (eval cmd) (catch :default e (str e)))]
               (.log console (str cmd " -> " result)))))
    (.catch (fn [e]
              (.error console e)

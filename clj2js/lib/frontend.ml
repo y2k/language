@@ -388,13 +388,14 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       ( { context with macros = StringMap.add name macro context.macros },
         RBList [ Atom (l, "comment") ] )
   | RBList ((Atom (_, "module") as x) :: body) ->
+      let ctx2, exp2 = List.fold_left_map expand_core_macro context body in
       let xs =
-        x :: (List.fold_left_map expand_core_macro context body |> snd)
+        x :: exp2
         |> List.concat_map (function
              | RBList (Atom (_, "module") :: xs) -> xs
              | x -> [ x ])
       in
-      RBList xs |> with_context
+      (ctx2, RBList xs)
   | RBList (Atom (_, "ns") :: _) as node -> node |> with_context
   | RBList ((RBList _ as h) :: args) ->
       RBList (expand_core_macro2 h :: List.map expand_core_macro2 args)
@@ -405,8 +406,13 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       RBList
         (Atom (l, ".")
         :: expand_core_macro2 target
-        :: Atom (unknown_location, mname)
+        :: Atom (unknown_location, "'" ^ mname)
         :: List.map expand_core_macro2 args)
+      |> with_context
+  (* Desugar . macro *)
+  | RBList (Atom (l, ".") :: target :: Atom (lp, prop) :: args) ->
+      let args = List.map expand_core_macro2 args in
+      RBList (Atom (l, ".") :: target :: Atom (lp, "'" ^ prop) :: args)
       |> with_context
   (* Expand user macro *)
   | RBList (Atom (l, fname) :: args)
@@ -422,9 +428,10 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   (* Desugar Construtors *)
   | RBList (Atom (l, name) :: xs)
     when name <> "." && String.ends_with ~suffix:"." name ->
+      let cnt_name = "\"" ^ String.sub name 0 (String.length name - 1) ^ "\"" in
       RBList
         (Atom (l, "new")
-        :: Atom (unknown_location, String.sub name 0 (String.length name - 1))
+        :: Atom (unknown_location, cnt_name)
         :: List.map expand_core_macro2 xs)
       |> with_context
   | RBList ((Atom (_l, _fname) as x) :: args) ->
@@ -437,20 +444,15 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       |> expand_core_macro2 |> with_context
   | x -> fail_node [ x ]
 
-let parse_and_simplify start_line filename code =
+let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
   NameGenerator.reset ();
-  (* print_endline "==| DEBUG |==============================================\n"; *)
+  (* if filename <> "prelude" then
+     print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
   expand_core_macro
-    {
-      filename;
-      loc = unknown_location;
-      start_line;
-      macros = StringMap.empty;
-      out_var = "";
-    }
+    { filename; loc = unknown_location; start_line; macros; out_var = "" }
     sexp
   |> function
   | ctx, x ->
@@ -466,5 +468,5 @@ let parse_and_simplify start_line filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      (* print_endline (show_cljexp x); *)
+      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
       (ctx, x)

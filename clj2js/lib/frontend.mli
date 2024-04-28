@@ -27,7 +27,8 @@ module NameGenerator : sig
   val reset : unit -> unit
 end
 
-val parse_and_simplify : int -> string -> string -> context * cljexp
+val parse_and_simplify :
+  cljexp StringMap.t -> int -> string -> string -> context * cljexp
 
 module List : sig
   include module type of List

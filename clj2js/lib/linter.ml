@@ -1,5 +1,4 @@
 open Frontend
-module StringMap = Map.Make (String)
 
 type exports = { exports : string list }
 type _ Effect.t += ResolveFile : string -> string Effect.t
@@ -20,7 +19,7 @@ let run_resolve f2 f =
 let resolve_exports prelude_code name : exports =
   let code = Effect.perform (ResolveFile name) in
   let code = prelude_code ^ "\n" ^ code in
-  let node = parse_and_simplify 0 name code |> snd in
+  let node = Frontend.parse_and_simplify StringMap.empty 0 name code |> snd in
 
   let rec resolve_loop (exports : string list) = function
     | RBList (Atom (_, "module") :: children) ->
@@ -44,7 +43,13 @@ type lint_ctx = {
   aliases : string StringMap.t;
   filename : string;
   prelude_code : string;
+  local_defs : string list;
 }
+
+let rec to_pairs = function
+  | [] -> []
+  | k :: v :: tail -> (k, v) :: to_pairs tail
+  | _ -> failwith "Not valid size of list"
 
 let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   match node with
@@ -72,6 +77,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
              ctx.aliases
       in
       (node, { ctx with aliases })
+  (* Check external reference *)
   | Atom (l, name) as a
     when String.contains name '/'
          && (not (String.starts_with ~prefix:"\"" name))
@@ -96,17 +102,69 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                 alias reference extenal_file ctx.filename l.line l.pos));
 
       (a, ctx)
-  (* | RBList (Atom (_, "module") :: xs) ->
-         let rec loop : cljexp list -> cljexp = function
-           | RBList [ Atom (l, "def"); name; value ] :: tail ->
-               RBList [ Atom (l, "let*"); SBList [ name; value ]; loop tail ]
-           | RBList [ Atom (_, "comment") ] :: tail -> loop tail
-           | [ x ] -> x
-           | [] -> CBList []
-           | x -> fail_node x
-         in
-         xs |> loop |> cljexp_to_json *)
+  (* Check local variable *)
+  | Atom (l, fname)
+    when (not (String.starts_with ~prefix:"\"" fname))
+         && (not (String.starts_with ~prefix:"'" fname))
+         && (not (String.starts_with ~prefix:":" fname))
+         && (not (String.starts_with ~prefix:"-" fname))
+         && (not (String.starts_with ~prefix:"RT/" fname))
+         && (String.get fname 0 < '0' || String.get fname 0 > '9')
+         && fname <> "<=" && fname <> ">=" && fname <> ">" && fname <> "<"
+         && fname <> "%" && fname <> "*" && fname <> "/" && fname <> "-"
+         && fname <> "+" && fname <> "=" && fname <> "if" && fname <> "fn*"
+         && fname <> "null" && fname <> "let*" && fname <> "."
+         && fname <> "false" && fname <> "true" && fname <> "module"
+         && fname <> "catch" && fname <> "try" && fname <> "while"
+         && fname <> "new" && fname <> "throw" ->
+      let parts = String.split_on_char '.' fname in
+      let parts = String.split_on_char '?' (List.nth parts 0) in
+      let fname = List.nth parts 0 in
+      if not (List.mem fname ctx.local_defs) then
+        failwith
+          (Printf.sprintf "Can't find variable '%s' used from %s:%i:%i" fname
+             ctx.filename l.line l.pos);
+      (node, ctx)
   | Atom _ as a -> (a, ctx)
+  | RBList (Atom (_, "let*") :: SBList binding :: body) ->
+      let ctx =
+        binding |> to_pairs
+        |> List.fold_left
+             (fun ctx (key, value) ->
+               lint' ctx value |> ignore;
+               let key =
+                 match key with
+                 | Atom (_, x) -> x
+                 | x -> failnode "LET*NOT" [ x ]
+               in
+               { ctx with local_defs = key :: ctx.local_defs })
+             ctx
+      in
+      let ctx = body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
+      (node, ctx)
+  | RBList (Atom (_, "fn*") :: SBList binding :: body) ->
+      let ctx =
+        binding
+        |> List.fold_left
+             (fun ctx x ->
+               let key =
+                 match x with Atom (_, x) -> x | x -> failnode "FN*NOT" [ x ]
+               in
+               { ctx with local_defs = key :: ctx.local_defs })
+             ctx
+      in
+      let ctx = body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
+      (node, ctx)
+  | RBList (Atom (_, "catch") :: _ :: Atom (_, err_val) :: body) ->
+      let ctx2 = { ctx with local_defs = err_val :: ctx.local_defs } in
+      body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx2 |> ignore;
+      (node, ctx)
+  | RBList (Atom (_, "def") :: Atom (_, name) :: body) ->
+      let local_ctx = { ctx with local_defs = name :: ctx.local_defs } in
+      body
+      |> List.fold_left (fun ctx n -> lint' ctx n |> snd) local_ctx
+      |> ignore;
+      (node, { ctx with local_defs = name :: ctx.local_defs })
   | RBList xs as origin ->
       let ctx = xs |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
       (origin, ctx)
@@ -120,4 +178,20 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
 let lint prelude_code filename node =
   (* print_endline "==================================================";
      print_endline (show_cljexp node); *)
-  lint' { aliases = StringMap.empty; filename; prelude_code } node |> fst
+  let prelude_lint_ctx =
+    prelude_code
+    |> Frontend.parse_and_simplify StringMap.empty 0 "prelude"
+    |> snd
+    |> lint'
+         { aliases = StringMap.empty; filename; prelude_code; local_defs = [] }
+    |> snd
+  in
+  lint'
+    {
+      aliases = StringMap.empty;
+      filename;
+      prelude_code;
+      local_defs = prelude_lint_ctx.local_defs;
+    }
+    node
+  |> fst

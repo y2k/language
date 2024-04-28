@@ -9,12 +9,17 @@ private fun <T> __prelude_geta(x: List<T>, y: Int): T = x[y]
 private fun __prelude_geta(x: String, y: Int): Char = x[y]
 |}
 
+let unpack_string x = String.sub x 1 (String.length x - 2)
+let unpack_symbol x = String.sub x 1 (String.length x - 1)
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
   match node with
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
+  | Atom (_, x) when String.starts_with ~prefix:"'" x ->
+      unpack_symbol x |> with_context
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) ->
       x |> String.map (function '/' -> '.' | x -> x) |> with_context
@@ -271,10 +276,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     when String.starts_with ~prefix:":" fname ->
       Printf.sprintf "__prelude_getm(%s, %s)" (compile source) (compile key)
       |> with_context
+  (* Field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
-    when String.starts_with ~prefix:"-" field ->
+    when String.starts_with ~prefix:"'-" field ->
       Printf.sprintf "%s.%s" (compile target)
-        (String.sub field 1 (String.length field - 1))
+        (String.sub field 2 (String.length field - 2))
       |> with_context
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   (* Interop method call *)
@@ -293,7 +299,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
       (if List.length args = 0 then ""
        else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
-      |> Printf.sprintf "%s(%s)" cnst_name
+      |> Printf.sprintf "%s(%s)" (unpack_string cnst_name)
       |> with_context
   (* Function call *)
   | RBList (head :: args) ->
@@ -326,6 +332,6 @@ let main (filename : string) code =
       1 prelude_macros
   in
   String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify prefix_lines_count filename
+  |> Frontend.parse_and_simplify StringMap.empty prefix_lines_count filename
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

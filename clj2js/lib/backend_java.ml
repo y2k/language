@@ -1,6 +1,9 @@
 module A = Angstrom
 open Frontend
 
+let unpack_string x = String.sub x 1 (String.length x - 2)
+let unpack_symbol x = String.sub x 1 (String.length x - 1)
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile_smt node = compile_ context node |> snd in
   let compile_exp node =
@@ -333,6 +336,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: Atom (_, mname) :: args) ->
+      let mname = unpack_symbol mname in
       let args2 = args |> List.map (compile_ context) in
       let sargs =
         match args2 with
@@ -372,7 +376,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         else
           args |> List.map compile_exp |> List.reduce (Printf.sprintf "%s,%s")
       in
-      let out_var = Printf.sprintf "new %s(%s)" cnst_name a in
+      let out_var = Printf.sprintf "new %s(%s)" (unpack_string cnst_name) a in
       "" |> with_context2 out_var
   (* Function call *)
   | RBList (fname :: args) ->
@@ -415,7 +419,7 @@ let main (filename : string) prelude_macros code =
       1 prelude_macros
   in
   String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify prefix_lines_count filename
+  |> Frontend.parse_and_simplify StringMap.empty prefix_lines_count filename
   |> fun (ctx, exp) ->
   (* print_endline (show_cljexp exp); *)
   let ctx, result = compile_ ctx exp in

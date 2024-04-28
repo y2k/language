@@ -13,6 +13,9 @@ let prelude =
 let prelude_imports prelude_path = "import * as RT from '" ^ prelude_path ^ "';"
 (* let prelude_imports = "import { atom, reset, deref } from './prelude.js';" *)
 
+let unpack_string x = String.sub x 1 (String.length x - 2)
+let unpack_symbol x = String.sub x 1 (String.length x - 1)
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compileOut node = compile_ context node in
   let compile node = compile_ context node |> snd in
@@ -56,6 +59,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Core forms *)
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
+  | Atom (_, x) when String.starts_with ~prefix:"'" x ->
+      unpack_symbol x |> with_context
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   | SBList xs -> RBList (Atom (unknown_location, "vector") :: xs) |> compileOut
@@ -66,8 +71,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (*  *)
   | RBList [ Atom (_, "get"); target; index ] ->
       Printf.sprintf "%s[%s]" (compile target) (compile index) |> with_context
+  | RBList [ Atom (_, "not"); RBList [ Atom (_, "="); a; b ] ] ->
+      Printf.sprintf "%s !== %s" (compile a) (compile b) |> with_context
   | RBList [ Atom (_, "not"); arg ] ->
-      Printf.sprintf "!%s" (compile arg) |> with_context
+      Printf.sprintf "!(%s)" (compile arg) |> with_context
   | RBList [ Atom (_, "type"); arg ] ->
       Printf.sprintf "typeof %s" (compile arg) |> with_context
   | RBList [ Atom (_, "set!"); target; value ] ->
@@ -146,8 +153,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     when String.starts_with ~prefix:"\"" body
          && String.ends_with ~suffix:"\"" body ->
       String.sub body 1 (String.length body - 2) |> with_context
-  | RBList [ Atom (_, "not="); a; b ] ->
-      Printf.sprintf "%s !== %s" (compile a) (compile b) |> with_context
   | RBList [ Atom (_, "throw"); ex ] ->
       Printf.sprintf "(function(){throw %s})()" (compile ex) |> with_context
   | RBList (Atom (_, "try") :: body) ->
@@ -170,7 +175,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        let e_name, catch_body =
          body
          |> List.find_map (function
-              | RBList (Atom (_, "catch") :: Atom (_, e) :: body) ->
+              | RBList (Atom (_, "catch") :: _err_type :: Atom (_, e) :: body) ->
                   Some (e, to_string_with_returns body)
               | _ -> None)
          |> Option.get
@@ -306,9 +311,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       "(function () { " ^ svals ^ sbody ^ " })()" |> with_context
   (* Interop field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
-    when String.starts_with ~prefix:"-" field ->
+    when String.starts_with ~prefix:"'-" field ->
       Printf.sprintf "%s.%s" (compile target)
-        (String.sub field 1 (String.length field - 1))
+        (String.sub field 2 (String.length field - 2))
       |> with_context
   (* Interop method *)
   | RBList (Atom (_, ".") :: target :: mname :: args) ->
@@ -324,7 +329,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
       (if List.length args = 0 then ""
        else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
-      |> Printf.sprintf "new %s(%s)" cnst_name
+      |> Printf.sprintf "new %s(%s)" (unpack_string cnst_name)
       |> with_context
   (* Functino call *)
   | RBList (head :: args) ->
@@ -338,14 +343,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | x -> fail_node [ x ]
 
 let main (filename : string) prelude_macros code =
-  let prefix_lines_count =
-    String.fold_left
-      (fun acc c -> if c = '\n' then acc + 1 else acc)
-      1 prelude_macros
+  let macros_ctx =
+    prelude_macros
+    |> Frontend.parse_and_simplify StringMap.empty 0 "prelude"
+    |> fst
   in
-  ( String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify prefix_lines_count filename
-  |> fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp) )
+  code |> Frontend.parse_and_simplify macros_ctx.macros 0 filename
   |> fun (ctx, exp) ->
+  (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   let a, b = compile_ ctx exp in
   (a, String.trim b)
