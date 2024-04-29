@@ -219,14 +219,21 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | [ x ] ->
             let ctx2, x = compile_ context x in
             Printf.sprintf "%sfinal var %s=%s;" x out_var ctx2.out_var
+        | [ x; xs ] ->
+            let ctx1, stm1 = compile_ context x in
+            let line = if stm1 = "" then ctx1.out_var ^ ";" else stm1 in
+            line ^ "" ^ body_loop [ xs ] ^ ""
         | x :: xs ->
-            let ctx2, x = compile_ context x in
-            let stm_of_exp =
-              match ctx2.out_var with "null" -> "" | x -> x ^ ";"
-            in
-            let a = Printf.sprintf "%s%s" x stm_of_exp in
-            let b = body_loop xs in
-            a ^ b
+            (* let ctx1, stm1 = compile_ context x in
+               let line = if stm1 = "" then ctx1.out_var else stm1 in *)
+            let ctx1, stm1 = compile_ context x in
+            (* print_endline @@ "LOG: " ^ ctx1.out_var ^ " | " ^ stm1; *)
+            let line = if stm1 = "" then ctx1.out_var ^ ";" else stm1 in
+            (* let stm_of_exp =
+                 match ctx1.out_var with "null" -> "" | x -> x ^ ";"
+               in *)
+            (* let a = Printf.sprintf "%s%s" stm1 stm_of_exp in *)
+            line ^ "" ^ body_loop xs
         | [] -> fail_node []
       in
       let sbody = body_loop body in
@@ -324,8 +331,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             (Printf.sprintf "%s" stm, ctx2)
         | x :: xs ->
             let ctx1, stm1 = compile_ context x in
+            let line = if stm1 = "" then ctx1.out_var else stm1 in
             let stm2, ctx2 = loop_body xs in
-            (Printf.sprintf "%s%s;%s" stm1 ctx1.out_var stm2, ctx2)
+            (Printf.sprintf "%s;%s" line stm2, ctx2)
       in
       let sbody, ctx2 = loop_body body in
       let vis =
@@ -333,6 +341,17 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "%s static %s %s(%s){%sreturn %s;}" vis
         (get_type fname_meta) fname sargs sbody ctx2.out_var
+      |> with_context
+  (* Static field *)
+  | RBList [ Atom (_, "def"); Atom (fname_meta, fname); body ] ->
+      let vis =
+        if fname_meta.symbol = ":private" then "private" else "public"
+      in
+      let get_type am =
+        if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol
+      in
+      Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname
+        (compile_exp body)
       |> with_context
   (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: Atom (_, mname) :: args) ->
@@ -401,26 +420,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | x -> fail_node [ x ]
 
 let main (filename : string) prelude_macros code =
-  (* let prelude_macros =
-       {|(defmacro not= [a b] (list 'not (list '= a b)))
-         (defmacro gen-class [& body] (list '__inject_raw_sexp (concat (list 'gen-class) body)))
-         (defmacro fn! [& body] (concat (list ^void 'fn) body))
-         (defmacro str [& xs] (concat (list 'y2k.RT/str) xs))
-         (defmacro checked! [f] (list 'y2k.RT/try_ (list 'fn (vector) f)))
-         (defmacro get [target key] (list 'y2k.RT/get target key))
-         (defmacro println [& xs] (list 'do (list 'System.out/println (concat (list 'str) xs)) 'null))
-         (defmacro js! [& body] (list 'comment body))
-         (defmacro jvm! [& body] (concat (list 'module) body))
-       |}
-     in *)
-  let prefix_lines_count =
-    String.fold_left
-      (fun acc c -> if c = '\n' then acc + 1 else acc)
-      1 prelude_macros
+  let macros_ctx =
+    prelude_macros
+    |> Frontend.parse_and_simplify StringMap.empty 0 "prelude"
+    |> fst
   in
-  String.concat "\n" [ prelude_macros; code ]
-  |> Frontend.parse_and_simplify StringMap.empty prefix_lines_count filename
-  |> fun (ctx, exp) ->
-  (* print_endline (show_cljexp exp); *)
+  code |> Frontend.parse_and_simplify macros_ctx.macros 0 filename
+  (* |> fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp)  *)
+  |>
+  fun (ctx, exp) ->
   let ctx, result = compile_ ctx exp in
   result ^ ctx.out_var |> String.trim

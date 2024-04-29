@@ -1,7 +1,7 @@
 let assert_ code expected =
   let prelude =
-    In_channel.with_open_bin "../../../test/samples/prelude/java/src/prelude.clj"
-      In_channel.input_all
+    In_channel.with_open_bin
+      "../../../test/samples/prelude/java/src/prelude.clj" In_channel.input_all
   in
   let actual = Lib.main_java "src/main.shared.clj" prelude code in
   if actual <> expected then (
@@ -123,6 +123,18 @@ public static Object b(){return 2;}|};
   assert_ {|(do (foo) (bar))|} "foo();bar()";
   assert_ {|(let [a (.b c 123)] (println "a") (foo))|}
     {|final var a=c.b(123);System.out.println(y2k.RT.str("a"));final var p__1=foo();p__1|};
+  assert_ {|(def LIMIT_CHARGE 80)|} {|public static Object LIMIT_CHARGE=80;|};
+  assert_ {|(def- LIMIT_CHARGE 80)|} {|private static Object LIMIT_CHARGE=80;|};
+  assert_ {|(def ^int LIMIT_CHARGE 80)|} {|public static int LIMIT_CHARGE=80;|};
+  assert_ {|(if false null (throw (Exception. "foo")))|}
+    {|final Object p__1;if(false){p__1=null;}else{p__1=y2k.RT.throw_(new Exception("foo"));}p__1|};
+  assert_ {|(defn foo [] (bar) (foo))|}
+    {|public static Object foo(){bar();return foo();}|};
+  assert_ {|(defn foo [] (if true 1 2) (foo))|}
+    {|public static Object foo(){final Object p__1;if(true){p__1=1;}else{p__1=2;};return foo();}|};
+  assert_ {|(let [] (bar) (foo))|} {|bar();final var p__1=foo();p__1|};
+  assert_ {|(let [] (if true 1 2) (foo))|}
+    {|final Object p__2;if(true){p__2=1;}else{p__2=2;}final var p__1=foo();p__1|};
   (* Files *)
   test_file ();
   ()

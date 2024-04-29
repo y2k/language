@@ -16,7 +16,7 @@ let run_resolve f2 f =
           | _ -> None);
     }
 
-let resolve_exports prelude_code name : exports =
+let read_exports_from_file prelude_code name : exports =
   let code = Effect.perform (ResolveFile name) in
   let code = prelude_code ^ "\n" ^ code in
   let node = Frontend.parse_and_simplify StringMap.empty 0 name code |> snd in
@@ -26,6 +26,7 @@ let resolve_exports prelude_code name : exports =
         children |> List.fold_left resolve_loop exports
     | RBList (Atom (_, "def") :: Atom (_, name) :: _) -> name :: exports
     | RBList (Atom (_, "ns") :: _) -> exports
+    | RBList (Atom (_, "comment") :: _) -> exports
     | RBList [ Atom (_, "export-default"); RBList (Atom _ :: def_exps) ] ->
         let rec loop exports = function
           | [] -> exports
@@ -53,6 +54,7 @@ let rec to_pairs = function
 
 let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   match node with
+  | RBList (Atom (_, "comment") :: _) -> (node, ctx)
   | RBList (Atom (_, "ns") :: _ :: depencencies) ->
       let aliases =
         depencencies
@@ -92,7 +94,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
 
       let extenal_file = StringMap.find alias ctx.aliases in
       (if not (String.starts_with ~prefix:"js." extenal_file) then
-         let exports = resolve_exports ctx.prelude_code extenal_file in
+         let exports = read_exports_from_file ctx.prelude_code extenal_file in
          let reference = List.nth parts 1 in
          if not (List.mem reference exports.exports) then
            failwith

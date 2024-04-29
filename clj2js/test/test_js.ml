@@ -206,9 +206,9 @@ bar(2)|};
   assert_ "(ns a (:require [js.fs.promises :as fs]))"
     "import * as fs from 'fs/promises';";
   assert_ "(ns a (:require [vendor.effects :as e]))"
-    "import * as e from './vendor/effects.js';";
+    "import * as e from './vendor.effects.js';";
   assert_ "(ns a (:require [vendor.effects :as e] [main :as app]))"
-    "import * as e from './vendor/effects.js';\n\
+    "import * as e from './vendor.effects.js';\n\
      import * as app from './main.js';";
   assert_ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
     {|(1 === 2 ? 3 : (4 === 5 ? 6 : (7 === 8 ? 9 : 0)))|};
@@ -244,18 +244,18 @@ bar(2)|};
     "(c, p__1, d) => { return (function () { const a = p__1[0]; const b = \
      p__1[1]; return (a + b + c + d) })() }";
   assert_ "(ns app (:require [vendor.effects :as e] [main :as app]))"
-    "import * as e from './vendor/effects.js';\n\
+    "import * as e from './vendor.effects.js';\n\
      import * as app from './main.js';";
   assert_ "(ns a (:require [js.fs.promises :as fs]))"
     "import * as fs from 'fs/promises';";
   assert_
     "(ns app (:require [vendor.effects :as e] [main :as app]) (:require \
      [js.fs.promises :as fs]))"
-    "import * as e from './vendor/effects.js';\n\
+    "import * as e from './vendor.effects.js';\n\
      import * as app from './main.js';\n\
      import * as fs from 'fs/promises';";
   assert_ "(ns app (:require [vendor.effects :as e] [js.foo.wrangler :as fs]))"
-    "import * as e from './vendor/effects.js';\n\
+    "import * as e from './vendor.effects.js';\n\
      import * as fs from 'foo/wrangler';";
   assert_ {|(assoc! 'data.db 7 'data.now)|} "data.db[7]=data.now";
   assert_ "[:div.tgme]" {|["div.tgme"]|};
@@ -303,6 +303,10 @@ bar(2)|};
 return e } })()|};
   assert_ {|(defn foo [x] (foo x))|}
     {|export const foo = (x) => { return foo(x) };|};
+  assert_ {|(comment (foo 1))(str 2)|} {|("" + 2)|};
+  assert_ {|(jvm! (foo 1))(str 2)|} {|("" + 2)|};
+  assert_ {|(ns resources (:require [main.shared :as app]))|}
+    {|import * as app from './main.shared.js';|};
   ()
 
 let test2 () =

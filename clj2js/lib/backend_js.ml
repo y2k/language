@@ -96,11 +96,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                           else if String.starts_with package ~prefix:"js." then
                             String.sub package 3 (String.length package - 3)
                             |> String.map (function '.' -> '/' | ch -> ch)
-                          else
-                            Printf.sprintf "./%s.js"
-                              (String.map
-                                 (function '.' -> '/' | ch -> ch)
-                                 package)
+                          else Printf.sprintf "./%s.js" package
                         in
                         Printf.sprintf "import * as %s from '%s';" alias target
                     | _ -> fail_node requiries)
@@ -175,7 +171,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        let e_name, catch_body =
          body
          |> List.find_map (function
-              | RBList (Atom (_, "catch") :: _err_type :: Atom (_, e) :: body) ->
+              | RBList (Atom (_, "catch") :: _err_type :: Atom (_, e) :: body)
+                ->
                   Some (e, to_string_with_returns body)
               | _ -> None)
          |> Option.get
