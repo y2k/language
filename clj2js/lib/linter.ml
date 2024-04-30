@@ -54,9 +54,10 @@ let rec to_pairs = function
 
 let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   match node with
+  | RBList (Atom (_, "quote") :: _) -> (node, ctx)
   | RBList (Atom (_, "comment") :: _) -> (node, ctx)
   | RBList (Atom (_, "ns") :: _ :: depencencies) ->
-      let aliases =
+      let ctx2 =
         depencencies
         |> List.concat_map (function
              | RBList (Atom (_, ":require") :: requiries) ->
@@ -71,20 +72,38 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                               String.sub package 1 (String.length package - 2)
                             else package
                           in
-                          (target, alias)
+                          (target, alias, None)
                       | _ -> failnode "REQ" requiries)
+             | RBList [ Atom (_, ":import"); SBList (_ :: classes) ] ->
+                 classes
+                 |> List.map (function
+                      | Atom (_, cls) -> ("", cls, Some cls)
+                      | _ -> failnode "LNTDEPIMP" classes)
              | x -> failnode "DEP" [ x ])
         |> List.fold_left
-             (fun acc (pkg, alias) -> StringMap.add alias pkg acc)
-             ctx.aliases
+             (fun ctx (pkg, alias, local_val) ->
+               let local_defs =
+                 match local_val with
+                 | None -> ctx.local_defs
+                 | Some x -> x :: ctx.local_defs
+               in
+               {
+                 ctx with
+                 aliases = StringMap.add alias pkg ctx.aliases;
+                 local_defs;
+               })
+             ctx
       in
-      (node, { ctx with aliases })
+      (node, ctx2)
   (* Check external reference *)
   | Atom (l, name) as a
     when String.contains name '/'
          && (not (String.starts_with ~prefix:"\"" name))
          && name <> "/"
-         && not (String.starts_with ~prefix:"RT/" name) ->
+         && (not (String.starts_with ~prefix:"RT/" name))
+         && (not (String.starts_with ~prefix:"y2k.RT/" name))
+         (* FIXME: this is a hack for java compilation *)
+         && not (String.starts_with ~prefix:"String/" name) ->
       let parts = String.split_on_char '/' name in
       let alias = List.nth parts 0 in
       if not (StringMap.mem alias ctx.aliases) then
@@ -93,7 +112,10 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
              ctx.filename l.line l.pos);
 
       let extenal_file = StringMap.find alias ctx.aliases in
-      (if not (String.starts_with ~prefix:"js." extenal_file) then
+      (if
+         extenal_file <> ""
+         && not (String.starts_with ~prefix:"js." extenal_file)
+       then
          let exports = read_exports_from_file ctx.prelude_code extenal_file in
          let reference = List.nth parts 1 in
          if not (List.mem reference exports.exports) then
@@ -107,18 +129,20 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   (* Check local variable *)
   | Atom (l, fname)
     when (not (String.starts_with ~prefix:"\"" fname))
+         && (not (String.contains fname '/'))
          && (not (String.starts_with ~prefix:"'" fname))
          && (not (String.starts_with ~prefix:":" fname))
          && (not (String.starts_with ~prefix:"-" fname))
          && (not (String.starts_with ~prefix:"RT/" fname))
+         && (not (String.starts_with ~prefix:"y2k.RT/" fname))
          && (String.get fname 0 < '0' || String.get fname 0 > '9')
          && fname <> "<=" && fname <> ">=" && fname <> ">" && fname <> "<"
          && fname <> "%" && fname <> "*" && fname <> "/" && fname <> "-"
          && fname <> "+" && fname <> "=" && fname <> "if" && fname <> "fn*"
-         && fname <> "null" && fname <> "let*" && fname <> "."
+         && fname <> "do" && fname <> "null" && fname <> "let*" && fname <> "."
          && fname <> "false" && fname <> "true" && fname <> "module"
-         && fname <> "catch" && fname <> "try" && fname <> "while"
-         && fname <> "new" && fname <> "throw" ->
+         && fname <> "quote" && fname <> "catch" && fname <> "try"
+         && fname <> "while" && fname <> "new" && fname <> "throw" ->
       let parts = String.split_on_char '.' fname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in

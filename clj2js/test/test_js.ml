@@ -5,7 +5,10 @@ let assert_ code expected =
     In_channel.with_open_bin "../../../test/samples/prelude/js/src/prelude.clj"
       In_channel.input_all
   in
-  let _ctx, actual = Clj2js.main_js "" "main.clj" prelude code in
+  let _ctx, actual =
+    Lib__.Frontend.NameGenerator.with_scope (fun _ ->
+        Clj2js.main_js "" "main.clj" prelude code)
+  in
   let start = 38 in
   let actual = String.sub actual start (String.length actual - start) in
   if actual <> expected then (

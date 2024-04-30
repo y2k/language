@@ -1,5 +1,8 @@
 let assert_ code expected =
-  let actual = Lib.main_kt "main.clj" code in
+  let actual =
+    Lib__.Frontend.NameGenerator.with_scope (fun _ ->
+        Lib.main_kt "main.clj" code)
+  in
   if actual <> expected then (
     print_endline actual;
     print_newline ();

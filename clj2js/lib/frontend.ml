@@ -109,12 +109,26 @@ let failnode prefix es =
   failwith ("Invalid node [" ^ prefix ^ "]")
 
 module NameGenerator = struct
-  let index = ref 0
-  let reset () = index := 0
+  let reset () = () (* FIXME: *)
 
-  let get_new_var () =
-    index := !index + 1;
-    "p__" ^ string_of_int !index
+  type _ Effect.t += CreateVal : string Effect.t
+
+  let with_scope f =
+    let index = ref 0 in
+    let open Effect.Deep in
+    Effect.Deep.try_with f ()
+      {
+        effc =
+          (fun (type a) (eff : a Effect.t) ->
+            match eff with
+            | CreateVal ->
+                index := !index + 1;
+                let result = "p__" ^ string_of_int !index in
+                Some (fun (k : (a, _) continuation) -> continue k result)
+            | _ -> None);
+      }
+
+  let get_new_var () = Effect.perform CreateVal
 end
 
 module MacroInterpretator = struct
@@ -164,6 +178,10 @@ module MacroInterpretator = struct
               RBList (List.map execute list_args)
           | RBList (Atom (_, "vector") :: vec_args) ->
               SBList (List.map execute vec_args)
+          | RBList [ Atom (l, "quote"); (Atom _ as arg) ] -> (
+              match execute arg with
+              | Atom (l, x) -> Atom (l, "'" ^ x)
+              | n -> RBList [ Atom (l, "quote"); n ])
           | RBList [ Atom (_, "-"); ea; eb ] -> (
               match (execute ea, execute eb) with
               | Atom (_, a), Atom (_, b) ->

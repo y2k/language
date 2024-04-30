@@ -16,6 +16,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       let r = "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" in
       ({ context with out_var = r }, "")
+  | Atom (_, x) when String.starts_with ~prefix:"'" x ->
+      let r = String.sub x 1 (String.length x - 1) in
+      ({ context with out_var = r }, "")
   | Atom (_, x) when String.starts_with ~prefix:"\"" x ->
       ({ context with out_var = x }, "")
   | Atom (_, x) ->
@@ -115,25 +118,37 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Printf.sprintf "package %s;%s%s" name imports "" |> with_context
-  | RBList [ Atom (_, "is"); x; Atom (_, type_) ] ->
+  | RBList [ Atom (_, "is"); x; Atom (_, type_) ]
+    when String.starts_with ~prefix:"'" type_ ->
+      let type_ = String.sub type_ 1 (String.length type_ - 1) in
       let out_var = Printf.sprintf "(%s instanceof %s)" (compile_exp x) type_ in
       "" |> with_context2 out_var
-  | RBList [ Atom (_, "as"); x; Atom (_, type_) ] ->
+  | RBList [ Atom (_, "as"); x; Atom (_, type_) ]
+    when String.starts_with ~prefix:"'" type_ ->
+      let type_ = String.sub type_ 1 (String.length type_ - 1) in
       let out_var = Printf.sprintf "(%s)%s" type_ (compile_exp x) in
       "" |> with_context2 out_var
+  (* | RBList [ Atom (_, "quote"); x ] -> compile_ context x *)
   | RBList
       [
-        Atom (_, "gen-class");
-        Atom (_, ":name");
-        Atom (_, clsName);
-        Atom (_, ":extends");
-        Atom (_, superCls);
-        Atom (_, ":constructors");
-        CBList [ SBList params; SBList _ ];
-        Atom (_, ":prefix");
-        Atom (_, prefix);
-        Atom (_, ":methods");
-        SBList methods;
+        Atom (_, "gen-class*");
+        RBList
+          [
+            Atom (_, "quote");
+            RBList
+              [
+                Atom (_, ":name");
+                Atom (_, clsName);
+                Atom (_, ":extends");
+                Atom (_, superCls);
+                Atom (_, ":constructors");
+                CBList [ SBList params; SBList _ ];
+                Atom (_, ":prefix");
+                Atom (_, prefix);
+                Atom (_, ":methods");
+                SBList methods;
+              ];
+          ];
       ] ->
       let prefix = String.sub prefix 1 (String.length prefix - 2) in
       let cnt_params =
@@ -238,7 +253,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       let sbody = body_loop body in
       Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
-  | RBList [ Atom (_, "class"); Atom (_, name) ] ->
+  | RBList [ Atom (_, "class"); Atom (_, name) ]
+    when String.starts_with ~prefix:"'" name ->
+      let name = String.sub name 1 (String.length name - 1) in
       "" |> with_context2 (Printf.sprintf "%s.class" name)
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   (* Lambda *)
@@ -426,8 +443,7 @@ let main (filename : string) prelude_macros code =
     |> fst
   in
   code |> Frontend.parse_and_simplify macros_ctx.macros 0 filename
-  (* |> fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp)  *)
-  |>
-  fun (ctx, exp) ->
+  |> fun (ctx, exp) ->
+  (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   let ctx, result = compile_ ctx exp in
   result ^ ctx.out_var |> String.trim
