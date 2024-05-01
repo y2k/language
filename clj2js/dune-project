@@ -12,6 +12,12 @@
  (name clj2js)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune angstrom ppx_deriving yojson)
+ (depends
+  ocaml
+  dune
+  angstrom
+  ppx_deriving
+  yojson
+  (alcotest :with-test))
  (tags
   (topics "to describe" your project)))
