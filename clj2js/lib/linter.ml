@@ -74,11 +74,15 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                           in
                           (target, alias, None)
                       | _ -> failnode "REQ" requiries)
-             | RBList [ Atom (_, ":import"); SBList (_ :: classes) ] ->
-                 classes
-                 |> List.map (function
-                      | Atom (_, cls) -> ("", cls, Some cls)
-                      | _ -> failnode "LNTDEPIMP" classes)
+             | RBList (Atom (_, ":import") :: imports) ->
+                 imports
+                 |> List.concat_map (function
+                      | SBList classes ->
+                          classes
+                          |> List.map (function
+                               | Atom (_, cls) -> ("", cls, Some cls)
+                               | _ -> failnode "LNTDEPIMP" classes)
+                      | n -> failnode "" [ n ])
              | x -> failnode "DEP" [ x ])
         |> List.fold_left
              (fun ctx (pkg, alias, local_val) ->
@@ -103,7 +107,8 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
          && (not (String.starts_with ~prefix:"RT/" name))
          && (not (String.starts_with ~prefix:"y2k.RT/" name))
          (* FIXME: this is a hack for java compilation *)
-         && not (String.starts_with ~prefix:"String/" name) ->
+         && (not (String.starts_with ~prefix:"String/" name))
+         && not (String.starts_with ~prefix:"ClassLoader/" name) ->
       let parts = String.split_on_char '/' name in
       let alias = List.nth parts 0 in
       if not (StringMap.mem alias ctx.aliases) then
@@ -127,23 +132,24 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
 
       (a, ctx)
   (* Check local variable *)
-  | Atom (l, fname)
-    when (not (String.starts_with ~prefix:"\"" fname))
-         && (not (String.contains fname '/'))
-         && (not (String.starts_with ~prefix:"'" fname))
-         && (not (String.starts_with ~prefix:":" fname))
-         && (not (String.starts_with ~prefix:"-" fname))
-         && (not (String.starts_with ~prefix:"RT/" fname))
-         && (not (String.starts_with ~prefix:"y2k.RT/" fname))
-         && (String.get fname 0 < '0' || String.get fname 0 > '9')
-         && fname <> "<=" && fname <> ">=" && fname <> ">" && fname <> "<"
-         && fname <> "%" && fname <> "*" && fname <> "/" && fname <> "-"
-         && fname <> "+" && fname <> "=" && fname <> "if" && fname <> "fn*"
-         && fname <> "do" && fname <> "null" && fname <> "let*" && fname <> "."
-         && fname <> "false" && fname <> "true" && fname <> "module"
-         && fname <> "quote" && fname <> "catch" && fname <> "try"
-         && fname <> "while" && fname <> "new" && fname <> "throw" ->
-      let parts = String.split_on_char '.' fname in
+  | Atom (l, vname)
+    when (not (String.starts_with ~prefix:"\"" vname))
+         && (not (String.starts_with ~prefix:"." vname))
+         && (not (String.contains vname '/'))
+         && (not (String.starts_with ~prefix:"'" vname))
+         && (not (String.starts_with ~prefix:":" vname))
+         && (not (String.starts_with ~prefix:"-" vname))
+         && (not (String.starts_with ~prefix:"RT/" vname))
+         && (not (String.starts_with ~prefix:"y2k.RT/" vname))
+         && (String.get vname 0 < '0' || String.get vname 0 > '9')
+         && vname <> "<=" && vname <> ">=" && vname <> ">" && vname <> "<"
+         && vname <> "%" && vname <> "*" && vname <> "/" && vname <> "-"
+         && vname <> "+" && vname <> "=" && vname <> "if" && vname <> "fn*"
+         && vname <> "do" && vname <> "null" && vname <> "let*" && vname <> "."
+         && vname <> "false" && vname <> "true" && vname <> "module"
+         && vname <> "quote" && vname <> "catch" && vname <> "try"
+         && vname <> "while" && vname <> "new" && vname <> "throw" ->
+      let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
       if not (List.mem fname ctx.local_defs) then

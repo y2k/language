@@ -5,7 +5,7 @@ let assert_ code expected =
   in
   let actual =
     Lib__.Frontend.NameGenerator.with_scope (fun _ ->
-        Lib.main_java "src/main.shared.clj" prelude code)
+        Lib.main_java "main.shared.clj" prelude code)
   in
   if actual <> expected then (
     print_endline actual;
@@ -19,7 +19,9 @@ let assert_file filename =
   let expected = with_open_bin (path ^ ".java") input_all in
   assert_ code expected
 
-let main () =
+let assert_files () = assert_file "main.shared.clj"
+
+let assert_strings () =
   assert_ {|(defn foo [a] a)|}
     {|public static Object foo(final Object a){return a;}|};
   assert_ {|(defn- foo [a] a)|}
@@ -64,10 +66,14 @@ let main () =
     {|final Object p__1;if(a){p__1=b;}else{p__1=c;}y2k.RT.str(p__1)|};
   assert_ {|(str (fn [[a b]] (= a b)))|}
     {|y2k.RT.str((p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;})|};
-  assert_ "(is 'a List)" "(a instanceof List)";
-  assert_ "(as 'a List)" "(List)a";
+  assert_ "(ns _ (:import [a.b List]))(def b (is 'a List))"
+    "package _;import a.b.List;class Main_shared {public static Object b=(a \
+     instanceof List);}";
+  assert_ "(ns _ (:import [a.b List]))(def b (as 'a List))"
+    "package _;import a.b.List;class Main_shared {public static Object \
+     b=(List)a;}";
   assert_
-    {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel])) (defn foo [x] x)|}
+    {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel]))(defn foo [x] x)|}
     {|package im.y2k.chargetimer;import android.app.Activity;import android.app.NotificationChannel;class Main_shared {public static Object foo(final Object x){return x;}}|};
   assert_ {|(fn [] (str 'b 'c))|} {|()->{return y2k.RT.str(b,c);}|};
   assert_ {|(^void fn [] (str 'b 'c))|} {|()->{y2k.RT.str(b,c);}|};
@@ -142,4 +148,22 @@ public static Object b(){return 2;}|};
 :prefix "wv_"
 :methods [[^JavascriptInterface foo [String String] void][^Override bar [int int] String][baz [int int] String]])|}
     {|public static class WVJL extends Object{public java.util.List<Object> state;public WVJL(Activity p0,WebView p1){state=java.util.List.of(p0,p1);}@JavascriptInterface public void foo(String p0, String p1){wv_foo(this,p0,p1);}@Override public String bar(int p0, int p1){super.bar(p0,p1);return (String)wv_bar(this,p0,p1);}public String baz(int p0, int p1){return (String)wv_baz(this,p0,p1);}}|};
+  assert_ {|(ns gg.h7.i8
+  (:import [a.b C1 C2 C3] [d.e F4 F5 F6]))|}
+    {|package gg.h7.i8;import a.b.C1;import a.b.C2;import a.b.C3;import d.e.F4;import d.e.F5;import d.e.F6;|};
+  assert_ {|(def a (ClassLoader/getSystemClassLoader))|}
+    {|public static Object a=ClassLoader.getSystemClassLoader();|};
+
+  assert_
+    {|(ns im.y2k.ch (:import [an.co Ctx AuMa]))
+(defn- foo [context] (as (.getSySe context Ctx/AU_SE) AuMa))|}
+    {|package im.y2k.ch;import an.co.Ctx;import an.co.AuMa;class Main_shared {private static Object foo(final Object context){return (AuMa)context.getSySe(Ctx.AU_SE);}}|};
+  assert_
+    {|(ns im.y2k.ch (:import [an.co Ctx AuMa]))
+(defn- foo [context] (is (.getSySe context Ctx/AU_SE) AuMa))|}
+    {|package im.y2k.ch;import an.co.Ctx;import an.co.AuMa;class Main_shared {private static Object foo(final Object context){return (context.getSySe(Ctx.AU_SE) instanceof AuMa);}}|};
   ()
+
+let main () =
+  assert_strings ();
+  assert_files ()

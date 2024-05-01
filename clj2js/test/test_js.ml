@@ -333,4 +333,5 @@ let test2 () =
 let test3 () =
   assert_file "hotreload-client.clj";
   assert_file "sample1.clj";
+  assert_file "main.shared.clj";
   ()

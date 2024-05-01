@@ -118,14 +118,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Printf.sprintf "package %s;%s%s" name imports "" |> with_context
-  | RBList [ Atom (_, "is"); x; Atom (_, type_) ]
-    when String.starts_with ~prefix:"'" type_ ->
-      let type_ = String.sub type_ 1 (String.length type_ - 1) in
+  | RBList [ Atom (_, "is*"); x; type_ ] ->
+      let type_ = compile_exp type_ in
       let out_var = Printf.sprintf "(%s instanceof %s)" (compile_exp x) type_ in
       "" |> with_context2 out_var
-  | RBList [ Atom (_, "as"); x; Atom (_, type_) ]
-    when String.starts_with ~prefix:"'" type_ ->
-      let type_ = String.sub type_ 1 (String.length type_ - 1) in
+  | RBList [ Atom (_, "as*"); x; type_ ] ->
+      let type_ = compile_exp type_ in
       let out_var = Printf.sprintf "(%s)%s" type_ (compile_exp x) in
       "" |> with_context2 out_var
   (* | RBList [ Atom (_, "quote"); x ] -> compile_ context x *)
