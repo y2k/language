@@ -24,7 +24,6 @@ type context = {
 
 module NameGenerator : sig
   val get_new_var : unit -> string
-  val reset : unit -> unit
   val with_scope : (unit -> 'a) -> 'a
 end
 

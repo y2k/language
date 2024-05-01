@@ -13,7 +13,6 @@ let () =
         | "json" -> Clj2js.main_json filename
         | "js" ->
             let prelude_macros = read_code_file Sys.argv.(3) in
-            let prelude_path = Filename.chop_extension Sys.argv.(3) ^ ".js" in
             fun code ->
               Lib__Linter.run_resolve
                 (fun name ->
@@ -22,9 +21,7 @@ let () =
                   in
                   (* prerr_endline @@ Sys.getenv "PWD" ^ " | " ^ filename; *)
                   In_channel.with_open_bin path In_channel.input_all)
-                (fun _ ->
-                  Clj2js.main_js prelude_path filename prelude_macros code
-                  |> snd)
+                (fun _ -> Clj2js.main_js filename prelude_macros code |> snd)
         | "sh" ->
             fun str ->
               let shebang = "#!/usr/bin/env clj2sh\n" in

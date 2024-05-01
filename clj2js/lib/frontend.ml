@@ -109,8 +109,6 @@ let failnode prefix es =
   failwith ("Invalid node [" ^ prefix ^ "]")
 
 module NameGenerator = struct
-  let reset () = () (* FIXME: *)
-
   type _ Effect.t += CreateVal : string Effect.t
 
   let with_scope f =
@@ -463,7 +461,6 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | x -> fail_node [ x ]
 
 let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
-  NameGenerator.reset ();
   (* if filename <> "prelude" then
      print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =

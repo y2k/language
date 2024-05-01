@@ -10,9 +10,6 @@ let prelude =
    (defn deref [a] (get a 0))
 |}
 
-let prelude_imports prelude_path = "import * as RT from '" ^ prelude_path ^ "';"
-(* let prelude_imports = "import { atom, reset, deref } from './prelude.js';" *)
-
 let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 
@@ -328,14 +325,18 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s"))
       |> Printf.sprintf "new %s(%s)" (unpack_string cnst_name)
       |> with_context
-  (* Functino call *)
+  (* Function call *)
   | RBList (head :: args) ->
       (let sargs =
          if List.length args = 0 then ""
          else args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
        in
-       String.map (function '/' -> '.' | x -> x) (compile head)
-       ^ "(" ^ sargs ^ ")")
+       let fname =
+         match head with
+         | RBList (Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")"
+         | _ -> compile head
+       in
+       String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")")
       |> with_context
   | x -> fail_node [ x ]
 

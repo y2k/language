@@ -8,9 +8,9 @@ let assert1 code expected =
     in
     let _ctx, actual =
       Lib__.Frontend.NameGenerator.with_scope (fun _ ->
-          Clj2js.main_js "" "main.clj" prelude code)
+          Clj2js.main_js "main.clj" prelude code)
     in
-    let start = 38 in
+    let start = 15 in
     let actual = String.sub actual start (String.length actual - start) in
     Alcotest.(check string) "1" expected actual
   in
@@ -33,9 +33,9 @@ let assert2 files code expected =
     let _ctx, actual =
       with_extenal_files files (fun () ->
           Lib__.Frontend.NameGenerator.with_scope (fun _ ->
-              Clj2js.main_js "" "main.clj" prelude code))
+              Clj2js.main_js "main.clj" prelude code))
     in
-    let start = 38 in
+    let start = 15 in
     let actual = String.sub actual start (String.length actual - start) in
     Alcotest.(check string) "1" expected actual
   in
@@ -302,10 +302,11 @@ bar(2)|};
       "export const a = 1;\nexport const b = 2;";
     assert1 {|(fn [{a :url b :props}] [a b])|}
       {|(p__1) => { return (function () { const a = p__1["url"]; const b = p__1["props"]; return [a, b] })() }|};
-    assert1 {|(atom 1)|} {|RT.atom(1)|};
-    assert1 {|(deref 'x)|} {|RT.deref(x)|};
-    assert1 {|(reset! 'x 2)|} {|RT.reset(x, 2)|};
-    assert1 {|(swap! 'a (fn [x] x))|} {|RT.swap(a, (x) => { return x })|};
+    assert1 {|(atom 1)|} {|Array.of(1)|};
+    assert1 {|(deref 'x)|} {|x[0]|};
+    assert1 {|(reset! 'x 2)|} {|(function () { x.fill(2); return 2 })()|};
+    assert1 {|(swap! 'a (fn [x] x))|}
+      {|a.splice(0, 1, ((x) => { return x })(a[0]))[0]|};
     assert1 {|(fn [a {b :b} c] (a b c))|}
       {|(a, p__1, c) => { return (function () { const b = p__1["b"]; return a(b, c) })() }|};
     assert1 {|(fn [a [b c] d] (a b c d))|}

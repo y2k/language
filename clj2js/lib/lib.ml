@@ -1,10 +1,6 @@
-let main_js prelude_path (filename : string) (prelude_macros : string) code =
+let main_js (filename : string) (prelude_macros : string) code =
   (match filename with
-  | "prelude" ->
-      (Backend_js.prelude |> Backend_js.main "prelude" prelude_macros, "")
-  | filename ->
-      ( code |> Backend_js.main filename prelude_macros,
-        Backend_js.prelude_imports prelude_path ))
+  | filename -> (code |> Backend_js.main filename prelude_macros, ""))
   |> fun ((ctx, code), imports) ->
   (ctx, Printf.sprintf "\"use strict\";\n%s\n%s" imports code)
 
