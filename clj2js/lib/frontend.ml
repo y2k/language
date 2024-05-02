@@ -82,7 +82,6 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  out_var : string;
 }
 
 module List = struct
@@ -90,7 +89,7 @@ module List = struct
 
   let reduce f xs =
     match xs with
-    | [] -> failwith "List is empty"
+    | [] -> failwith "[REDUCE] List is empty"
     | xs -> List.fold_left f (List.hd xs) (List.tl xs)
 
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
@@ -176,6 +175,13 @@ module MacroInterpretator = struct
               RBList (List.map execute list_args)
           | RBList (Atom (_, "vector") :: vec_args) ->
               SBList (List.map execute vec_args)
+          | RBList [ Atom (l, "symbol"); n ] ->
+              Atom
+                ( l,
+                  match execute n with
+                  | Atom (_, x) when String.starts_with ~prefix:"\"" x ->
+                      String.sub x 1 (String.length x - 2)
+                  | n -> failnode __LOC__ [ n ] )
           | RBList [ Atom (l, "quote"); (Atom _ as arg) ] -> (
               match execute arg with
               | Atom (l, x) -> Atom (l, "'" ^ x)
@@ -222,7 +228,8 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | CBList xs ->
       RBList
         (Atom (unknown_location, "hash-map") :: List.map expand_core_macro2 xs)
-      |> with_context
+      |> expand_core_macro2 |> with_context
+  | RBList (Atom (_, "fn*") :: _) as o -> o |> with_context
   | RBList (Atom (_, "let") :: SBList vals :: body) ->
       let unpack_let_args args body =
         let rec loop = function
@@ -461,13 +468,13 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | x -> fail_node [ x ]
 
 let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
-  (* if filename <> "prelude" then
-     print_endline "==| DEBUG |==============================================\n"; *)
+  if filename <> "prelude" then
+    print_endline "==| DEBUG |==============================================\n";
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
   expand_core_macro
-    { filename; loc = unknown_location; start_line; macros; out_var = "" }
+    { filename; loc = unknown_location; start_line; macros }
     sexp
   |> function
   | ctx, x ->
@@ -483,5 +490,5 @@ let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
+      if filename <> "prelude" then print_endline (show_cljexp x);
       (ctx, x)

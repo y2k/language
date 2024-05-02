@@ -19,7 +19,6 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  out_var : string;
 }
 
 module NameGenerator : sig
