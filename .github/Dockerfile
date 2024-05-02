@@ -10,7 +10,7 @@ COPY clj2js/bin bin
 COPY clj2js/lib lib
 COPY clj2js/test test
 
-RUN opam install --deps-only --with-test . \
+RUN opam install --deps-only --with-test . && \
     eval $(opam env) && \
     dune build
 
