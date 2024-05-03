@@ -59,7 +59,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             Printf.sprintf "local %s=%s\n%s" val_name (compile val_body)
               (parse_vals remain)
         | [] -> ""
-        | xs -> fail_node xs
+        | xs -> failnode __LOC__ xs
       in
       let svals = parse_vals vals in
       let sbody =
@@ -77,7 +77,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        in
        fname ^ " " ^ sargs)
       |> withContext
-  | n -> fail_node [ n ]
+  | n -> failnode __LOC__ [ n ]
 
 let main (filename : string) code =
   Frontend.parse_and_simplify StringMap.empty 0 filename code

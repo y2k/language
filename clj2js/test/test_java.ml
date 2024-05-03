@@ -46,8 +46,8 @@ let assert_strings =
       {|public static Object foo(final Object a,final Object b){return a(b);}|};
     assert1 __POS__ {|(defn foo [[a b]] (a b))|}
       {|public static Object foo(final Object p__1){final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
-    assert1 __POS__ {|(= 'a 'b)|} {|Objects.equals(a,b)|};
-    assert1 __POS__ {|(not= 'a 'b)|} {|!Objects.equals(a,b)|};
+    assert1 __POS__ {|(= 'a 'b)|} {|java.util.Objects.equals(a,b)|};
+    assert1 __POS__ {|(not= 'a 'b)|} {|!java.util.Objects.equals(a,b)|};
     assert1 __POS__ {|(+ 'a 'b)|} {|(a+b)|};
     assert1 __POS__ {|(- 'a 'b)|} {|(a-b)|};
     assert1 __POS__ {|(* 'a 'b)|} {|(a*b)|};
@@ -78,7 +78,7 @@ let assert_strings =
     assert1 __POS__ {|(str (if 'a 'b 'c))|}
       {|final Object p__1;if(a){p__1=b;}else{p__1=c;}y2k.RT.str(p__1)|};
     assert1 __POS__ {|(str (fn [[a b]] (= a b)))|}
-      {|y2k.RT.str((p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=Objects.equals(a,b);return p__2;})|};
+      {|y2k.RT.str((p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=java.util.Objects.equals(a,b);return p__2;})|};
     assert1 __POS__ "(ns _ (:import [a.b List]))(def b (is 'a List))"
       "package _;import a.b.List;class Main_shared{public static Object b=(a \
        instanceof List);}";

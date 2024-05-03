@@ -23,7 +23,7 @@ let result_get_expression = function
 let result_get_statments = function
   | Literal _ -> []
   | Call (xs, _) -> xs
-  | IfCall _ -> failwith __LOC__
+  | IfCall (xs, _) -> xs
 
 let generate_class (compile_exp : cljexp -> result2) prefix params clsName
     methods superCls =
@@ -67,7 +67,7 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
                |> List.mapi (fun i a ->
                       match a with
                       | Atom (_, a) -> Printf.sprintf "%s p%i" a i
-                      | x -> fail_node [ x ])
+                      | x -> failnode __LOC__ [ x ])
                |> List.reduce (Printf.sprintf "%s, %s")
              in
              let args__ =
@@ -86,7 +86,7 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
              in
              Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot rtype
                mname args_ call_super return_ prefix mname args__
-         | x -> fail_node [ x ])
+         | x -> failnode __LOC__ [ x ])
     |> List.reduce (Printf.sprintf "%s%s")
   in
   Printf.sprintf
@@ -95,29 +95,13 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
     clsName superCls state ms
 
 let rec compile_ (ctx : context) (node : cljexp) : result2 =
-  let make_function2 a b op =
+  let make_operator a b f =
     let ar = compile_ ctx a in
     let br = compile_ ctx b in
-
     let la = result_get_expression ar in
     let lb = result_get_expression br in
-
-    let res = Printf.sprintf op la lb in
     let stmts = result_get_statments ar @ result_get_statments br in
-
-    Call (stmts, res)
-  in
-  let make_operator a b op =
-    let ar = compile_ ctx a in
-    let br = compile_ ctx b in
-
-    let la = result_get_expression ar in
-    let lb = result_get_expression br in
-
-    let res = Printf.sprintf "(%s%s%s)" la op lb in
-    let stmts = result_get_statments ar @ result_get_statments br in
-
-    Call (stmts, res)
+    Call (stmts, f la lb)
   in
   match node with
   | Atom (_, "unit") -> Literal "(Object)null"
@@ -140,12 +124,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
   | RBList [ Atom (_, op); a; b ]
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<"
          || op = ">=" || op = "<=" ->
-      make_operator a b op
+      make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
   | RBList [ Atom (_, op); a; b ] when op = "is*" ->
-      make_function2 a b "(%s instanceof %s)"
-  | RBList [ Atom (_, op); a; b ] when op = "as*" -> make_function2 b a "(%s)%s"
-  | RBList [ Atom (_, op); a; b ] when op = "=" ->
-      make_function2 a b "Objects.equals(%s,%s)"
+      make_operator a b (Printf.sprintf "(%s instanceof %s)")
+  | RBList [ Atom (_, op); a; b ] when op = "as*" ->
+      make_operator b a (Printf.sprintf "(%s)%s")
   | RBList [ Atom (_, "not"); x ] ->
       let rx = compile_ ctx x in
       let r_call = rx |> result_get_expression |> Printf.sprintf "!%s" in
@@ -165,7 +148,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.map (function
              | Atom (am, aname) ->
                  Printf.sprintf "final %s %s" (get_type am) aname
-             | x -> fail_node [ x ])
+             | x -> failnode __LOC__ [ x ])
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
@@ -211,7 +194,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         args
         |> List.map (function
              | Atom (_, aname) -> Printf.sprintf "%s" aname
-             | x -> fail_node [ x ])
+             | x -> failnode __LOC__ [ x ])
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
@@ -249,40 +232,24 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       Call ([], statments_text ^ result_expresion)
   | RBList [ Atom (_, "if"); c; a; b ] ->
       let c_r = compile_ ctx c in
-      let c_statments =
-        match c_r with
-        | Literal _ -> []
-        | Call (xs, _) -> xs
-        | IfCall (xs, _) -> xs
-      in
       let c_exp =
         match c_r with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
       in
+      let c_statments = result_get_statments c_r in
 
       let a_c = compile_ ctx a in
       let a_exp =
         match a_c with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
       in
-      let a_statments =
-        match a_c with
-        | Literal _ -> []
-        | Call (xs, _) -> xs
-        | IfCall (xs, _) -> xs
-      in
+      let a_statments = result_get_statments a_c in
 
       let b_c = compile_ ctx b in
       let b_exp =
         match b_c with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
       in
-      let b_statments =
-        match b_c with
-        | Literal _ -> []
-        | Call (xs, _) -> xs
-        | IfCall (xs, _) -> xs
-      in
+      let b_statments = result_get_statments b_c in
 
       let temp_val = NameGenerator.get_new_var () in
-
       let statments =
         List.concat
           [
@@ -314,9 +281,9 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
                           |> List.map (fun c ->
                                  Printf.sprintf "import %s.%s;" pkg c)
                           |> List.reduce (Printf.sprintf "%s%s")
-                      | n -> fail_node [ n ])
+                      | n -> failnode __LOC__ [ n ])
                  |> List.reduce (Printf.sprintf "%s%s")
-             | n -> fail_node [ n ])
+             | n -> failnode __LOC__ [ n ])
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Literal (Printf.sprintf "package %s;%s" name imports)
@@ -348,21 +315,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         | [] -> []
         | Atom (m, key) :: value :: tail ->
             let value_r = compile_ ctx value in
-            let value_exp =
-              match value_r with
-              | Literal x -> x
-              | Call (_, x) -> x
-              | IfCall _ -> failwith __LOC__
-            in
+            let value_exp = result_get_expression value_r in
             let value_cast =
               if m.symbol = "" then "" else Printf.sprintf "(%s)" m.symbol
             in
-            let value_statments =
-              match value_r with
-              | Literal _ -> []
-              | Call (xs, _) -> xs
-              | IfCall _ -> failwith __LOC__
-            in
+            let value_statments = result_get_statments value_r in
             let x =
               Printf.sprintf "final var %s=%s%s;" key value_cast value_exp
             in

@@ -12,7 +12,7 @@ let rec cljexp_to_json : _ -> Yojson.Safe.t = function
         | RBList [ Atom (_, "comment") ] :: tail -> loop tail
         | [ x ] -> x
         | [] -> CBList []
-        | x -> fail_node x
+        | x -> failnode __LOC__ x
       in
       xs |> loop |> cljexp_to_json
   | RBList xs -> `List (List.map cljexp_to_json xs)

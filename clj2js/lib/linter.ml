@@ -33,10 +33,10 @@ let read_exports_from_file prelude_code name : exports =
           | Atom (_, k) :: _ :: tail ->
               ("default." ^ String.sub k 1 (String.length k - 1))
               :: loop exports tail
-          | n -> failnode "RSLP_LP" n
+          | n -> failnode __LOC__ n
         in
         loop exports def_exps
-    | n -> failnode "RSLV_EXP" [ n ]
+    | n -> failnode __LOC__ [ n ]
   in
   { exports = resolve_loop [] node }
 
@@ -73,7 +73,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                             else package
                           in
                           (target, alias, None)
-                      | _ -> failnode "REQ" requiries)
+                      | _ -> failnode __LOC__ requiries)
              | RBList (Atom (_, ":import") :: imports) ->
                  imports
                  |> List.concat_map (function
@@ -81,9 +81,9 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                           classes
                           |> List.map (function
                                | Atom (_, cls) -> ("", cls, Some cls)
-                               | _ -> failnode "LNTDEPIMP" classes)
-                      | n -> failnode "" [ n ])
-             | x -> failnode "DEP" [ x ])
+                               | _ -> failnode __LOC__ classes)
+                      | n -> failnode __LOC__ [ n ])
+             | x -> failnode __LOC__ [ x ])
         |> List.fold_left
              (fun ctx (pkg, alias, local_val) ->
                let local_defs =
@@ -135,7 +135,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   (* Check local variable *)
   | Atom (l, vname)
     when (not (String.starts_with ~prefix:"\"" vname))
-         && (not (String.starts_with ~prefix:"." vname))
+         && "." <> vname
          && (not (String.contains vname '/'))
          && (not (String.starts_with ~prefix:"'" vname))
          && (not (String.starts_with ~prefix:":" vname))
@@ -143,13 +143,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
          && (not (String.starts_with ~prefix:"RT/" vname))
          && (not (String.starts_with ~prefix:"y2k.RT/" vname))
          && (String.get vname 0 < '0' || String.get vname 0 > '9')
-         && vname <> "<=" && vname <> ">=" && vname <> ">" && vname <> "<"
-         && vname <> "%" && vname <> "*" && vname <> "/" && vname <> "-"
-         && vname <> "+" && vname <> "=" && vname <> "if" && vname <> "fn*"
-         && vname <> "do" && vname <> "null" && vname <> "let*" && vname <> "."
-         && vname <> "false" && vname <> "true" && vname <> "module"
-         && vname <> "quote" && vname <> "catch" && vname <> "try"
-         && vname <> "while" && vname <> "new" && vname <> "throw" ->
+         && vname <> "module" ->
       let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
@@ -166,9 +160,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
              (fun ctx (key, value) ->
                lint' ctx value |> ignore;
                let key =
-                 match key with
-                 | Atom (_, x) -> x
-                 | x -> failnode "LET*NOT" [ x ]
+                 match key with Atom (_, x) -> x | x -> failnode __LOC__ [ x ]
                in
                { ctx with local_defs = key :: ctx.local_defs })
              ctx
@@ -181,7 +173,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
         |> List.fold_left
              (fun ctx x ->
                let key =
-                 match x with Atom (_, x) -> x | x -> failnode "FN*NOT" [ x ]
+                 match x with Atom (_, x) -> x | x -> failnode __LOC__ [ x ]
                in
                { ctx with local_defs = key :: ctx.local_defs })
              ctx

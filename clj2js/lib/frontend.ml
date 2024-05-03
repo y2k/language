@@ -95,12 +95,6 @@ module List = struct
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
 end
 
-let fail_node es =
-  es |> List.map show_cljexp |> List.fold_left ( ^ ) ""
-  |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
-  |> prerr_endline;
-  failwith "Invalid node"
-
 let failnode prefix es =
   es |> List.map show_cljexp |> List.fold_left ( ^ ) ""
   |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
@@ -138,7 +132,7 @@ module MacroInterpretator = struct
       | Atom (_, name) :: nt, v :: vt ->
           compute_args' (StringMap.add name v acc) nt vt
       | [], [] -> acc
-      | a, b -> fail_node (List.concat [ a; b ])
+      | a, b -> failnode __LOC__ (List.concat [ a; b ])
     in
     compute_args' StringMap.empty arg_names arg_values
 
@@ -153,11 +147,11 @@ module MacroInterpretator = struct
           | RBList [ Atom (_, "vec"); Atom (_, xs) ] -> (
               match StringMap.find xs args with
               | RBList xs -> SBList xs
-              | x -> fail_node [ x ])
+              | x -> failnode __LOC__ [ x ])
           | RBList [ Atom (_, "concat"); a; b ] -> (
               match (execute a, execute b) with
               | RBList a2, RBList b2 -> RBList (List.concat [ a2; b2 ])
-              | a2, b2 -> fail_node [ a2; b2 ])
+              | a2, b2 -> failnode __LOC__ [ a2; b2 ])
           | RBList (Atom (_, "str") :: str_args) ->
               let result =
                 str_args |> List.map execute
@@ -167,7 +161,7 @@ module MacroInterpretator = struct
                             && String.ends_with ~suffix:"\"" x ->
                          String.sub x 1 (String.length x - 2)
                      | Atom (_, x) -> x
-                     | n -> fail_node [ n ])
+                     | n -> failnode __LOC__ [ n ])
                 |> String.concat ""
               in
               Atom (unknown_location, "\"" ^ result ^ "\"")
@@ -192,7 +186,7 @@ module MacroInterpretator = struct
                   Atom
                     ( unknown_location,
                       string_of_int (int_of_string a - int_of_string b) )
-              | a, b -> fail_node [ a; b ])
+              | a, b -> failnode __LOC__ [ a; b ])
           | Atom (_, "__FILENAME__") -> Atom (unknown_location, context.filename)
           | Atom (_, "__LINE__") ->
               Atom
@@ -213,7 +207,7 @@ module MacroInterpretator = struct
               Atom (unknown_location, x)
           | Atom (_, x) when int_of_string_opt x |> Option.is_some ->
               Atom (unknown_location, x)
-          | node -> fail_node [ node ]
+          | node -> failnode __LOC__ [ node ]
         in
         body |> List.map execute
     | _ -> failwith "FIXME"
@@ -261,7 +255,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                 |> snd
               in
               b @ loop tail
-          | xs -> fail_node xs
+          | xs -> failnode __LOC__ xs
         in
         RBList (Atom (unknown_location, "let*") :: SBList (loop args) :: body)
       in
@@ -299,7 +293,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                 loop body;
               ]
         | [ x ] -> x
-        | _ -> fail_node [ node ]
+        | _ -> failnode __LOC__ [ node ]
       in
       RBList
         [
@@ -313,7 +307,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
         | [ Atom (_, ":else"); then_ ] -> then_
         | cond :: then_ :: body ->
             RBList [ Atom (unknown_location, "if"); cond; then_; loop body ]
-        | _ -> fail_node [ node ]
+        | _ -> failnode __LOC__ [ node ]
       in
       loop body |> expand_core_macro2 |> with_context
   | RBList (Atom (l, "if-let") :: tail) ->
@@ -353,7 +347,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                    :: RBList [ Atom (unknown_location, "get"); virt_arg; key ]
                    :: loop2 tail
                | [] -> []
-               | xs -> fail_node xs
+               | xs -> failnode __LOC__ xs
              in
              loop (new_args @ [ virt_arg ]) (loop2 map_items) tail
          | SBList xs :: tail ->
@@ -379,7 +373,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
                |> snd
              in
              loop (new_args @ [ virt_arg ]) let_args tail
-         | xs -> fail_node xs
+         | xs -> failnode __LOC__ xs
        in
        let body = List.map expand_core_macro2 body in
        match loop [] [] args with
@@ -399,7 +393,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
              match x with
              | Atom (l, z) -> RBList [ Atom (l, z); acc ]
              | RBList (a :: bs) -> RBList (a :: acc :: bs)
-             | xs -> fail_node [ xs ])
+             | xs -> failnode __LOC__ [ xs ])
       |> expand_core_macro1
   | RBList (Atom (_, "->>") :: body) ->
       body
@@ -407,7 +401,7 @@ let rec expand_core_macro (context : context) node : context * cljexp =
              match x with
              | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
              | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
-             | xs -> fail_node [ xs ])
+             | xs -> failnode __LOC__ [ xs ])
       |> expand_core_macro1
   | RBList (Atom (l, "defmacro") :: Atom (_, name) :: _) as macro ->
       (* print_endline @@ "[LOG] defmacro: " ^ name; *)
@@ -470,14 +464,15 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | SBList body ->
       RBList (Atom (unknown_location, "vector") :: body)
       |> expand_core_macro2 |> with_context
-  | x -> fail_node [ x ]
+  | x -> failnode __LOC__ [ x ]
 
 let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
   (* if filename <> "prelude" then
-    print_endline "==| DEBUG |==============================================\n"; *)
+     print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
+  (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
   expand_core_macro
     { filename; loc = unknown_location; start_line; macros }
     sexp
