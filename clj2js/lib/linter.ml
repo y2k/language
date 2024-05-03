@@ -102,6 +102,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   (* Check external reference *)
   | Atom (l, name) as a
     when String.contains name '/'
+         && (not (String.contains name '.'))
          && (not (String.starts_with ~prefix:"\"" name))
          && name <> "/"
          && (not (String.starts_with ~prefix:"RT/" name))

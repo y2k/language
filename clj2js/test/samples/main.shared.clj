@@ -30,7 +30,8 @@
          level (.getIntExtra (.registerReceiver ctx null (IntentFilter. Intent/ACTION_BATTERY_CHANGED)) "level" -1)
          m (/ (JobInfo/getMinPeriodMillis) 1000)
          reason (.getPendingJob (.getSystemService ctx (class JobScheduler)) 123)]
-     (.evaluateJavascript! wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)))
+     (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)
+     unit))
 
  (defn- start_job [env]
    (let [^Context activity (:context env)
@@ -62,7 +63,8 @@
             (.setContentText "Test")
             .build)]
      (.createNotificationChannel nm ch)
-     (.notify! nm 1 n)))
+     (.notify nm 1 n)
+     unit))
 
  (defn- play_alarm [^Context context]
    (let [am (as (.getSystemService context Context/AUDIO_SERVICE) AudioManager)
@@ -71,10 +73,10 @@
      (.setStreamVolume am sound_stream_id max 0)
      (let [notification (.getDefaultUri RingtoneManager RingtoneManager/TYPE_ALARM)
            r (.getRingtone RingtoneManager context notification)]
-       (.play! r)
+       (.play r)
        (.postDelayed
         (Handler.)
-        (runnable (fn [] (.stop! r)))
+        (runnable (fn [] (.stop r) unit))
         1000))))
 
  (defn- play_alarm_pressed [env]

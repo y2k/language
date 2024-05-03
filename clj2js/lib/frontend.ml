@@ -182,7 +182,7 @@ module MacroInterpretator = struct
                   | Atom (_, x) when String.starts_with ~prefix:"\"" x ->
                       String.sub x 1 (String.length x - 2)
                   | n -> failnode __LOC__ [ n ] )
-          | RBList [ Atom (l, "quote"); (Atom _ as arg) ] -> (
+          | RBList [ Atom (l, "quote"); arg ] -> (
               match execute arg with
               | Atom (l, x) -> Atom (l, "'" ^ x)
               | n -> RBList [ Atom (l, "quote"); n ])
@@ -229,7 +229,10 @@ let rec expand_core_macro (context : context) node : context * cljexp =
       RBList
         (Atom (unknown_location, "hash-map") :: List.map expand_core_macro2 xs)
       |> expand_core_macro2 |> with_context
+  (* | RBList ((Atom (_, "comment") as c) :: _ :: _) ->
+      RBList [ c ] |> with_context *)
   | RBList (Atom (_, "fn*") :: _) as o -> o |> with_context
+  | RBList (Atom (_, "let*") :: _) as o -> o |> with_context
   | RBList (Atom (_, "let") :: SBList vals :: body) ->
       let unpack_let_args args body =
         let rec loop = function
@@ -423,17 +426,19 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | RBList ((RBList _ as h) :: args) ->
       RBList (expand_core_macro2 h :: List.map expand_core_macro2 args)
       |> with_context
+  (* Desugar interop function call *)
   | RBList (Atom (l, fname) :: target :: args)
     when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
-      let mname = String.sub fname 1 (String.length fname - 1) in
+      let mname = "'" ^ String.sub fname 1 (String.length fname - 1) in
       RBList
         (Atom (l, ".")
         :: expand_core_macro2 target
-        :: Atom (unknown_location, "'" ^ mname)
+        :: Atom (unknown_location, mname)
         :: List.map expand_core_macro2 args)
       |> with_context
   (* Desugar . macro *)
-  | RBList (Atom (l, ".") :: target :: Atom (lp, prop) :: args) ->
+  | RBList (Atom (l, ".") :: target :: Atom (lp, prop) :: args)
+    when not (String.starts_with ~prefix:"'" prop) ->
       let args = List.map expand_core_macro2 args in
       RBList (Atom (l, ".") :: target :: Atom (lp, "'" ^ prop) :: args)
       |> with_context
@@ -468,8 +473,8 @@ let rec expand_core_macro (context : context) node : context * cljexp =
   | x -> fail_node [ x ]
 
 let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
-  if filename <> "prelude" then
-    print_endline "==| DEBUG |==============================================\n";
+  (* if filename <> "prelude" then
+    print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
@@ -490,5 +495,5 @@ let parse_and_simplify (macros : cljexp StringMap.t) start_line filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      if filename <> "prelude" then print_endline (show_cljexp x);
+      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
       (ctx, x)

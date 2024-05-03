@@ -10,31 +10,89 @@ module Option = struct
   let value_or f x = match x with Some y -> y | None -> f ()
 end
 
-module CompilerResult = struct
-  type compile_result = { body : string; out_var : string option }
+type result2 =
+  | Literal of string
+  | Call of string list * string
+  | IfCall of string list * string
 
-  let empty = { body = ""; out_var = None }
-  let of_body body = { body; out_var = None }
+let result_get_expression = function
+  | Literal s -> s
+  | Call (_, s) -> s
+  | IfCall _ -> failwith __LOC__
 
-  let get_val cr =
-    match cr.out_var with Some x -> x | None -> failwith "No output variable"
+let result_get_statments = function
+  | Literal _ -> []
+  | Call (xs, _) -> xs
+  | IfCall _ -> failwith __LOC__
 
-  let get_body cr = cr.body
-  let get_body_or_val cr = if cr.body <> "" then cr.body else get_val cr
-  let make_val s = { body = ""; out_var = Some s }
-
-  let merge_bodies xs =
-    xs
-    |> List.map (fun x -> x.body)
-    |> List.filter (( <> ) "")
-    |> List.reduce_opt (Printf.sprintf "%s\n%s")
-    |> Option.value ~default:""
-end
-
-type result2 = Literal of string | Call of string list * string
-
-let result_get_expression = function Literal s -> s | Call (_, s) -> s
-let result_get_statments = function Literal _ -> [] | Call (xs, _) -> xs
+let generate_class (compile_exp : cljexp -> result2) prefix params clsName
+    methods superCls =
+  let prefix = String.sub prefix 1 (String.length prefix - 2) in
+  let cnt_params =
+    match params with
+    | [] -> ""
+    | params ->
+        params
+        |> List.mapi (fun i x ->
+               let type1 =
+                 match compile_exp x with
+                 | Literal x -> x
+                 | Call _ -> failwith __LOC__
+                 | IfCall _ -> failwith __LOC__
+               in
+               let type2 =
+                 if String.starts_with ~prefix:"\"" type1 then
+                   String.sub type1 1 (String.length type1 - 2)
+                 else type1
+               in
+               Printf.sprintf "%s p%i" type2 i)
+        |> List.reduce (Printf.sprintf "%s,%s")
+  in
+  let state =
+    match params with
+    | [] -> ""
+    | params ->
+        params
+        |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+        |> List.reduce (Printf.sprintf "%s,%s")
+        |> Printf.sprintf "public %s(%s){state=java.util.List.of(%s);}" clsName
+             cnt_params
+  in
+  let ms =
+    methods
+    |> List.map (function
+         | SBList [ Atom (m, mname); SBList args; Atom (_, rtype) ] ->
+             let args_ =
+               args
+               |> List.mapi (fun i a ->
+                      match a with
+                      | Atom (_, a) -> Printf.sprintf "%s p%i" a i
+                      | x -> fail_node [ x ])
+               |> List.reduce (Printf.sprintf "%s, %s")
+             in
+             let args__ =
+               args
+               |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+               |> List.reduce (Printf.sprintf "%s,%s")
+             in
+             let annot = match m.symbol with "" -> "" | x -> "@" ^ x ^ " " in
+             let return_ =
+               if rtype = "void" then "" else Printf.sprintf "return (%s)" rtype
+             in
+             let call_super =
+               if annot = "@Override " then
+                 Printf.sprintf "super.%s(%s);" mname args__
+               else ""
+             in
+             Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot rtype
+               mname args_ call_super return_ prefix mname args__
+         | x -> fail_node [ x ])
+    |> List.reduce (Printf.sprintf "%s%s")
+  in
+  Printf.sprintf
+    "public static class %s extends %s{public java.util.List<Object> \
+     state;%s%s}"
+    clsName superCls state ms
 
 let rec compile_ (ctx : context) (node : cljexp) : result2 =
   let make_function2 a b op =
@@ -61,14 +119,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
     Call (stmts, res)
   in
-  (* let compile_smt node = compile_ context node |> snd in
-     let compile_exp node =
-       let ctx2, _ = compile_ context node in
-       ctx2.out_var
-     in
-     let with_context node = (context, node) in
-     let with_context2 out_var node = ({ context with out_var }, node) in *)
   match node with
+  | Atom (_, "unit") -> Literal "(Object)null"
   (* Keyword *)
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       let r = "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" in
@@ -84,6 +136,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let x = String.map (function '/' -> '.' | x -> x) x in
       Literal x
   (* ==================== *)
+  | RBList [ Atom (_, "quote"); arg ] -> compile_ ctx arg
   | RBList [ Atom (_, op); a; b ]
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<"
          || op = ">=" || op = "<=" ->
@@ -124,7 +177,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.concat_map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ])
+             | Call (s, r) -> s @ [ r ^ ";" ]
+             | IfCall (s, _) -> s @ [ ";" ])
       in
 
       let vis =
@@ -145,13 +199,14 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         match last_r with
         | Literal x -> ([], Printf.sprintf "return %s;}" x)
         | Call (s, r) -> (s, Printf.sprintf "return %s;}" r)
+        | IfCall (s, r) -> (s, Printf.sprintf "return %s;}" r)
       in
 
       let statments = [ fn_defenition ] @ sbody @ result_statments in
 
       Call (statments, result_expresion)
   (* Lambda *)
-  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
+  | RBList (Atom (m, "fn*") :: SBList args :: body) ->
       let sargs =
         args
         |> List.map (function
@@ -168,7 +223,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.concat_map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ])
+             | Call (s, r) -> s @ [ r ^ ";" ]
+             | IfCall _ -> failwith __LOC__)
       in
 
       let fn_defenition = Printf.sprintf "(%s)->{" sargs in
@@ -180,9 +236,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       in
 
       let result_statments, result_expresion =
+        let return_ = match m.symbol with "void" -> "" | _ -> "return " in
         match last_r with
-        | Literal x -> ([], Printf.sprintf "return %s;}" x)
-        | Call (s, r) -> (s, Printf.sprintf "return %s;}" r)
+        | Literal x -> ([], Printf.sprintf "%s%s;}" return_ x)
+        | Call (s, r) -> (s, Printf.sprintf "%s%s;}" return_ r)
+        | IfCall _ -> failwith __LOC__
       in
 
       let statments = [ fn_defenition ] @ sbody @ result_statments in
@@ -191,16 +249,37 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       Call ([], statments_text ^ result_expresion)
   | RBList [ Atom (_, "if"); c; a; b ] ->
       let c_r = compile_ ctx c in
-      let c_statments = match c_r with Literal _ -> [] | Call (xs, _) -> xs in
-      let c_exp = match c_r with Literal x -> x | Call (_, x) -> x in
+      let c_statments =
+        match c_r with
+        | Literal _ -> []
+        | Call (xs, _) -> xs
+        | IfCall (xs, _) -> xs
+      in
+      let c_exp =
+        match c_r with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
+      in
 
       let a_c = compile_ ctx a in
-      let a_exp = match a_c with Literal x -> x | Call (_, x) -> x in
-      let a_statments = match a_c with Literal _ -> [] | Call (xs, _) -> xs in
+      let a_exp =
+        match a_c with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
+      in
+      let a_statments =
+        match a_c with
+        | Literal _ -> []
+        | Call (xs, _) -> xs
+        | IfCall (xs, _) -> xs
+      in
 
       let b_c = compile_ ctx b in
-      let b_exp = match b_c with Literal x -> x | Call (_, x) -> x in
-      let b_statments = match b_c with Literal _ -> [] | Call (xs, _) -> xs in
+      let b_exp =
+        match b_c with Literal x -> x | Call (_, x) -> x | IfCall (_, x) -> x
+      in
+      let b_statments =
+        match b_c with
+        | Literal _ -> []
+        | Call (xs, _) -> xs
+        | IfCall (xs, _) -> xs
+      in
 
       let temp_val = NameGenerator.get_new_var () in
 
@@ -216,22 +295,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
           ]
       in
 
-      Call (statments, temp_val)
-  (* | RBList (Atom (_, "hash-map") :: xs) ->
-          let args_init =
-            xs
-            |> List.map (fun x -> compile_ context x |> snd)
-            |> List.filter (fun x -> x <> "")
-            |> List.reduce_opt ( ^ ) |> Option.value ~default:""
-          in
-          let args =
-            xs |> List.map compile_exp
-            |> List.reduce_opt (Printf.sprintf "%s,%s")
-            |> Option.value ~default:""
-          in
-          let out_var = Printf.sprintf "java.util.Map.of(%s)" args in
-          args_init |> with_context2 out_var
-  *)
+      IfCall (statments, temp_val)
   | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
       let imports =
         ns_params
@@ -244,7 +308,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
                             (fun x ->
                               match compile_ ctx x with
                               | Literal x -> x
-                              | Call _ -> failwith __LOC__)
+                              | Call _ -> failwith __LOC__
+                              | IfCall _ -> failwith __LOC__)
                             classes
                           |> List.map (fun c ->
                                  Printf.sprintf "import %s.%s;" pkg c)
@@ -255,115 +320,48 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Literal (Printf.sprintf "package %s;%s" name imports)
-  (*
-      | RBList [ Atom (_, "is*"); x; type_ ] ->
-          let type_ = compile_exp type_ in
-          let out_var = Printf.sprintf "(%s instanceof %s)" (compile_exp x) type_ in
-          "" |> with_context2 out_var
-      | RBList [ Atom (_, "as*"); x; type_ ] ->
-          let type_ = compile_exp type_ in
-          let out_var = Printf.sprintf "(%s)%s" type_ (compile_exp x) in
-          "" |> with_context2 out_var
-      | RBList
+  | RBList
+      [
+        Atom (_, "gen-class*");
+        RBList
           [
-            Atom (_, "gen-class*");
+            Atom (_, "quote");
             RBList
               [
-                Atom (_, "quote");
-                RBList
-                  [
-                    Atom (_, ":name");
-                    Atom (_, clsName);
-                    Atom (_, ":extends");
-                    Atom (_, superCls);
-                    Atom (_, ":constructors");
-                    CBList [ SBList params; SBList _ ];
-                    Atom (_, ":prefix");
-                    Atom (_, prefix);
-                    Atom (_, ":methods");
-                    SBList methods;
-                  ];
+                Atom (_, ":name");
+                Atom (_, clsName);
+                Atom (_, ":extends");
+                Atom (_, superCls);
+                Atom (_, ":constructors");
+                CBList [ SBList params; SBList _ ];
+                Atom (_, ":prefix");
+                Atom (_, prefix);
+                Atom (_, ":methods");
+                SBList methods;
               ];
-          ] ->
-          let prefix = String.sub prefix 1 (String.length prefix - 2) in
-          let cnt_params =
-            match params with
-            | [] -> ""
-            | params ->
-                params
-                |> List.mapi (fun i x ->
-                       let type1 = compile_exp x in
-                       let type2 =
-                         if String.starts_with ~prefix:"\"" type1 then
-                           String.sub type1 1 (String.length type1 - 2)
-                         else type1
-                       in
-                       Printf.sprintf "%s p%i" type2 i)
-                |> List.reduce (Printf.sprintf "%s,%s")
-          in
-          let state =
-            match params with
-            | [] -> ""
-            | params ->
-                params
-                |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-                |> List.reduce (Printf.sprintf "%s,%s")
-                |> Printf.sprintf "public %s(%s){state=java.util.List.of(%s);}"
-                     clsName cnt_params
-          in
-          let ms =
-            methods
-            |> List.map (function
-                 | SBList [ Atom (m, mname); SBList args; Atom (_, rtype) ] ->
-                     let args_ =
-                       args
-                       |> List.mapi (fun i a ->
-                              match a with
-                              | Atom (_, a) -> Printf.sprintf "%s p%i" a i
-                              | x -> fail_node [ x ])
-                       |> List.reduce (Printf.sprintf "%s, %s")
-                     in
-                     let args__ =
-                       args
-                       |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-                       |> List.reduce (Printf.sprintf "%s,%s")
-                     in
-                     let annot =
-                       match m.symbol with "" -> "" | x -> "@" ^ x ^ " "
-                     in
-                     let return_ =
-                       if rtype = "void" then ""
-                       else Printf.sprintf "return (%s)" rtype
-                     in
-                     let call_super =
-                       if annot = "@Override " then
-                         Printf.sprintf "super.%s(%s);" mname args__
-                       else ""
-                     in
-                     Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot
-                       rtype mname args_ call_super return_ prefix mname args__
-                 | x -> fail_node [ x ])
-            |> List.reduce (Printf.sprintf "%s%s")
-          in
-          Printf.sprintf
-            "public static class %s extends %s{public java.util.List<Object> \
-             state;%s%s}"
-            clsName superCls state ms
-          |> with_context
-  *)
+          ];
+      ] ->
+      Literal
+        (generate_class (compile_ ctx) prefix params clsName methods superCls)
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec val_loop = function
         | [] -> []
         | Atom (m, key) :: value :: tail ->
             let value_r = compile_ ctx value in
             let value_exp =
-              match value_r with Literal x -> x | Call (_, x) -> x
+              match value_r with
+              | Literal x -> x
+              | Call (_, x) -> x
+              | IfCall _ -> failwith __LOC__
             in
             let value_cast =
               if m.symbol = "" then "" else Printf.sprintf "(%s)" m.symbol
             in
             let value_statments =
-              match value_r with Literal _ -> [] | Call (xs, _) -> xs
+              match value_r with
+              | Literal _ -> []
+              | Call (xs, _) -> xs
+              | IfCall _ -> failwith __LOC__
             in
             let x =
               Printf.sprintf "final var %s=%s%s;" key value_cast value_exp
@@ -381,7 +379,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.concat_map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ])
+             | Call (s, r) -> s @ [ r ^ ";" ]
+             | IfCall (s, _) -> s)
       in
       if List.is_empty body then failnode __LOC__ [ node ];
       let last_r =
@@ -391,7 +390,6 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       in
       let result_statments, result_expresion =
         match last_r with
-        (* | Literal x -> ([], x) *)
         | Literal x ->
             let out_val = NameGenerator.get_new_var () in
             ( List.concat [ []; [ Printf.sprintf "final var %s=%s;" out_val x ] ],
@@ -400,83 +398,25 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
             let out_val = NameGenerator.get_new_var () in
             ( List.concat [ s; [ Printf.sprintf "final var %s=%s;" out_val r ] ],
               out_val )
+        | IfCall (s, r) ->
+            let out_val = NameGenerator.get_new_var () in
+            ( List.concat [ s; [ Printf.sprintf "final var %s=%s;" out_val r ] ],
+              out_val )
       in
 
       Call
         ( List.concat [ val_statments; body_statments; result_statments ],
           result_expresion )
-  (* let rec parse_vals nodes =
-       match nodes with
-       | Atom (m, val_name) :: val_body :: remain ->
-           let ctx2, s = compile_ context val_body in
-           let type_ =
-             if m.symbol = "" then "" else Printf.sprintf "(%s)" m.symbol
-           in
-           Printf.sprintf "%sfinal var %s=%s%s;%s" s val_name type_
-             ctx2.out_var (parse_vals remain)
-       | [] -> ""
-       | xs -> fail_node xs
-     in
-     let svals = parse_vals vals in
-     let out_var = NameGenerator.get_new_var () in
-     let rec body_loop = function
-       | [ x ] ->
-           let ctx2, x = compile_ context x in
-           Printf.sprintf "%sfinal var %s=%s;" x out_var ctx2.out_var
-       | [ x; xs ] ->
-           let ctx1, stm1 = compile_ context x in
-           let line = if stm1 = "" then ctx1.out_var ^ ";" else stm1 in
-           line ^ "" ^ body_loop [ xs ] ^ ""
-       | x :: xs ->
-           let ctx1, stm1 = compile_ context x in
-           let line = if stm1 = "" then ctx1.out_var ^ ";" else stm1 in
-           line ^ "" ^ body_loop xs
-       | [] -> fail_node []
-     in
-     let sbody = body_loop body in
-     Printf.sprintf "%s%s" svals sbody |> with_context2 out_var
-  *)
-  (*
-      | RBList [ Atom (_, "class"); Atom (_, name) ]
-        when String.starts_with ~prefix:"'" name ->
-          let name = String.sub name 1 (String.length name - 1) in
-          "" |> with_context2 (Printf.sprintf "%s.class" name)
-      | RBList (Atom (_, "comment") :: _) -> "" |> with_context
-      (* Lambda *)
-      | RBList (Atom (m, "fn*") :: SBList args :: body) ->
-          let get_type am = if am.symbol = "" then "" else am.symbol ^ " " in
-          let sargs =
-            args
-            |> List.map (function
-                 | Atom (am, aname) -> Printf.sprintf "%s%s" (get_type am) aname
-                 | x -> fail_node [ x ])
-            |> List.reduce_opt (Printf.sprintf "%s,%s")
-            |> Option.value ~default:""
-          in
-          let rec loop_body = function
-            | [] -> fail_node []
-            | [ x ] ->
-                let ctx2, s = compile_ context x in
-                let s = if s = "" then "" else s in
-                (Printf.sprintf "%s" s, ctx2)
-            | x :: xs ->
-                let _, s = compile_ context x in
-                let s2, ctx2 = loop_body xs in
-                (Printf.sprintf "%s%s" s s2, ctx2)
-          in
-          let sbody, ctx2 = loop_body body in
-          let returns = if m.symbol = "void" then "" else "return " in
-          let out_var =
-            Printf.sprintf "(%s)->{%s%s%s;}" sargs sbody returns ctx2.out_var
-          in
-          "" |> with_context2 out_var
-      *)
-  | RBList (Atom (_, "module") :: (RBList (Atom (_, "ns") :: _) as ns) :: body)
-    ->
-      let ns_ =
-        match compile_ ctx ns with
-        | Literal x -> x
-        | _ -> failnode __LOC__ [ node ]
+  | RBList (Atom (_, "comment") :: _) -> Literal ""
+  | RBList (Atom (_, "module") :: body) ->
+      let ns_, body =
+        match body with
+        | (RBList (Atom (_, "ns") :: _) as ns) :: body ->
+            ( (match compile_ ctx ns with
+              | Literal x -> x
+              | _ -> failnode __LOC__ [ node ]),
+              body )
+        | body -> ("", body)
       in
 
       let name_start_pos =
@@ -497,29 +437,13 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
                match compile_ ctx x with
                | Literal x -> x
                | Call (xs, x) ->
-                   (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x)
-        |> List.reduce_opt (Printf.sprintf "%s\n%s")
+                   (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x
+               | IfCall _ -> failwith __LOC__)
+        |> List.reduce_opt (Printf.sprintf "%s%s")
         |> Option.value ~default:""
-        |> Printf.sprintf "%sclass %s {%s}" ns_ cls_name
+        |> Printf.sprintf "%sclass %s{%s}" ns_ cls_name
       in
       Literal result
-  (*
-      | RBList (Atom (_, "module") :: body) ->
-          body |> List.map compile_smt
-          |> List.reduce (Printf.sprintf "%s\n%s")
-          |> with_context
-      | RBList (Atom (_, "do") :: body) ->
-          let rec loop ctx = function
-            | [ x ] -> ({ ctx with out_var = compile_exp x }, compile_smt x)
-            | x :: xs ->
-                let stm = compile_smt x in
-                let exp = compile_exp x in
-                let ctx2, other = loop ctx xs in
-                (ctx2, Printf.sprintf "%s%s;%s" stm exp other)
-            | [] -> fail_node []
-          in
-          loop context body
-  *)
   (* Static field *)
   | RBList [ Atom (_, "def"); Atom (fname_meta, fname); body ] ->
       let vis =
@@ -533,7 +457,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
           (match compile_ ctx body with
           | Literal x -> x
           | Call (xs, x) ->
-              (List.reduce_opt ( ^ ) xs |> Option.value ~default:"") ^ x)
+              (List.reduce_opt ( ^ ) xs |> Option.value ~default:"") ^ x
+          | IfCall _ -> failwith __LOC__)
       in
       Literal result
   (* Interop method call *)
@@ -546,10 +471,16 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       let target_r = compile_ ctx target in
       let target_statments =
-        match target_r with Literal _ -> [] | Call (xs, _) -> xs
+        match target_r with
+        | Literal _ -> []
+        | Call (xs, _) -> xs
+        | IfCall _ -> failwith __LOC__
       in
       let target_exp =
-        match target_r with Literal x -> x | Call (_, x) -> x
+        match target_r with
+        | Literal x -> x
+        | Call (_, x) -> x
+        | IfCall _ -> failwith __LOC__
       in
 
       let results = args |> List.map (compile_ ctx) in
@@ -559,15 +490,21 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
           [
             target_statments;
             results
-            |> List.concat_map (function Literal _ -> [] | Call (xs, _) -> xs);
+            |> List.concat_map (function
+                 | Literal _ -> []
+                 | Call (xs, _) -> xs
+                 | IfCall _ -> failwith __LOC__);
           ]
       in
 
       let args =
         results
-        |> List.map (function Literal x -> x | Call (_, x) -> x)
+        |> List.map (function
+             | Literal x -> x
+             | Call (_, x) -> x
+             | IfCall _ -> failwith __LOC__)
         |> List.reduce_opt (Printf.sprintf "%s,%s")
-        |> Option.value_or (fun _ -> failwith __LOC__)
+        |> Option.value ~default:""
       in
 
       Call (statments, Printf.sprintf "%s.%s(%s)" target_exp sfname args)
@@ -580,15 +517,21 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         List.concat
           [
             results
-            |> List.concat_map (function Literal _ -> [] | Call (xs, _) -> xs);
+            |> List.concat_map (function
+                 | Literal _ -> []
+                 | Call (xs, _) -> xs
+                 | IfCall _ -> failwith __LOC__);
           ]
       in
 
       let args =
         results
-        |> List.map (function Literal x -> x | Call (_, x) -> x)
+        |> List.map (function
+             | Literal x -> x
+             | Call (_, x) -> x
+             | IfCall _ -> failwith __LOC__)
         |> List.reduce_opt (Printf.sprintf "%s,%s")
-        |> Option.value_or (fun _ -> failwith __LOC__)
+        |> Option.value ~default:""
       in
 
       Call (statments, Printf.sprintf "new %s(%s)" cnst_name args)
@@ -603,12 +546,18 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       let statments =
         results
-        |> List.concat_map (function Literal _ -> [] | Call (xs, _) -> xs)
+        |> List.concat_map (function
+             | Literal _ -> []
+             | Call (xs, _) -> xs
+             | IfCall (xs, _) -> xs)
       in
 
       let args =
         results
-        |> List.map (function Literal x -> x | Call (_, x) -> x)
+        |> List.map (function
+             | Literal x -> x
+             | Call (_, x) -> x
+             | IfCall (_, x) -> x)
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
@@ -624,13 +573,13 @@ let main (filename : string) prelude_macros code =
     |> fst
   in
   code |> Frontend.parse_and_simplify macros_ctx.macros 0 filename
-  (* |> fun (ctx, exp) ->
-     (ctx, Linter.lint prelude_macros filename exp) *)
-  |>
-  fun (ctx, exp) ->
+  |> fun (ctx, exp) ->
+  (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   compile_ ctx exp
   |> (function
        | Literal x -> x
        | Call (xs, x) ->
+           (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x
+       | IfCall (xs, x) ->
            (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x)
   |> String.trim

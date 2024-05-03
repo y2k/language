@@ -14,7 +14,11 @@ let assert1 pos code expected =
     let actual = String.sub actual start (String.length actual - start) in
     Alcotest.(check ~pos string) "1" expected actual
   in
-  Alcotest.test_case "assert_" `Quick inner_assert
+  let loc =
+    let f, l, s, e = pos in
+    Printf.sprintf "%S, line %d, characters %d-%d" f l s e
+  in
+  Alcotest.test_case loc `Quick inner_assert
 
 let assert2 files code expected =
   let with_extenal_files files f =
@@ -333,6 +337,15 @@ return e } })()|};
     assert1 __POS__ {|(jvm! (foo 1))(str 2)|} {|("" + 2)|};
     assert1 __POS__ {|(ns resources (:require [main.shared :as app]))|}
       {|import * as app from './main.shared.js';|};
+    assert1 __POS__ {|(.join 'r)|} {|r.join()|};
+    assert1 __POS__ {|[(.join 'r)]|} {|[r.join()]|};
+    assert1 __POS__ {|{:b (.join 'r)}|} {|{"b": r.join()}|};
+    assert1 __POS__
+      {|(defn- tr [user] (let [un "c"] (str "a" un "b" user.id ")")))|}
+      {|const tr = (user) => { return (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })() };|};
+    assert1 __POS__
+      {|(defn- tr [user] {:cp (let [un "c"] (str "a" un "b" user.id ")"))})|}
+      {|const tr = (user) => { return {"cp": (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })()} };|};
   ]
 
 let test2 =
