@@ -80,6 +80,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | n -> failnode __LOC__ [ n ]
 
 let main (filename : string) code =
-  Frontend.parse_and_simplify StringMap.empty 0 filename code
+  Frontend.parse_and_simplify empty_context 0 filename code
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> snd |> String.trim

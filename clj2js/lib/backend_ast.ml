@@ -20,7 +20,7 @@ let rec cljexp_to_json : _ -> Yojson.Safe.t = function
   | CBList xs -> `List (List.map cljexp_to_json xs)
 
 let main filename code =
-  Frontend.parse_and_simplify StringMap.empty 0 filename code
+  Frontend.parse_and_simplify empty_context 0 filename code
   |> snd
   (* |> fun x -> print_endline (show_cljexp x); x *)
   |> cljexp_to_json

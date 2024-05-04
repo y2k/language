@@ -45,7 +45,7 @@ let assert_strings =
     assert1 __POS__ {|(defn foo [a b] (a b))|}
       {|public static Object foo(final Object a,final Object b){return a(b);}|};
     assert1 __POS__ {|(defn foo [[a b]] (a b))|}
-      {|public static Object foo(final Object p__1){final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
+      {|public static Object foo(final Object p__1){final var a=y2k.RT.get(p__1,0);final var b=y2k.RT.get(p__1,1);final var p__2=a(b);return p__2;}|};
     assert1 __POS__ {|(= 'a 'b)|} {|java.util.Objects.equals(a,b)|};
     assert1 __POS__ {|(not= 'a 'b)|} {|!java.util.Objects.equals(a,b)|};
     assert1 __POS__ {|(+ 'a 'b)|} {|(a+b)|};
@@ -57,6 +57,11 @@ let assert_strings =
     assert1 __POS__ {|(>= 'a 'b)|} {|(a>=b)|};
     assert1 __POS__ {|(<= 'a 'b)|} {|(a<=b)|};
     assert1 __POS__ {|[1 2 3]|} {|java.util.List.of(1,2,3)|};
+    assert1 __POS__ {|[1]|} {|java.util.List.of(1)|};
+    assert1 __POS__ {|[]|} {|java.util.List.of()|};
+    assert1 __POS__ {|[(str 1)]|} {|java.util.List.of(y2k.RT.str(1))|};
+    assert1 __POS__ {|[(if true 1 2)]|}
+      {|final Object p__1;if(true){p__1=1;}else{p__1=2;}java.util.List.of(p__1)|};
     assert1 __POS__ {|(:webview 'env)|} {|y2k.RT.get(env,"webview")|};
     assert1 __POS__ {|(defn foo [a b c] a)(foo 'a 'b 1)|}
       {|class Main_shared{public static Object foo(final Object a,final Object b,final Object c){return a;}foo(a,b,1)}|};
@@ -74,11 +79,11 @@ let assert_strings =
     assert1 __POS__ {|{:a 'b :c 'd}|} {|java.util.Map.of("a",b,"c",d)|};
     assert1 __POS__ {|(fn [x] x)|} {|(x)->{return x;}|};
     assert1 __POS__ {|(fn [[a b]] (a b))|}
-      {|(p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=a(b);return p__2;}|};
+      {|(p__1)->{final var a=y2k.RT.get(p__1,0);final var b=y2k.RT.get(p__1,1);final var p__2=a(b);return p__2;}|};
     assert1 __POS__ {|(str (if 'a 'b 'c))|}
       {|final Object p__1;if(a){p__1=b;}else{p__1=c;}y2k.RT.str(p__1)|};
     assert1 __POS__ {|(str (fn [[a b]] (= a b)))|}
-      {|y2k.RT.str((p__1)->{final var a=get(p__1,0);final var b=get(p__1,1);final var p__2=java.util.Objects.equals(a,b);return p__2;})|};
+      {|y2k.RT.str((p__1)->{final var a=y2k.RT.get(p__1,0);final var b=y2k.RT.get(p__1,1);final var p__2=java.util.Objects.equals(a,b);return p__2;})|};
     assert1 __POS__ "(ns _ (:import [a.b List]))(def b (is 'a List))"
       "package _;import a.b.List;class Main_shared{public static Object b=(a \
        instanceof List);}";
@@ -200,14 +205,14 @@ let assert_strings =
       {|(defn foo [a b] (foo (if true 2 3) (if true 6 7))(foo (if false 4 5) (if true 8 9)))|}
       {|public static Object foo(final Object a,final Object b){final Object p__1;if(true){p__1=2;}else{p__1=3;}final Object p__2;if(true){p__2=6;}else{p__2=7;}foo(p__1,p__2);final Object p__3;if(false){p__3=4;}else{p__3=5;}final Object p__4;if(true){p__4=8;}else{p__4=9;}return foo(p__3,p__4);}|};
     (* assert1 __POS__
-      {|(defn- get_status [env]
-      (let [^Context ctx (:context env)
-            ^WebView wv (:webview env)
-            level (.getIntExtra (.registerReceiver ctx null (IntentFilter. Intent/ACTION_BATTERY_CHANGED)) "level" -1)
-            m (/ (JobInfo/getMinPeriodMillis) 1000)
-            reason (.getPendingJob (.getSystemService ctx (class JobScheduler)) 123)]
-        (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)))|}
-      {||}; *)
+       {|(defn- get_status [env]
+       (let [^Context ctx (:context env)
+             ^WebView wv (:webview env)
+             level (.getIntExtra (.registerReceiver ctx null (IntentFilter. Intent/ACTION_BATTERY_CHANGED)) "level" -1)
+             m (/ (JobInfo/getMinPeriodMillis) 1000)
+             reason (.getPendingJob (.getSystemService ctx (class JobScheduler)) 123)]
+         (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)))|}
+       {||}; *)
   ]
 
 let main () =

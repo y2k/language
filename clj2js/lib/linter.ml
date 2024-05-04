@@ -19,7 +19,7 @@ let run_resolve f2 f =
 let read_exports_from_file prelude_code name : exports =
   let code = Effect.perform (ResolveFile name) in
   let code = prelude_code ^ "\n" ^ code in
-  let node = Frontend.parse_and_simplify StringMap.empty 0 name code |> snd in
+  let node = Frontend.parse_and_simplify empty_context 0 name code |> snd in
 
   let rec resolve_loop (exports : string list) = function
     | RBList (Atom (_, "module") :: children) ->
@@ -27,7 +27,12 @@ let read_exports_from_file prelude_code name : exports =
     | RBList (Atom (_, "def") :: Atom (_, name) :: _) -> name :: exports
     | RBList (Atom (_, "ns") :: _) -> exports
     | RBList (Atom (_, "comment") :: _) -> exports
-    | RBList [ Atom (_, "export-default"); RBList (Atom _ :: def_exps) ] ->
+    | RBList
+        [
+          Atom (_, "__raw_template");
+          Atom (_, "\"export default \"");
+          RBList [ Atom (_, "quote"); RBList (Atom _ :: def_exps) ];
+        ] ->
         let rec loop exports = function
           | [] -> exports
           | Atom (_, k) :: _ :: tail ->
@@ -205,7 +210,7 @@ let lint prelude_code filename node =
      print_endline (show_cljexp node); *)
   let prelude_lint_ctx =
     prelude_code
-    |> Frontend.parse_and_simplify StringMap.empty 0 "prelude"
+    |> Frontend.parse_and_simplify empty_context 0 "prelude"
     |> snd
     |> lint'
          { aliases = StringMap.empty; filename; prelude_code; local_defs = [] }

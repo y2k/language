@@ -134,6 +134,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let r_call = rx |> result_get_expression |> Printf.sprintf "!%s" in
       Call (result_get_statments rx, r_call)
   (* Function definition *)
+  | SBList xs ->
+      compile_ ctx (RBList (Atom (unknown_location, "java.util.List/of") :: xs))
   | RBList
       [
         Atom (_, "def");
@@ -526,11 +528,10 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 let main (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
-    |> Frontend.parse_and_simplify StringMap.empty 0 "prelude"
+    |> Frontend.parse_and_simplify empty_context 0 "prelude"
     |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx.macros 0 filename
-  |> fun (ctx, exp) ->
+  code |> Frontend.parse_and_simplify macros_ctx 0 filename |> fun (ctx, exp) ->
   (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   compile_ ctx exp
   |> (function
