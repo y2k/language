@@ -1,4 +1,4 @@
-open Frontend
+open Common
 
 type exports = { exports : string list }
 type _ Effect.t += ResolveFile : string -> string Effect.t
@@ -19,7 +19,7 @@ let run_resolve f2 f =
 let read_exports_from_file prelude_code name : exports =
   let code = Effect.perform (ResolveFile name) in
   let code = prelude_code ^ "\n" ^ code in
-  let node = Frontend.parse_and_simplify empty_context 0 name code |> snd in
+  let node = Frontend.parse_and_simplify empty_context name code |> snd in
 
   let rec resolve_loop (exports : string list) = function
     | RBList (Atom (_, "module") :: children) ->
@@ -154,8 +154,8 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       let fname = List.nth parts 0 in
       if not (List.mem fname ctx.local_defs) then
         failwith
-          (Printf.sprintf "Can't find variable '%s' used from %s:%i:%i" fname
-             ctx.filename l.line l.pos);
+          (Printf.sprintf "[%s] Can't find variable '%s' used from %s:%i:%i"
+             __LOC__ fname ctx.filename l.line l.pos);
       (node, ctx)
   | Atom _ as a -> (a, ctx)
   | RBList (Atom (_, "let*") :: SBList binding :: body) ->
@@ -210,7 +210,7 @@ let lint prelude_code filename node =
      print_endline (show_cljexp node); *)
   let prelude_lint_ctx =
     prelude_code
-    |> Frontend.parse_and_simplify empty_context 0 "prelude"
+    |> Frontend.parse_and_simplify empty_context "prelude"
     |> snd
     |> lint'
          { aliases = StringMap.empty; filename; prelude_code; local_defs = [] }

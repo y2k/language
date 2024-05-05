@@ -1,5 +1,5 @@
 module A = Angstrom
-open Frontend
+open Common
 
 let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
@@ -12,8 +12,8 @@ end
 
 type result2 =
   | Literal of string
-  | Call of string list * string
-  | IfCall of string list * string
+  | Call of string * string
+  | IfCall of string * string
 
 let result_get_expression = function
   | Literal s -> s
@@ -21,7 +21,7 @@ let result_get_expression = function
   | IfCall _ -> failwith __LOC__
 
 let result_get_statments = function
-  | Literal _ -> []
+  | Literal _ -> ""
   | Call (xs, _) -> xs
   | IfCall (xs, _) -> xs
 
@@ -100,7 +100,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
     let br = compile_ ctx b in
     let la = result_get_expression ar in
     let lb = result_get_expression br in
-    let stmts = result_get_statments ar @ result_get_statments br in
+    let stmts = result_get_statments ar ^ result_get_statments br in
     Call (stmts, f la lb)
   in
   match node with
@@ -159,11 +159,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         body
         |> List.filteri (fun i _ -> i < length - 1)
         |> List.map (fun node -> compile_ ctx node)
-        |> List.concat_map (function
+        |> List.map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ]
-             | IfCall (s, _) -> s @ [ ";" ])
+             | Call (s, r) -> s ^ r ^ ";"
+             | IfCall (s, _) -> s ^ ";")
+        |> List.fold_left ( ^ ) ""
       in
 
       let vis =
@@ -182,12 +183,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       let result_statments, result_expresion =
         match last_r with
-        | Literal x -> ([], Printf.sprintf "return %s;}" x)
+        | Literal x -> ("", Printf.sprintf "return %s;}" x)
         | Call (s, r) -> (s, Printf.sprintf "return %s;}" r)
         | IfCall (s, r) -> (s, Printf.sprintf "return %s;}" r)
       in
 
-      let statments = [ fn_defenition ] @ sbody @ result_statments in
+      let statments = fn_defenition ^ sbody ^ result_statments in
 
       Call (statments, result_expresion)
   (* Lambda *)
@@ -205,11 +206,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         body
         |> List.filteri (fun i _ -> i < length - 1)
         |> List.map (fun node -> compile_ ctx node)
-        |> List.concat_map (function
+        |> List.map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ]
+             | Call (s, r) -> s ^ r ^ ";"
              | IfCall _ -> failwith __LOC__)
+        |> List.fold_left ( ^ ) ""
       in
 
       let fn_defenition = Printf.sprintf "(%s)->{" sargs in
@@ -223,15 +225,15 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let result_statments, result_expresion =
         let return_ = match m.symbol with "void" -> "" | _ -> "return " in
         match last_r with
-        | Literal x -> ([], Printf.sprintf "%s%s;}" return_ x)
+        | Literal x -> ("", Printf.sprintf "%s%s;}" return_ x)
         | Call (s, r) -> (s, Printf.sprintf "%s%s;}" return_ r)
         | IfCall _ -> failwith __LOC__
       in
 
-      let statments = [ fn_defenition ] @ sbody @ result_statments in
-      let statments_text = statments |> List.reduce ( ^ ) in
+      let statments = fn_defenition ^ sbody ^ result_statments in
+      let statments_text = statments in
 
-      Call ([], statments_text ^ result_expresion)
+      Call ("", statments_text ^ result_expresion)
   | RBList [ Atom (_, "if"); c; a; b ] ->
       let c_r = compile_ ctx c in
       let c_exp =
@@ -253,15 +255,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       let temp_val = NameGenerator.get_new_var () in
       let statments =
-        List.concat
-          [
-            c_statments;
-            [ Printf.sprintf "final Object %s;if(%s){" temp_val c_exp ];
-            a_statments;
-            [ Printf.sprintf "%s=%s;}else{" temp_val a_exp ];
-            b_statments;
-            [ Printf.sprintf "%s=%s;}" temp_val b_exp ];
-          ]
+        c_statments
+        ^ Printf.sprintf "final Object %s;if(%s){" temp_val c_exp
+        ^ a_statments
+        ^ Printf.sprintf "%s=%s;}else{" temp_val a_exp
+        ^ b_statments
+        ^ Printf.sprintf "%s=%s;}" temp_val b_exp
       in
 
       IfCall (statments, temp_val)
@@ -314,7 +313,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         (generate_class (compile_ ctx) prefix params clsName methods superCls)
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
       let rec val_loop = function
-        | [] -> []
+        | [] -> ""
         | Atom (m, key) :: value :: tail ->
             let value_r = compile_ ctx value in
             let value_exp = result_get_expression value_r in
@@ -325,7 +324,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
             let x =
               Printf.sprintf "final var %s=%s%s;" key value_cast value_exp
             in
-            List.concat [ value_statments; [ x ]; val_loop tail ]
+            value_statments ^ x ^ val_loop tail
         | xs -> failnode __LOC__ xs
       in
       let val_statments = val_loop vals in
@@ -335,11 +334,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         body
         |> List.filteri (fun i _ -> i < length - 1)
         |> List.map (fun node -> compile_ ctx node)
-        |> List.concat_map (function
+        |> List.map (function
              | Literal x ->
                  failwith @@ "Literal '" ^ x ^ "' is not supported here"
-             | Call (s, r) -> s @ [ r ^ ";" ]
+             | Call (s, r) -> s ^ r ^ ";"
              | IfCall (s, _) -> s)
+        |> List.fold_left ( ^ ) ""
       in
       if List.is_empty body then failnode __LOC__ [ node ];
       let last_r =
@@ -351,21 +351,16 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         match last_r with
         | Literal x ->
             let out_val = NameGenerator.get_new_var () in
-            ( List.concat [ []; [ Printf.sprintf "final var %s=%s;" out_val x ] ],
-              out_val )
+            (Printf.sprintf "final var %s=%s;" out_val x, out_val)
         | Call (s, r) ->
             let out_val = NameGenerator.get_new_var () in
-            ( List.concat [ s; [ Printf.sprintf "final var %s=%s;" out_val r ] ],
-              out_val )
+            (s ^ Printf.sprintf "final var %s=%s;" out_val r, out_val)
         | IfCall (s, r) ->
             let out_val = NameGenerator.get_new_var () in
-            ( List.concat [ s; [ Printf.sprintf "final var %s=%s;" out_val r ] ],
-              out_val )
+            (s ^ Printf.sprintf "final var %s=%s;" out_val r, out_val)
       in
 
-      Call
-        ( List.concat [ val_statments; body_statments; result_statments ],
-          result_expresion )
+      Call (val_statments ^ body_statments ^ result_statments, result_expresion)
   | RBList (Atom (_, "comment") :: _) -> Literal ""
   | RBList (Atom (_, "module") :: body) ->
       let ns_, body =
@@ -395,8 +390,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         |> List.map (fun x ->
                match compile_ ctx x with
                | Literal x -> x
-               | Call (xs, x) ->
-                   (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x
+               | Call (xs, x) -> xs ^ x
                | IfCall _ -> failwith __LOC__)
         |> List.reduce_opt (Printf.sprintf "%s%s")
         |> Option.value ~default:""
@@ -415,8 +409,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
         Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname
           (match compile_ ctx body with
           | Literal x -> x
-          | Call (xs, x) ->
-              (List.reduce_opt ( ^ ) xs |> Option.value ~default:"") ^ x
+          | Call (xs, x) -> xs ^ x
           | IfCall _ -> failwith __LOC__)
       in
       Literal result
@@ -431,7 +424,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let target_r = compile_ ctx target in
       let target_statments =
         match target_r with
-        | Literal _ -> []
+        | Literal _ -> ""
         | Call (xs, _) -> xs
         | IfCall _ -> failwith __LOC__
       in
@@ -447,13 +440,14 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let statments =
         List.concat
           [
-            target_statments;
+            [ target_statments ];
             results
-            |> List.concat_map (function
-                 | Literal _ -> []
+            |> List.map (function
+                 | Literal _ -> ""
                  | Call (xs, _) -> xs
                  | IfCall _ -> failwith __LOC__);
           ]
+        |> List.fold_left ( ^ ) ""
       in
 
       let args =
@@ -473,14 +467,12 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let results = args |> List.map (compile_ ctx) in
 
       let statments =
-        List.concat
-          [
-            results
-            |> List.concat_map (function
-                 | Literal _ -> []
-                 | Call (xs, _) -> xs
-                 | IfCall _ -> failwith __LOC__);
-          ]
+        results
+        |> List.map (function
+             | Literal _ -> ""
+             | Call (xs, _) -> xs
+             | IfCall _ -> failwith __LOC__)
+        |> List.fold_left ( ^ ) ""
       in
 
       let args =
@@ -505,10 +497,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       let statments =
         results
-        |> List.concat_map (function
-             | Literal _ -> []
+        |> List.map (function
+             | Literal _ -> ""
              | Call (xs, _) -> xs
              | IfCall (xs, _) -> xs)
+        |> List.fold_left ( ^ ) ""
       in
 
       let args =
@@ -527,17 +520,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
-    prelude_macros
-    |> Frontend.parse_and_simplify empty_context 0 "prelude"
-    |> fst
+    prelude_macros |> Frontend.parse_and_simplify empty_context "prelude" |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx 0 filename |> fun (ctx, exp) ->
+  code |> Frontend.parse_and_simplify macros_ctx filename |> fun (ctx, exp) ->
   (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   compile_ ctx exp
   |> (function
-       | Literal x -> x
-       | Call (xs, x) ->
-           (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x
-       | IfCall (xs, x) ->
-           (xs |> List.reduce_opt ( ^ ) |> Option.value ~default:"") ^ x)
+       | Literal x -> x | Call (xs, x) -> xs ^ x | IfCall (xs, x) -> xs ^ x)
   |> String.trim

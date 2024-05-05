@@ -1,5 +1,5 @@
 module A = Angstrom
-open Frontend
+open Common
 
 let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
@@ -208,10 +208,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 let main (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
-    |> Frontend.parse_and_simplify empty_context 0 "prelude"
+    |> Frontend.parse_and_simplify empty_context "prelude"
     |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx 0 filename
+  code |> Frontend.parse_and_simplify macros_ctx filename
   |> fun (ctx, exp) ->
   (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   let a, b = compile_ ctx exp in
