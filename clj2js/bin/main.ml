@@ -3,7 +3,7 @@ open Lib__.Common
 
 let read_code_file filename =
   if filename = "prelude" then ""
-  else In_channel.with_open_bin filename In_channel.input_all
+  else In_channel.(with_open_bin filename input_all)
 
 let () =
   let target = Sys.argv.(1) in

@@ -51,6 +51,7 @@ type lint_ctx = {
   prelude_code : string;
   local_defs : string list;
 }
+[@@deriving show]
 
 let rec to_pairs = function
   | [] -> []
@@ -152,10 +153,11 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
-      if not (List.mem fname ctx.local_defs) then
+      if not (List.mem fname ctx.local_defs) then (
+        prerr_endline @@ show_lint_ctx ctx;
         failwith
           (Printf.sprintf "[%s] Can't find variable '%s' used from %s:%i:%i"
-             __LOC__ fname ctx.filename l.line l.pos);
+             __LOC__ fname ctx.filename l.line l.pos));
       (node, ctx)
   | Atom _ as a -> (a, ctx)
   | RBList (Atom (_, "let*") :: SBList binding :: body) ->

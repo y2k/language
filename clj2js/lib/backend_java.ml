@@ -420,7 +420,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let sfname =
         match compile_ ctx method_ with
         | Literal x -> x
-        | _ -> failnode "JB:IMC:M" [ method_ ]
+        | _ -> failnode __LOC__ [ method_ ]
       in
 
       let target_r = compile_ ctx target in
@@ -493,7 +493,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let sfname =
         compile_ ctx fname |> function
         | Literal x -> x
-        | _ -> failnode "BJ:FC:N" [ fname ]
+        | _ -> failnode __LOC__ [ fname ]
       in
       let results = args |> List.map (compile_ ctx) in
 
@@ -518,7 +518,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       Call (statments, Printf.sprintf "%s(%s)" sfname args)
   (* Default *)
-  | x -> failnode "JB:CMP" [ x ]
+  | x -> failnode __LOC__ [ x ]
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
@@ -530,7 +530,7 @@ let main (filename : string) prelude_macros code =
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename
-  (* |> (fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp)) *)
+  |> (fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp))
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> (function
        | Literal x -> x | Call (xs, x) -> xs ^ x | IfCall (xs, x) -> xs ^ x)

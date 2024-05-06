@@ -222,6 +222,6 @@ let main (filename : string) prelude_macros code =
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename
-  (* |> lint_code prelude_macros filename *)
+  |> lint_code prelude_macros filename
   |> (fun (ctx, exp) -> interpret ctx exp |> snd)
   |> show_sexp |> String.trim

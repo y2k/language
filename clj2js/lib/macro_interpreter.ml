@@ -29,9 +29,6 @@ let run (ctx : context) (macro : cljexp) (_macro_args : cljexp list) : cljexp =
   let args = compute_args macro_arg_names _macro_args |> StringMap.to_seq in
   let local_scope = ctx.scope |> StringMap.add_seq args in
 
-  let virt_block =
-    RBList (Atom (unknown_location, "let*") :: SBList [] :: macro_body)
-  in
-
-  let _, r = ctx.interpreter { ctx with scope = local_scope } virt_block in
-  r
+  RBList (Atom (unknown_location, "let*") :: SBList [] :: macro_body)
+  |> ctx.interpreter { ctx with scope = local_scope }
+  |> snd

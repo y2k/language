@@ -217,5 +217,5 @@ let main (filename : string) prelude_macros code =
     |> fst
   in
   code |> Frontend.parse_and_simplify macros_ctx filename
-  (* |> lint prelude_macros filename *)
+  |> lint prelude_macros filename
   |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim
