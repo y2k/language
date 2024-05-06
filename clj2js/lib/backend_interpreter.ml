@@ -22,6 +22,8 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   let interpret_ x = interpret context x |> snd in
   let with_context x = (context, x) in
   match node with
+  | Atom (m, x) when String.starts_with ~prefix:"'" x ->
+      (context, Atom (m, String.sub x 1 (String.length x - 1)))
   | Atom (_, v) as x
     when v = "true" || v = "false"
          || String.starts_with ~prefix:"\"" v
@@ -173,7 +175,9 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
                 (function Atom (_, x) -> x | n -> failnode __LOC__ [ n ])
                 args,
               body )
-        | _ -> failnode __LOC__ [ node ]
+        | _ ->
+            (* prerr_endline @@ show_context context; *)
+            failnode __LOC__ [ node ]
       in
 
       let scope =
@@ -208,15 +212,6 @@ let rec show_sexp = function
       |> List.reduce_opt (Printf.sprintf "%s %s")
       |> Option.value ~default:"" |> Printf.sprintf "{%s}"
 
-let add_functions_to_scope context =
-  let scope =
-    context.functions
-    |> StringMap.map (fun f ->
-           RBList (Atom (unknown_location, "fn*") :: SBList f.params :: f.body))
-    |> StringMap.merge (fun _ _ x -> x) context.scope
-  in
-  { context with scope }
-
 let main (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros |> Frontend.parse_and_simplify empty_context "prelude" |> fst
@@ -224,5 +219,5 @@ let main (filename : string) prelude_macros code =
   code
   |> Frontend.parse_and_simplify macros_ctx filename
   (* |> lint_code prelude_macros filename *)
-  |> (fun (ctx, exp) -> interpret (add_functions_to_scope ctx) exp |> snd)
+  |> (fun (ctx, exp) -> interpret ctx exp |> snd)
   |> show_sexp |> String.trim

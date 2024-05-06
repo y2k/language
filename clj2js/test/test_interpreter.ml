@@ -9,7 +9,7 @@ let main () =
         assert_ __POS__ {|1|} {|1|};
         assert_ __POS__ {|"a"|} {|"a"|};
         assert_ __POS__ {|:a|} {|:a|};
-        assert_ __POS__ {|'a|} {|'a|};
+        assert_ __POS__ {|'a|} {|a|};
         assert_ __POS__ {|(- 11 7)|} {|4|};
         assert_ __POS__ {|(+ 11 7)|} {|18|};
         assert_ __POS__ {|(* 11 7)|} {|77|};

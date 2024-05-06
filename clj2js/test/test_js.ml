@@ -42,14 +42,14 @@ m.LI_SP|};
     assert_ __POS__
       {|(.next
        (.json 'request null)
-       (fn [text] (println "???")))|}
-      {|request.json(null).next(((text) => { return console.info("???") }))|};
+       (fn [text] (println "hello")))|}
+      {|request.json(null).next(((text) => { return console.info("hello") }))|};
     assert_ __POS__
       {|(defn fetch [request env context]
         (->
          (.json request null)
-         (.next (fn [text] (println "???")))))|}
-      {|export const fetch = ((request, env, context) => { return request.json(null).next(((text) => { return console.info("???") })) });|};
+         (.next (fn [text] (println "hello")))))|}
+      {|export const fetch = ((request, env, context) => { return request.json(null).next(((text) => { return console.info("hello") })) });|};
     assert_ __POS__
       {|(defn fetch [request env context]
         request)|}

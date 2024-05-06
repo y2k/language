@@ -120,25 +120,17 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       in
       let new_body = RBList [ Atom (l, "def"); name; fbody ] in
       let context =
-        {
-          context with
-          functions =
-            context.functions |> StringMap.add fname { params = args; body };
-        }
+        { context with scope = context.scope |> StringMap.add fname fbody }
       in
       (context, new_body)
   | RBList (Atom (l, "defn-") :: Atom (ln, name) :: SBList args :: body) ->
-      ( {
-          context with
-          functions =
-            context.functions |> StringMap.add name { params = args; body };
-        },
+      let fn =
+        expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body))
+      in
+      ( { context with scope = context.scope |> StringMap.add name fn },
         RBList
-          [
-            Atom (l, "def");
-            Atom ({ ln with symbol = ":private" }, name);
-            expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body));
-          ] )
+          [ Atom (l, "def"); Atom ({ ln with symbol = ":private" }, name); fn ]
+      )
   | RBList [ Atom (_, "__inject_raw_sexp"); x ] -> with_context x
   | RBList (Atom (l, "case") :: target :: body) ->
       let rec loop = function
@@ -302,7 +294,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       let args = List.map expand_core_macro2 args in
       RBList (Atom (l, ".") :: target :: Atom (lp, "'" ^ prop) :: args)
       |> with_context
-  (* Expand user macro *)
+  (* Expand (call) user macro *)
   | RBList (Atom (l, fname) :: args)
     when StringMap.exists (fun n _ -> n = fname) context.macros ->
       (* print_endline @@ "[LOG] call macro: " ^ fname; *)
@@ -328,21 +320,13 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | x -> failnode __LOC__ [ x ]
 
 let parse_and_simplify (prelude_context : context) filename code =
-  (* if filename <> "prelude" then
-     print_endline "==| DEBUG |==============================================\n"; *)
+  if filename <> "prelude" then
+    print_endline "==| DEBUG |==============================================\n";
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
-  (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
-  desugar_and_register
-    {
-      empty_context with
-      filename;
-      macros = prelude_context.macros;
-      functions = prelude_context.functions;
-    }
-    sexp
-  |> function
+  if filename <> "prelude" then print_endline (show_cljexp sexp);
+  desugar_and_register { prelude_context with filename } sexp |> function
   | ctx, x ->
       let x =
         match x with
@@ -356,5 +340,5 @@ let parse_and_simplify (prelude_context : context) filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
+      if filename <> "prelude" then print_endline (show_cljexp x);
       (ctx, x)

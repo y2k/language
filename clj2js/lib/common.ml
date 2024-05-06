@@ -40,8 +40,8 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  functions : function_decl StringMap.t;
   scope : cljexp StringMap.t;
+  interpreter : context -> cljexp -> context * cljexp;
 }
 [@@deriving show]
 
@@ -51,8 +51,8 @@ let empty_context =
     loc = unknown_location;
     start_line = 0;
     macros = StringMap.empty;
-    functions = StringMap.empty;
     scope = StringMap.empty;
+    interpreter = (fun _ _ -> failwith __LOC__);
   }
 
 module NameGenerator = struct

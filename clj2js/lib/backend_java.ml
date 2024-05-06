@@ -520,11 +520,16 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
-    prelude_macros |> Frontend.parse_and_simplify empty_context "prelude" |> fst
+    prelude_macros
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = Backend_interpreter.interpret }
+         "prelude"
+    |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx filename |> fun (ctx, exp) ->
-  (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
-  compile_ ctx exp
+  code
+  |> Frontend.parse_and_simplify macros_ctx filename
+  (* |> (fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp)) *)
+  |> (fun (ctx, exp) -> compile_ ctx exp)
   |> (function
        | Literal x -> x | Call (xs, x) -> xs ^ x | IfCall (xs, x) -> xs ^ x)
   |> String.trim

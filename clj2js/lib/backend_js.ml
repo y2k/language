@@ -205,14 +205,17 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | x -> failnode __LOC__ [ x ]
 
+let lint prelude_macros filename (ctx, exp) =
+  (ctx, Linter.lint prelude_macros filename exp)
+
 let main (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
-    |> Frontend.parse_and_simplify empty_context "prelude"
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = Backend_interpreter.interpret }
+         "prelude"
     |> fst
   in
   code |> Frontend.parse_and_simplify macros_ctx filename
-  |> fun (ctx, exp) ->
-  (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
-  let a, b = compile_ ctx exp in
-  (a, String.trim b)
+  (* |> lint prelude_macros filename *)
+  |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim
