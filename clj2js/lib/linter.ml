@@ -16,10 +16,13 @@ let run_resolve f2 f =
           | _ -> None);
     }
 
-let read_exports_from_file prelude_code name : exports =
+let read_exports_from_file interpreter prelude_code name : exports =
   let code = Effect.perform (ResolveFile name) in
   let code = prelude_code ^ "\n" ^ code in
-  let node = Frontend.parse_and_simplify empty_context name code |> snd in
+  let node =
+    Frontend.parse_and_simplify { empty_context with interpreter } name code
+    |> snd
+  in
 
   let rec resolve_loop (exports : string list) = function
     | RBList (Atom (_, "module") :: children) ->
@@ -31,7 +34,7 @@ let read_exports_from_file prelude_code name : exports =
         [
           Atom (_, "__raw_template");
           Atom (_, "\"export default \"");
-          RBList [ Atom (_, "quote"); RBList (Atom _ :: def_exps) ];
+          RBList [ Atom (_, "quote"); CBList def_exps ];
         ] ->
         let rec loop exports = function
           | [] -> exports
@@ -50,6 +53,7 @@ type lint_ctx = {
   filename : string;
   prelude_code : string;
   local_defs : string list;
+  interpreter : context -> cljexp -> context * cljexp;
 }
 [@@deriving show]
 
@@ -128,7 +132,9 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
          extenal_file <> ""
          && not (String.starts_with ~prefix:"js." extenal_file)
        then
-         let exports = read_exports_from_file ctx.prelude_code extenal_file in
+         let exports =
+           read_exports_from_file ctx.interpreter ctx.prelude_code extenal_file
+         in
          let reference = List.nth parts 1 in
          if not (List.mem reference exports.exports) then
            failwith
@@ -207,15 +213,21 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       let ctx = xs |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
       (origin, ctx)
 
-let lint prelude_code filename node =
+let lint interpreter prelude_code filename node =
   (* print_endline "==================================================";
      print_endline (show_cljexp node); *)
   let prelude_lint_ctx =
     prelude_code
-    |> Frontend.parse_and_simplify empty_context "prelude"
+    |> Frontend.parse_and_simplify { empty_context with interpreter } "prelude"
     |> snd
     |> lint'
-         { aliases = StringMap.empty; filename; prelude_code; local_defs = [] }
+         {
+           aliases = StringMap.empty;
+           filename;
+           prelude_code;
+           local_defs = [];
+           interpreter;
+         }
     |> snd
   in
   lint'
@@ -224,6 +236,7 @@ let lint prelude_code filename node =
       filename;
       prelude_code;
       local_defs = prelude_lint_ctx.local_defs;
+      interpreter;
     }
     node
   |> fst

@@ -41,5 +41,7 @@ let main () =
   (list 'fx* env key args))
 |}
           {||};
+        assert_ __POS__ {|(get {:a 1 :b 2 :c 3} :b)|} {|2|};
+        assert_ __POS__ {|(get [10 20 30] 1)|} {|20|};
       ] );
   ]

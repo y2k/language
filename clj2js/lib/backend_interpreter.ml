@@ -165,6 +165,21 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
              { context with scope }
       in
       results |> List.rev |> List.hd |> with_context
+  | RBList [ Atom (_, "get"); map; key ] -> (
+      let map = interpret_ map in
+      let key = interpret_ key in
+      match (map, key) with
+      | CBList xs, Atom (_, key) ->
+          List.split_into_pairs xs
+          |> List.find (fun (k, _) ->
+                 match k with
+                 | Atom (_, k) -> k = key
+                 | n -> failnode __LOC__ [ n ])
+          |> snd |> with_context
+      | SBList xs, Atom (_, i) when int_of_string_opt i |> Option.is_some ->
+          List.nth xs (int_of_string i) |> with_context
+      | m, k -> failnode __LOC__ [ m; k ])
+  | CBList xs -> CBList (List.map interpret_ xs) |> with_context
   (* Function call *)
   | RBList (Atom (_, fname) :: args) ->
       let arg_values = List.map interpret_ args in
@@ -194,23 +209,20 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       results |> List.rev |> List.hd |> with_context
   | node -> failnode __LOC__ [ node ]
 
-let lint_code prelude_macros filename (ctx, exp) =
-  (ctx, Linter.lint prelude_macros filename exp)
+let run_linter prelude_macros filename (ctx, exp) =
+  (ctx, Linter.lint interpret prelude_macros filename exp)
 
-let rec show_sexp = function
+let rec show_sexp sexp =
+  let format template xs =
+    xs |> List.map show_sexp
+    |> List.reduce_opt (Printf.sprintf "%s %s")
+    |> Option.value ~default:"" |> Printf.sprintf template
+  in
+  match sexp with
   | Atom (_, x) -> x
-  | RBList xs ->
-      xs |> List.map show_sexp
-      |> List.reduce_opt (Printf.sprintf "%s %s")
-      |> Option.value ~default:"" |> Printf.sprintf "(%s)"
-  | SBList xs ->
-      xs |> List.map show_sexp
-      |> List.reduce_opt (Printf.sprintf "%s %s")
-      |> Option.value ~default:"" |> Printf.sprintf "[%s]"
-  | CBList xs ->
-      xs |> List.map show_sexp
-      |> List.reduce_opt (Printf.sprintf "%s %s")
-      |> Option.value ~default:"" |> Printf.sprintf "{%s}"
+  | RBList xs -> format "(%s)" xs
+  | SBList xs -> format "[%s]" xs
+  | CBList xs -> format "{%s}" xs
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
@@ -222,6 +234,6 @@ let main (filename : string) prelude_macros code =
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename
-  |> lint_code prelude_macros filename
+  |> run_linter prelude_macros filename
   |> (fun (ctx, exp) -> interpret ctx exp |> snd)
   |> show_sexp |> String.trim
