@@ -71,12 +71,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   let with_context x = (context, x) in
   match node with
   | Atom _ -> node |> with_context
-  | CBList xs ->
-      RBList
-        (Atom (unknown_location, "hash-map") :: List.map expand_core_macro2 xs)
-      |> expand_core_macro2 |> with_context
-  (* | RBList ((Atom (_, "comment") as c) :: _ :: _) ->
-      RBList [ c ] |> with_context *)
+  | CBList xs -> CBList (xs |> List.map expand_core_macro2) |> with_context
   | RBList (Atom (_, "fn*") :: _) as o -> o |> with_context
   | RBList (Atom (_, "let*") :: _) as o -> o |> with_context
   | RBList (Atom (_, "let") :: SBList vals :: body) ->

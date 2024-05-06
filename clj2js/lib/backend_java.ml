@@ -134,6 +134,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let r_call = rx |> result_get_expression |> Printf.sprintf "!%s" in
       Call (result_get_statments rx, r_call)
   (* Function definition *)
+  | CBList xs ->
+      compile_ ctx (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
   | SBList xs ->
       compile_ ctx (RBList (Atom (unknown_location, "java.util.List/of") :: xs))
   | RBList

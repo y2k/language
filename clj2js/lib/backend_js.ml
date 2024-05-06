@@ -114,7 +114,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       | _ -> Printf.sprintf "export const %s = %s;" name (compile body))
       |> with_context
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
-  | RBList (Atom (_, "hash-map") :: xs) ->
+  | CBList xs ->
       let rec to_pairs = function
         | k :: v :: xs ->
             let a = compile k in
@@ -207,12 +207,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
-    prelude_macros
-    |> Frontend.parse_and_simplify empty_context "prelude"
-    |> fst
+    prelude_macros |> Frontend.parse_and_simplify empty_context "prelude" |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx filename
-  |> fun (ctx, exp) ->
+  code |> Frontend.parse_and_simplify macros_ctx filename |> fun (ctx, exp) ->
   (ctx, Linter.lint prelude_macros filename exp) |> fun (ctx, exp) ->
   let a, b = compile_ ctx exp in
   (a, String.trim b)
