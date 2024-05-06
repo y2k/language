@@ -309,6 +309,10 @@ let rec desugar_and_register (context : context) node : context * cljexp =
         :: Atom (unknown_location, cnt_name)
         :: List.map expand_core_macro2 xs)
       |> with_context
+  | RBList (Atom (m, name) :: args) when String.starts_with ~prefix:"!" name ->
+      let name = String.sub name 1 (String.length name - 1) in
+      RBList (Atom (m, name) :: Atom (unknown_location, "__env") :: args)
+      |> expand_core_macro2 |> with_context
   | RBList ((Atom (_l, _fname) as x) :: args) ->
       RBList (x :: List.map expand_core_macro2 args) |> with_context
   | SBList xs -> SBList (xs |> List.map expand_core_macro2) |> with_context
@@ -316,7 +320,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
 
 let parse_and_simplify (prelude_context : context) filename code =
   (* if filename <> "prelude" then
-    print_endline "==| DEBUG |==============================================\n"; *)
+     print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in

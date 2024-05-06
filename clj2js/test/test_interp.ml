@@ -16,6 +16,7 @@ let main () =
         assert_ __POS__ {|(/ 11 7)|} {|1|};
         assert_ __POS__ {|(list 1 (+ 1 1) 3)|} {|(1 2 3)|};
         assert_ __POS__ {|(vector 1 (+ 1 1) 3)|} {|[1 2 3]|};
+        assert_ __POS__ {|(vec (list 1 2 3))|} {|[1 2 3]|};
         assert_ __POS__ {|[1 (+ 1 1) 3]|} {|[1 2 3]|};
         assert_ __POS__ {|(concat (list 1 2) (list 3 4))|} {|(1 2 3 4)|};
         assert_ __POS__ {|(quote a)|} {|'a|};
@@ -39,15 +40,24 @@ let main () =
         assert_ __POS__ {|(defn foo [f] (f 1)) (foo (fn [x] (+ x x)))|} {|2|};
         assert_ __POS__
           {|
+(def add_fx :7491ad10daad)
+
 (defn fx* [env key args]
   (let [eff (get env key)]
     (eff args)))
 (defmacro fx [env key & args]
-  (list 'fx* env key args))
-(defn main [env]
-  (fx env :foo (fn [x] (+ x x))))
-(main {:foo 2})
-|}
-          {|(comment)|};
+  (list 'fx* env key (vec args)))
+
+(defmacro defn! [name args & body]
+  (concat (list 'defn name (vec (concat (list '__env) args))) body))
+
+(defn! bar [x]
+  (!fx add_fx x x))
+
+(defn! main []
+  (!bar 3))
+
+(main {add_fx (fn [[a b]] (+ a b))})|}
+          {|6|};
       ] );
   ]

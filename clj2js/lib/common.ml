@@ -10,7 +10,8 @@ type cljexp =
 [@@deriving show]
 
 let failnode prefix es =
-  es |> List.map show_cljexp |> List.fold_left ( ^ ) ""
+  es |> List.map show_cljexp
+  |> List.fold_left (Printf.sprintf "%s\n---\n%s") ""
   |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
   |> prerr_endline;
   failwith ("Invalid node [" ^ prefix ^ "]")

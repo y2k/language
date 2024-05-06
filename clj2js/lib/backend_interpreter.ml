@@ -59,6 +59,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
         xs |> List.map interpret_
         |> List.concat_map (function
              | RBList xs -> xs
+             | SBList xs -> xs
              | n -> failnode __LOC__ [ n ])
       in
       (context, RBList r)
@@ -79,6 +80,11 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       (context, RBList (List.map interpret_ list_args))
   | RBList (Atom (_, "vector") :: vec_args) ->
       (context, SBList (List.map interpret_ vec_args))
+  | RBList [ Atom (_, "vec"); xs ] ->
+      (match interpret_ xs with
+      | RBList xs -> SBList xs
+      | n -> failnode __LOC__ [ n ])
+      |> with_context
   | SBList vec_args -> (context, SBList (List.map interpret_ vec_args))
   | RBList [ Atom (l, "symbol"); n ] ->
       Atom
