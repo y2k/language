@@ -20,7 +20,7 @@ let () =
                     Filename.concat (Filename.dirname filename) (name ^ ".clj")
                   in
                   (* prerr_endline @@ Sys.getenv "PWD" ^ " | " ^ filename; *)
-                  In_channel.with_open_bin path In_channel.input_all)
+                  In_channel.(with_open_bin path input_all))
                 (fun _ ->
                   Clj2js.main_js_with_strict filename prelude_macros code)
         | "java" ->

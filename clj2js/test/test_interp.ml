@@ -32,5 +32,7 @@ let main () =
         assert_ __POS__ {|(let [x (+ 1 2) y (+ 1 x)] (+ 1 y))|} {|5|};
         assert_ __POS__
           {|(defn f [a] (let [x (+ a 2) y (+ 1 x)] (+ 1 y)))(f 1)|} {|5|};
+        assert_ __POS__ {|(get {:a 1 :b 2 :c 3} :b)|} {|2|};
+        assert_ __POS__ {|(get [10 20 30] 1)|} {|20|};
       ] );
   ]

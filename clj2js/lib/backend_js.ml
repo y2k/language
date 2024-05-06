@@ -205,8 +205,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | x -> failnode __LOC__ [ x ]
 
-let lint prelude_macros filename (ctx, exp) =
-  (ctx, Linter.lint prelude_macros filename exp)
+let run_linter prelude_macros filename (ctx, exp) =
+  (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
@@ -216,6 +216,7 @@ let main (filename : string) prelude_macros code =
          "prelude"
     |> fst
   in
-  code |> Frontend.parse_and_simplify macros_ctx filename
-  |> lint prelude_macros filename
+  code
+  |> Frontend.parse_and_simplify macros_ctx filename
+  |> run_linter prelude_macros filename
   |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim

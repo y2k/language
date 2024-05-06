@@ -520,6 +520,9 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
   (* Default *)
   | x -> failnode __LOC__ [ x ]
 
+let run_linter prelude_macros filename (ctx, exp) =
+  (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
+
 let main (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
@@ -530,7 +533,7 @@ let main (filename : string) prelude_macros code =
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename
-  |> (fun (ctx, exp) -> (ctx, Linter.lint prelude_macros filename exp))
+  |> run_linter prelude_macros filename
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> (function
        | Literal x -> x | Call (xs, x) -> xs ^ x | IfCall (xs, x) -> xs ^ x)
