@@ -180,12 +180,13 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           List.nth xs (int_of_string i) |> with_context
       | m, k -> failnode __LOC__ [ m; k ])
   | CBList xs -> CBList (List.map interpret_ xs) |> with_context
+  | RBList (Atom (_, "fn*") :: _args :: _body) as x -> x |> with_context
   (* Function call *)
-  | RBList (Atom (_, fname) :: args) ->
+  | RBList (target :: args) ->
       let arg_values = List.map interpret_ args in
       let arg_names, f_body =
-        context.scope |> StringMap.find_opt fname |> function
-        | Some (RBList (Atom (_, "fn*") :: SBList args :: body)) ->
+        interpret_ target |> function
+        | RBList (Atom (_, "fn*") :: SBList args :: body) ->
             ( List.map
                 (function Atom (_, x) -> x | n -> failnode __LOC__ [ n ])
                 args,
