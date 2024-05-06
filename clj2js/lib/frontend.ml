@@ -336,9 +336,8 @@ let parse_and_simplify (prelude_context : context) filename code =
   (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
   desugar_and_register
     {
+      empty_context with
       filename;
-      loc = unknown_location;
-      start_line = 0;
       macros = prelude_context.macros;
       functions = prelude_context.functions;
     }

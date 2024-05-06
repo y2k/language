@@ -19,9 +19,21 @@ let log_sexp prefix node =
   print_endline @@ prefix ^ " " ^ show_cljexp node;
   node
 
-module StringMap = Map.Make (String)
+module StringMap = struct
+  include Map.Make (String)
+
+  let pp pp_value fmt map =
+    let bindings = bindings map in
+    Format.fprintf fmt "@[<v>{";
+    bindings
+    |> List.iter (fun (key, value) ->
+           Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
+             value);
+    Format.fprintf fmt "@,}@]"
+end
 
 type function_decl = { params : cljexp list; body : cljexp list }
+[@@deriving show]
 
 type context = {
   filename : string;
@@ -29,7 +41,9 @@ type context = {
   start_line : int;
   macros : cljexp StringMap.t;
   functions : function_decl StringMap.t;
+  scope : cljexp StringMap.t;
 }
+[@@deriving show]
 
 let empty_context =
   {
@@ -38,6 +52,7 @@ let empty_context =
     start_line = 0;
     macros = StringMap.empty;
     functions = StringMap.empty;
+    scope = StringMap.empty;
   }
 
 module NameGenerator = struct
@@ -63,6 +78,10 @@ end
 
 module List = struct
   include List
+
+  let rec split_into_pairs = function
+    | a :: b :: rest -> (a, b) :: split_into_pairs rest
+    | _ -> []
 
   let reduce f xs =
     match xs with
