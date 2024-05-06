@@ -214,7 +214,11 @@ let rec show_sexp = function
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =
-    prelude_macros |> Frontend.parse_and_simplify empty_context "prelude" |> fst
+    prelude_macros
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = interpret }
+         "prelude"
+    |> fst
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename

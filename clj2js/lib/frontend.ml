@@ -315,12 +315,12 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | x -> failnode __LOC__ [ x ]
 
 let parse_and_simplify (prelude_context : context) filename code =
-  if filename <> "prelude" then
-    print_endline "==| DEBUG |==============================================\n";
+  (* if filename <> "prelude" then
+    print_endline "==| DEBUG |==============================================\n"; *)
   let sexp =
     RBList (Atom (unknown_location, "module") :: string_to_sexp code)
   in
-  if filename <> "prelude" then print_endline (show_cljexp sexp);
+  (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
   desugar_and_register { prelude_context with filename } sexp |> function
   | ctx, x ->
       let x =
@@ -335,5 +335,5 @@ let parse_and_simplify (prelude_context : context) filename code =
             match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
         | x -> x
       in
-      if filename <> "prelude" then print_endline (show_cljexp x);
+      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
       (ctx, x)
