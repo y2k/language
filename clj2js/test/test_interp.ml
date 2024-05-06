@@ -32,5 +32,14 @@ let main () =
         assert_ __POS__ {|(let [x (+ 1 2) y (+ 1 x)] (+ 1 y))|} {|5|};
         assert_ __POS__
           {|(defn f [a] (let [x (+ a 2) y (+ 1 x)] (+ 1 y)))(f 1)|} {|5|};
+        assert_ __POS__
+          {|
+(defn fx* [env key args]
+  (let [eff (get env key)] eff)
+    (apply eff args))
+(defmacro fx [env key & args]
+  (list 'fx* env key args))
+|}
+          {||};
       ] );
   ]
