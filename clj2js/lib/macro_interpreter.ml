@@ -26,8 +26,12 @@ let run (ctx : context) (macro : cljexp) (_macro_args : cljexp list) : cljexp =
     | n -> failnode __LOC__ [ n ]
   in
 
-  let args = compute_args macro_arg_names _macro_args |> StringMap.to_seq in
-  let local_scope = ctx.scope |> StringMap.add_seq args in
+  let args =
+    compute_args macro_arg_names _macro_args
+    |> StringMap.map (fun x -> (x, ctx))
+    |> StringMap.to_seq
+  in
+  let local_scope = StringMap.add_seq args ctx.scope in
 
   RBList (Atom (unknown_location, "let*") :: SBList [] :: macro_body)
   |> ctx.interpreter { ctx with scope = local_scope }

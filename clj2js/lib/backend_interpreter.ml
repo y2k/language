@@ -50,8 +50,8 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
                if i < len - 1 then [ x; sep ] else [ x ])
       in
       (context, RBList r)
-  | RBList [ Atom (_, "vec"); Atom (_, xs) ] -> (
-      match StringMap.find xs context.scope with
+  | RBList [ Atom (_, "vec"); x ] -> (
+      match interpret_ x with
       | RBList xs -> (context, SBList xs)
       | x -> failnode __LOC__ [ x ])
   | RBList (Atom (_, "concat") :: xs) ->
@@ -80,11 +80,6 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       (context, RBList (List.map interpret_ list_args))
   | RBList (Atom (_, "vector") :: vec_args) ->
       (context, SBList (List.map interpret_ vec_args))
-  | RBList [ Atom (_, "vec"); xs ] ->
-      (match interpret_ xs with
-      | RBList xs -> SBList xs
-      | n -> failnode __LOC__ [ n ])
-      |> with_context
   | SBList vec_args -> (context, SBList (List.map interpret_ vec_args))
   | RBList [ Atom (l, "symbol"); n ] ->
       Atom
@@ -124,12 +119,12 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   | Atom (_, "__POSITION__") ->
       (context, Atom (unknown_location, string_of_int context.loc.pos))
   (* /Constants *)
-  (* Args *)
-  | Atom (m, x) when StringMap.exists (fun k _ -> k = x) context.scope ->
-      StringMap.find x context.scope
-      |> (function Atom (_, arg_val) -> Atom (m, arg_val) | x -> x)
-      |> with_context
-  (* /Args *)
+  (* Resolve scope value *)
+  | Atom (m, x) when StringMap.exists (fun k _ -> k = x) context.scope -> (
+      match StringMap.find x context.scope with
+      | Atom (_, arg_val), ctx -> (ctx, Atom (m, arg_val))
+      | x, ctx -> (ctx, x))
+  (* /Resolve scope value *)
   | RBList (Atom (_, "module") :: body) ->
       let context2, results =
         body |> List.fold_left_map (fun ctx x -> interpret ctx x) context
@@ -138,7 +133,10 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       (context2, last_node)
   | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
       let context =
-        { context with scope = context.scope |> StringMap.add name body }
+        {
+          context with
+          scope = context.scope |> StringMap.add name (body, context);
+        }
       in
       (context, RBList [ Atom (unknown_location, "comment") ])
   | RBList [ Atom (_, "="); a; b ] -> (
@@ -161,7 +159,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
                  match k with Atom (_, s) -> s | n -> failnode __LOC__ [ n ]
                in
                let v = interpret { context with scope = ctx } v |> snd in
-               StringMap.add name v ctx)
+               StringMap.add name (v, context) ctx)
              context.scope
       in
       let _, results =
@@ -203,11 +201,13 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
             failnode __LOC__ [ node ]
       in
 
+      (* Add function arguments to function scope *)
       let scope =
         List.fold_left2
-          (fun ctx k v -> StringMap.add k v ctx)
+          (fun ctx k v -> StringMap.add k (v, context) ctx)
           f_ctx.scope arg_names arg_values
       in
+
       let _, results =
         f_body
         |> List.fold_left_map
@@ -219,18 +219,6 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
 
 let run_linter prelude_macros filename (ctx, exp) =
   (ctx, Linter.lint interpret prelude_macros filename exp)
-
-let rec show_sexp sexp =
-  let format template xs =
-    xs |> List.map show_sexp
-    |> List.reduce_opt (Printf.sprintf "%s %s")
-    |> Option.value ~default:"" |> Printf.sprintf template
-  in
-  match sexp with
-  | Atom (_, x) -> x
-  | RBList xs -> format "(%s)" xs
-  | SBList xs -> format "[%s]" xs
-  | CBList xs -> format "{%s}" xs
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =

@@ -115,14 +115,20 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       in
       let new_body = RBList [ Atom (l, "def"); name; fbody ] in
       let context =
-        { context with scope = context.scope |> StringMap.add fname fbody }
+        {
+          context with
+          scope = context.scope |> StringMap.add fname (fbody, context);
+        }
       in
       (context, new_body)
   | RBList (Atom (l, "defn-") :: Atom (ln, name) :: SBList args :: body) ->
       let fn =
         expand_core_macro2 (RBList (Atom (l, "fn") :: SBList args :: body))
       in
-      ( { context with scope = context.scope |> StringMap.add name fn },
+      ( {
+          context with
+          scope = context.scope |> StringMap.add name (fn, context);
+        },
         RBList
           [ Atom (l, "def"); Atom ({ ln with symbol = ":private" }, name); fn ]
       )

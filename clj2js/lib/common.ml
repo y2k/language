@@ -41,7 +41,7 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  scope : cljexp StringMap.t;
+  scope : (cljexp * context) StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
 }
 [@@deriving show]
@@ -91,3 +91,15 @@ module List = struct
 
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
 end
+
+let rec show_sexp sexp =
+  let format template xs =
+    xs |> List.map show_sexp
+    |> List.reduce_opt (Printf.sprintf "%s %s")
+    |> Option.value ~default:"" |> Printf.sprintf template
+  in
+  match sexp with
+  | Atom (_, x) -> x
+  | RBList xs -> format "(%s)" xs
+  | SBList xs -> format "[%s]" xs
+  | CBList xs -> format "{%s}" xs
