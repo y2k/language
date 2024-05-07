@@ -186,17 +186,18 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           List.nth xs (int_of_string i) |> with_context
       | m, k -> failnode __LOC__ [ m; k ])
   | CBList xs -> CBList (List.map interpret_ xs) |> with_context
-  | RBList (Atom (_, "fn*") :: _args :: _body) as x -> x |> with_context
+  | RBList (Atom (_, "fn*") :: _ :: _) as x -> x |> with_context
   (* Function call *)
   | RBList (target :: args) ->
       let arg_values = List.map interpret_ args in
-      let arg_names, f_body =
-        interpret_ target |> function
-        | RBList (Atom (_, "fn*") :: SBList args :: body) ->
+      let arg_names, f_body, f_ctx =
+        match interpret context target with
+        | f_ctx, RBList (Atom (_, "fn*") :: SBList args :: body) ->
             ( List.map
                 (function Atom (_, x) -> x | n -> failnode __LOC__ [ n ])
                 args,
-              body )
+              body,
+              f_ctx )
         | _ ->
             (* prerr_endline @@ show_context context; *)
             failnode __LOC__ [ node ]
@@ -205,13 +206,13 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       let scope =
         List.fold_left2
           (fun ctx k v -> StringMap.add k v ctx)
-          context.scope arg_names arg_values
+          f_ctx.scope arg_names arg_values
       in
       let _, results =
         f_body
         |> List.fold_left_map
              (fun ctx x -> interpret ctx x)
-             { context with scope }
+             { f_ctx with scope }
       in
       results |> List.rev |> List.hd |> with_context
   | node -> failnode __LOC__ [ node ]

@@ -38,6 +38,12 @@ let main () =
         assert_ __POS__ {|(fn [x] x)|} {|(fn* [x] x)|};
         assert_ __POS__ {|((fn [x] (+ x x)) 1)|} {|2|};
         assert_ __POS__ {|(defn foo [f] (f 1)) (foo (fn [x] (+ x x)))|} {|2|};
+        assert_ __POS__ {|(def a 1) (+ a 2)|} {|3|};
+        assert_ __POS__ {|(def a 1) (defn f [x] (+ a x)) (let [a 4] (f 2))|}
+          {|3|};
+      ] );
+    ( "Effects",
+      [
         assert_ __POS__
           {|
 (def add_fx :7491ad10daad)
