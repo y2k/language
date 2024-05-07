@@ -4,13 +4,14 @@
 
 - https://github.com/y2k/relax_cats_bot
 - https://github.com/y2k/declarative_ban_bot
-- https://github.com/y2k/charge_timer (с компиляцией в Kotlin для Android)
+- https://github.com/y2k/charge_timer (с компиляцией в Java для Android)
 - https://github.com/y2k/declarative_notify
 
 ### Платформы компиляции
 
 - JS
-- Kotlin
+- Java
+- Интерпретатор
 
 ### Пример кода
 
