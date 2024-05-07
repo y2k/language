@@ -321,6 +321,10 @@ let test2 =
       {|export const foo = ((a, b) => { return (function () { const x = ("" + e); return x })() });|};
     assert_ __POS__ "(Foo.)" "new Foo()";
     assert_ __POS__ "(Foo. 'a 1)" "new Foo(a, 1)";
+    assert_ __POS__ {|(let [fx 1] (fx 2))|}
+      {|(function () { const fx = 1; return fx(2) })()|};
+    assert_ __POS__ {|(defn f [fx] (fx 2))|}
+      {|export const f = ((fx) => { return fx(2) });|};
   ]
 
 let main () =

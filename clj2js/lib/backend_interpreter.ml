@@ -25,7 +25,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   | Atom (m, x) when String.starts_with ~prefix:"'" x ->
       (context, Atom (m, String.sub x 1 (String.length x - 1)))
   | Atom (_, v) as x
-    when v = "true" || v = "false"
+    when v = "true" || v = "false" || v = "null"
          || String.starts_with ~prefix:"\"" v
          || String.starts_with ~prefix:":" v
          || String.starts_with ~prefix:"'" v

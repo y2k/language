@@ -9,13 +9,6 @@ type cljexp =
   | CBList of cljexp list
 [@@deriving show]
 
-let failnode prefix es =
-  es |> List.map show_cljexp
-  |> List.fold_left (Printf.sprintf "%s\n---\n%s") ""
-  |> Printf.sprintf "Can't parse:\n-------\n%s\n-------"
-  |> prerr_endline;
-  failwith ("Invalid node [" ^ prefix ^ "]")
-
 let log_sexp prefix node =
   print_endline @@ prefix ^ " " ^ show_cljexp node;
   node
@@ -91,6 +84,14 @@ module List = struct
 
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
 end
+
+let failnode prefix es =
+  es |> List.map show_cljexp
+  |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
+  |> Option.value ~default:""
+  |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"
+  |> prerr_endline;
+  failwith ("Invalid node [" ^ prefix ^ "]")
 
 let rec show_sexp sexp =
   let format template xs =

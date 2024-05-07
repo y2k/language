@@ -4,6 +4,7 @@ let main () =
   [
     ( "Interpreter",
       [
+        assert_ __POS__ {|null|} {|null|};
         assert_ __POS__ {|true|} {|true|};
         assert_ __POS__ {|false|} {|false|};
         assert_ __POS__ {|1|} {|1|};
