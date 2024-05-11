@@ -315,6 +315,17 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | SBList xs -> SBList (xs |> List.map expand_core_macro2) |> with_context
   | x -> failnode __LOC__ [ x ]
 
+let remove_comments_from_module = function
+  | RBList (Atom (l, "module") :: xs) -> (
+      let xs =
+        xs
+        |> List.filter (function
+             | RBList [ Atom (_, "comment") ] -> false
+             | _ -> true)
+      in
+      match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
+  | x -> x
+
 let parse_and_simplify (prelude_context : context) filename code =
   (* if filename <> "prelude" then
      print_endline "==| DEBUG |==============================================\n"; *)
@@ -323,19 +334,7 @@ let parse_and_simplify (prelude_context : context) filename code =
       (Atom (unknown_location, "module") :: Frontend_parser.string_to_sexp code)
   in
   (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
-  desugar_and_register { prelude_context with filename } sexp |> function
-  | ctx, x ->
-      let x =
-        match x with
-        | RBList (Atom (l, "module") :: xs) -> (
-            let xs =
-              xs
-              |> List.filter (function
-                   | RBList [ Atom (_, "comment") ] -> false
-                   | _ -> true)
-            in
-            match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
-        | x -> x
-      in
-      (* if filename <> "prelude" then print_endline (show_cljexp x); *)
-      (ctx, x)
+  desugar_and_register { prelude_context with filename } sexp |> fun (ctx, x) ->
+  let x = remove_comments_from_module x in
+  (* if filename <> "prelude" then print_endline (show_cljexp x); *)
+  (ctx, x)

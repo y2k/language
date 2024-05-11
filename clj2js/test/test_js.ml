@@ -10,12 +10,12 @@ let test1 =
     assert_ __POS__ {|(def LI_SP 600)|} {|export const LI_SP = 600;|};
     assert_ __POS__ {|(def ^:private LI_SP 600)|} {|const LI_SP = 600;|};
     assert_ __POS__ {|(def- LI_SP 600)|} {|const LI_SP = 600;|};
-    assert_with_import
+    assert_with_import __POS__
       [ ("../vendor/effects/src/effects", "(def foo 1)") ]
       {|(ns app (:require ["../vendor/effects/src/effects" :as e])) (e/foo)|}
       {|import * as e from '../vendor/effects/src/effects.js';
 e.foo()|};
-    assert_with_import
+    assert_with_import __POS__
       [ ("a", "(def a 2)(def LI_SP 1)(def b 3)") ]
       {|(ns _ (:require [a :as m])) m/LI_SP|}
       {|import * as m from './a.js';

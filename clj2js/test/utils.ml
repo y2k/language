@@ -30,7 +30,7 @@ let assert_file compile prelude_path ext p filename =
   in
   assert_ compile prelude_path p code expected
 
-let assert_with_import compile prelude_path files code expected =
+let assert_with_import compile prelude_path pos files code expected =
   let module Clj2js = Lib in
   let with_extenal_files files f =
     Lib__Linter.run_resolve
@@ -54,4 +54,8 @@ let assert_with_import compile prelude_path files code expected =
     let actual = String.sub actual start (String.length actual - start) in
     Alcotest.(check string) "1" expected actual
   in
-  Alcotest.test_case "assert_" `Quick inner_assert
+  let loc =
+    let f, l, s, e = pos in
+    Printf.sprintf "%S, line %d, characters %d-%d" f l s e
+  in
+  Alcotest.test_case loc `Quick inner_assert
