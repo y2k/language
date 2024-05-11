@@ -52,8 +52,10 @@ type lint_ctx = {
   aliases : string StringMap.t;
   filename : string;
   prelude_code : string;
-  local_defs : string list;
+  (* scope : (cljexp * context) StringMap.t; *)
+  local_defs : (int * unit) StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
+  recursion : int;
 }
 [@@deriving show]
 
@@ -63,7 +65,11 @@ let rec to_pairs = function
   | _ -> failwith "Not valid size of list"
 
 let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
+  (* if ctx.recursion > 100 then failnode __LOC__ [ node ];
+     let ctx = { ctx with recursion = ctx.recursion + 1 } in *)
   match node with
+  | Atom (_, v) when String.get v 0 >= '0' && String.get v 0 <= '9' ->
+      (node, ctx)
   | RBList (Atom (_, "quote") :: _) -> (node, ctx)
   | RBList (Atom (_, "comment") :: _) -> (node, ctx)
   | RBList (Atom (_, "ns") :: _ :: depencencies) ->
@@ -99,7 +105,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                let local_defs =
                  match local_val with
                  | None -> ctx.local_defs
-                 | Some x -> x :: ctx.local_defs
+                 | Some x -> StringMap.add x (0, ()) ctx.local_defs
                in
                {
                  ctx with
@@ -149,21 +155,41 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
     when (not (String.starts_with ~prefix:"\"" vname))
          && "." <> vname
          && (not (String.contains vname '/'))
+         && (not (String.contains vname '.'))
          && (not (String.starts_with ~prefix:"'" vname))
          && (not (String.starts_with ~prefix:":" vname))
          && (not (String.starts_with ~prefix:"-" vname))
          && (not (String.starts_with ~prefix:"RT/" vname))
          && (not (String.starts_with ~prefix:"y2k.RT/" vname))
-         && (String.get vname 0 < '0' || String.get vname 0 > '9')
-         && vname <> "module" ->
+         && (String.get vname 0 < '0' || String.get vname 0 > '9') ->
       let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
-      if not (List.mem fname ctx.local_defs) then (
+      if
+        (not (StringMap.mem fname ctx.local_defs))
+        (* TODO: убрать хардкод *)
+        && vname <> "console"
+        && vname <> "fx!"
+        && vname <> "gen-class*" && vname <> "set!" && vname <> "alert"
+        && vname <> "Promise" && vname <> "RegExp" && vname <> "JSON"
+        && vname <> "process" && vname <> "String" && vname <> "is*"
+        && vname <> "as*" && vname <> "list" && vname <> "vector"
+        && vname <> "vec" && vname <> "=" && vname <> "str" && vname <> "get"
+        && vname <> "concat" && vname <> "parseInt" && vname <> "while"
+        && vname <> "+" && vname <> "-" && vname <> "*" && vname <> "/"
+        && vname <> ">" && vname <> ">=" && vname <> "<" && vname <> "if"
+        && vname <> "<=" && vname <> "not" && vname <> "document"
+        && vname <> "true" && vname <> "false" && vname <> "setTimeout"
+        && vname <> "eval" && vname <> "fetch" && vname <> "Array"
+        && vname <> "unit" && vname <> "try" && vname <> "assoc"
+        && vname <> "ignore" && vname <> "null" && vname <> "module"
+        && vname <> "new" && vname <> "false" && vname <> "__raw_template"
+        && vname <> "window"
+      then (
         prerr_endline @@ show_lint_ctx ctx;
         failwith
-          (Printf.sprintf "[%s] Can't find variable '%s' used from %s:%i:%i"
-             __LOC__ fname ctx.filename l.line l.pos));
+          (Printf.sprintf "[%s] Can't find variable [%s|%s] used from %s:%i:%i"
+             __LOC__ fname vname ctx.filename l.line l.pos));
       (node, ctx)
   | Atom _ as a -> (a, ctx)
   | RBList (Atom (_, "let*") :: SBList binding :: body) ->
@@ -175,7 +201,10 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                let key =
                  match key with Atom (_, x) -> x | x -> failnode __LOC__ [ x ]
                in
-               { ctx with local_defs = key :: ctx.local_defs })
+               {
+                 ctx with
+                 local_defs = StringMap.add key (-1, ()) ctx.local_defs;
+               })
              ctx
       in
       let ctx = body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
@@ -188,21 +217,97 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
                let key =
                  match x with Atom (_, x) -> x | x -> failnode __LOC__ [ x ]
                in
-               { ctx with local_defs = key :: ctx.local_defs })
+               {
+                 ctx with
+                 local_defs = StringMap.add key (-1, ()) ctx.local_defs;
+               })
              ctx
       in
       let ctx = body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
       (node, ctx)
   | RBList (Atom (_, "catch") :: _ :: Atom (_, err_val) :: body) ->
-      let ctx2 = { ctx with local_defs = err_val :: ctx.local_defs } in
+      let ctx2 =
+        { ctx with local_defs = StringMap.add err_val (0, ()) ctx.local_defs }
+      in
       body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx2 |> ignore;
       (node, ctx)
-  | RBList (Atom (_, "def") :: Atom (_, name) :: body) ->
-      let local_ctx = { ctx with local_defs = name :: ctx.local_defs } in
-      body
+  | RBList
+      [
+        Atom (_, "def");
+        Atom (_, name);
+        (RBList (Atom (_, "fn*") :: SBList args :: _) as fn);
+      ] ->
+      let rec compute_count = function
+        | Atom (_, "&") :: _ -> 1000
+        | _ :: rest -> 1 + compute_count rest
+        | [] -> 0
+      in
+      let local_ctx =
+        {
+          ctx with
+          local_defs =
+            StringMap.add name (compute_count args, ()) ctx.local_defs;
+        }
+      in
+      [ fn ]
       |> List.fold_left (fun ctx n -> lint' ctx n |> snd) local_ctx
       |> ignore;
-      (node, { ctx with local_defs = name :: ctx.local_defs })
+      (node, local_ctx)
+  | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
+      let local_ctx =
+        { ctx with local_defs = StringMap.add name (-1, ()) ctx.local_defs }
+      in
+      lint' local_ctx body |> ignore;
+      (node, local_ctx)
+  | RBList (Atom (_, "module") :: body) ->
+      body
+      |> List.fold_left_map
+           (fun ctx n ->
+             let _, ctx2 = lint' ctx n in
+             (ctx2, ()))
+           ctx
+      |> ignore;
+      (node, ctx)
+  (* Check function call arguments count *)
+  | RBList (Atom (m, fname) :: args)
+    when (not (String.contains fname '/'))
+         && (not (String.contains fname '.'))
+         (* TODO: убрать хардкод *)
+         && fname <> "fetch"
+         && fname <> "fx!" && fname <> "gen-class*" && fname <> "set!"
+         && fname <> "alert" && fname <> "RegExp" && fname <> "is*"
+         && fname <> "=" && fname <> "as*" && fname <> "list" && fname <> "vec"
+         && fname <> "vector" && fname <> "str" && fname <> "concat"
+         && fname <> "get" && fname <> "parseInt" && fname <> "+"
+         && fname <> "-" && fname <> "*" && fname <> ">" && fname <> "if"
+         && fname <> ">=" && fname <> "<" && fname <> "<=" && fname <> "not"
+         && fname <> "while" && fname <> "setTimeout" && fname <> "eval"
+         && fname <> "ignore" && fname <> "try" && fname <> "assoc"
+         && fname <> "." && fname <> "new" && fname <> "__raw_template" ->
+      let fname =
+        if String.starts_with ~prefix:"'" fname then
+          String.sub fname 1 (String.length fname - 1)
+        else fname
+      in
+      let arg_count, _ =
+        ctx.local_defs |> StringMap.find_opt fname |> function
+        | Some x -> x
+        | None ->
+            Printf.sprintf "%s: Can't find function '%s'" __LOC__ fname
+            |> failwith
+      in
+      if arg_count < 0 then ()
+      else if arg_count >= 1000 && List.length args < arg_count mod 1000 then
+        Printf.sprintf "[%s] %s: '%s' expected at least %d arguments, got %d"
+          (show_error_location ctx.filename m)
+          __LOC__ fname (arg_count mod 1000) (List.length args)
+        |> failwith
+      else if arg_count < 1000 && arg_count <> List.length args then
+        Printf.sprintf "[%s] %s: '%s' expected %d arguments, got %d"
+          (show_error_location ctx.filename m)
+          __LOC__ fname arg_count (List.length args)
+        |> failwith;
+      (node, ctx)
   | RBList xs as origin ->
       let ctx = xs |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in
       (origin, ctx)
@@ -225,8 +330,9 @@ let lint interpreter prelude_code filename node =
            aliases = StringMap.empty;
            filename;
            prelude_code;
-           local_defs = [];
+           local_defs = StringMap.empty;
            interpreter;
+           recursion = 0;
          }
     |> snd
   in
@@ -237,6 +343,7 @@ let lint interpreter prelude_code filename node =
       prelude_code;
       local_defs = prelude_lint_ctx.local_defs;
       interpreter;
+      recursion = 0;
     }
     node
   |> fst

@@ -156,8 +156,9 @@ let assert_strings =
     (* *)
     assert_ __POS__ {|(defn foo [] (foo)(foo))|}
       {|public static Object foo(){foo();return foo();}|};
-    assert_ __POS__ {|(defn foo [] (foo (foo) (foo)))|}
-      {|public static Object foo(){return foo(foo(),foo());}|};
+    (* TODO: пофиксить вложенные вызов *)
+    assert_ __POS__ {|(defn foo [a b] (foo (foo) (foo)))|}
+      {|public static Object foo(final Object a,final Object b){return foo(foo(),foo());}|};
     assert_ __POS__ {|(defn foo [] (if true 2 3))|}
       {|public static Object foo(){final Object p__1;if(true){p__1=2;}else{p__1=3;}return p__1;}|};
     assert_ __POS__ {|(defn foo [] (if true 2 3)(if false 4 5))|}

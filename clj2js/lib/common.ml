@@ -39,6 +39,8 @@ type context = {
 }
 [@@deriving show]
 
+let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
+
 let empty_context =
   {
     filename = "";
