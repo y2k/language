@@ -199,9 +199,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
        let fname =
          match head with
          | RBList (Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")"
+         | Atom (_, fname) -> String.map (function '/' -> '.' | x -> x) fname
          | _ -> compile head
        in
-       String.map (function '/' -> '.' | x -> x) fname ^ "(" ^ sargs ^ ")")
+       fname ^ "(" ^ sargs ^ ")")
       |> with_context
   | x -> failnode __LOC__ [ x ]
 
