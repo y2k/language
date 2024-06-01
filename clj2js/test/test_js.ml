@@ -319,6 +319,7 @@ return e } })()|};
       "const f = ((a, b, ...c) => { return 0 });\nf(1, 2, 3, 4)";
     assert_ __POS__ {|((= 3 "https://g.com/a") 1)|}
       {|3 === "https://g.com/a"(1)|};
+    assert_ __POS__ "(.-subtle crypto)" "crypto.subtle";
   ]
 
 let test2 =
