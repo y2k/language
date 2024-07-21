@@ -4,7 +4,7 @@ deploy: test_e2e
 	@ cp -f _build/default/bin/main.exe ~/.bin/clj2js
 
 restore:
-	opam install . --deps-only -y
+	opam install . --deps-only --with-test -y
 
 test_e2e: test
 	@ cp -f _build/default/bin/main.exe _build/default/bin/clj2js
