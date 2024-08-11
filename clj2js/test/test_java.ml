@@ -182,6 +182,7 @@ let assert_strings =
              reason (.getPendingJob (.getSystemService ctx (class JobScheduler)) 123)]
          (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)))|}
        {||}; *)
+    assert_ __POS__ "(ns html)" "package html;";
   ]
 
 let main () =

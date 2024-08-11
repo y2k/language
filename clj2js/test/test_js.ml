@@ -344,6 +344,14 @@ let test2 =
       {|(function () { const fx = 1; return fx(2) })()|};
     assert_ __POS__ {|(defn f [fx] (fx 2))|}
       {|export const f = ((fx) => { return fx(2) });|};
+    assert_ __POS__ "(ns html)" "";
+    assert_ __POS__ {|(fn [a e] (+ a e))|} {|((a, e) => { return (a + e) })|};
+    assert_ __POS__ {|(fn [{a :b c :d} e] (+ a c e))|}
+      {|((p__1, e) => { return (function () { const a = p__1["b"]; const c = p__1["d"]; return (a + c + e) })() })|};
+    assert_ __POS__ {|(fn [[{a :b c :d} e]] (+ a c e))|}
+      "((p__1) => { return (function () { const p__2 = p__1[0]; const a = \
+       p__2[\"b\"]; const c = p__2[\"d\"]; const e = p__1[1]; return (a + c + \
+       e) })() })";
   ]
 
 let main () =

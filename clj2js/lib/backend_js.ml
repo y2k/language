@@ -48,8 +48,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                     | _ -> failnode __LOC__ requiries)
                |> List.reduce (Printf.sprintf "%s\n%s")
            | x -> failnode __LOC__ [ x ])
-      |> List.reduce (Printf.sprintf "%s\n%s")
-      |> with_context
+      |> List.reduce_opt (Printf.sprintf "%s\n%s")
+      |> Option.value ~default:"" |> with_context
   | RBList (Atom (_, "__raw_template") :: args) ->
       args |> List.map compile
       |> List.mapi (fun i x -> if i mod 2 = 0 then unpack_string x else x)
