@@ -292,7 +292,8 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
         ctx.local_defs |> StringMap.find_opt fname |> function
         | Some x -> x
         | None ->
-            Printf.sprintf "%s: Can't find function '%s'" __LOC__ fname
+            Printf.sprintf "%s: Can't find function '%s' [%s]" __LOC__ fname
+              (show_error_location ctx.filename m)
             |> failwith
       in
       if arg_count < 0 then ()
