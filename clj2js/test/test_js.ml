@@ -323,6 +323,18 @@ return e } })()|};
     assert_ __POS__ {|{:a 1}|} {|{["a"]: 1}|};
     assert_ __POS__ {|(let [b "c"] {b 2})|}
       {|(function () { const b = "c"; return {[b]: 2} })()|};
+    assert_ __POS__
+      {|(defmacro foo [xs] (list '.at (list '.from 'Array xs) -1)) (foo [])|}
+      {|Array.from([]).at(-1)|};
+  ]
+
+let linter_tests =
+  [
+    assert_ __POS__ {|(defn foo [x] x)(defn bar [y] (foo y))|}
+      "export const foo = ((x) => { return x });\n\
+       export const bar = ((y) => { return foo(y) });";
+    assert_ __POS__ {|(defn bar [y] y.b)|}
+      {|export const bar = ((y) => { return y.b });|};
   ]
 
 let test2 =
@@ -361,6 +373,7 @@ let main () =
   [
     ("JS - test1", test1);
     ("JS - test2", test2);
+    ("JS - Linter tests", linter_tests);
     ( "JS - files",
       [
         assert_file __POS__ "hotreload-client.clj";

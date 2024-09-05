@@ -67,6 +67,7 @@ let rec to_pairs = function
 let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   (* if ctx.recursion > 100 then failnode __LOC__ [ node ];
      let ctx = { ctx with recursion = ctx.recursion + 1 } in *)
+  (* print_endline @@ "LINT: " ^ show_cljexp node; *)
   match node with
   | Atom (_, v) when String.get v 0 >= '0' && String.get v 0 <= '9' ->
       (node, ctx)
@@ -155,7 +156,6 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
     when (not (String.starts_with ~prefix:"\"" vname))
          && "." <> vname
          && (not (String.contains vname '/'))
-         && (not (String.contains vname '.'))
          && (not (String.starts_with ~prefix:"'" vname))
          && (not (String.starts_with ~prefix:":" vname))
          && (not (String.starts_with ~prefix:"-" vname))
@@ -168,22 +168,24 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       if
         (not (StringMap.mem fname ctx.local_defs))
         (* TODO: убрать хардкод *)
-        && vname <> "console"
-        && vname <> "crypto" && vname <> "fx!" && vname <> "gen-class*"
-        && vname <> "set!" && vname <> "alert" && vname <> "Promise"
-        && vname <> "RegExp" && vname <> "JSON" && vname <> "process"
-        && vname <> "String" && vname <> "is*" && vname <> "as*"
-        && vname <> "list" && vname <> "vector" && vname <> "vec"
-        && vname <> "=" && vname <> "str" && vname <> "get" && vname <> "concat"
-        && vname <> "parseInt" && vname <> "while" && vname <> "+"
-        && vname <> "-" && vname <> "*" && vname <> "/" && vname <> ">"
-        && vname <> ">=" && vname <> "<" && vname <> "if" && vname <> "<="
-        && vname <> "not" && vname <> "document" && vname <> "true"
-        && vname <> "false" && vname <> "setTimeout" && vname <> "eval"
-        && vname <> "fetch" && vname <> "Array" && vname <> "unit"
-        && vname <> "try" && vname <> "assoc" && vname <> "ignore"
-        && vname <> "null" && vname <> "module" && vname <> "new"
-        && vname <> "false" && vname <> "__raw_template" && vname <> "window"
+        && fname <> "console"
+        && fname <> "Math" && fname <> "Date" && fname <> "Buffer"
+        && fname <> "Array" && fname <> "Object" && fname <> "crypto"
+        && fname <> "fx!" && fname <> "gen-class*" && fname <> "set!"
+        && fname <> "alert" && fname <> "Promise" && fname <> "RegExp"
+        && fname <> "JSON" && fname <> "process" && fname <> "String"
+        && fname <> "is*" && fname <> "as*" && fname <> "list"
+        && fname <> "vector" && fname <> "vec" && fname <> "=" && fname <> "str"
+        && fname <> "get" && fname <> "concat" && fname <> "parseInt"
+        && fname <> "while" && fname <> "+" && fname <> "-" && fname <> "*"
+        && fname <> "/" && fname <> ">" && fname <> ">=" && fname <> "<"
+        && fname <> "if" && fname <> "<=" && fname <> "not"
+        && fname <> "document" && fname <> "true" && fname <> "false"
+        && fname <> "setTimeout" && fname <> "eval" && fname <> "fetch"
+        && fname <> "Array" && fname <> "unit" && fname <> "try"
+        && fname <> "assoc" && fname <> "ignore" && fname <> "null"
+        && fname <> "module" && fname <> "new" && fname <> "false"
+        && fname <> "__raw_template" && fname <> "window"
       then (
         prerr_endline @@ show_lint_ctx ctx;
         failwith
@@ -307,6 +309,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
           (show_error_location ctx.filename m)
           __LOC__ fname arg_count (List.length args)
         |> failwith;
+      args |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx |> ignore;
       (node, ctx)
   | RBList xs as origin ->
       let ctx = xs |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx in

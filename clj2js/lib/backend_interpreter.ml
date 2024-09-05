@@ -29,6 +29,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
          || String.starts_with ~prefix:"\"" v
          || String.starts_with ~prefix:":" v
          || String.starts_with ~prefix:"'" v
+         || String.starts_with ~prefix:"-" v
          ||
          let ch = String.get v 0 in
          ch >= '0' && ch <= '9' ->
