@@ -114,6 +114,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       | _ -> Printf.sprintf "export const %s = %s;" name (compile body))
       |> with_context
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
+  (* Object literal *)
   | CBList xs ->
       let rec to_pairs = function
         | k :: v :: xs ->
@@ -123,7 +124,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
                 String.sub a 1 (String.length a - 1)
               else a
             in
-            let b = kn ^ ": " ^ compile v in
+            let b = "[" ^ kn ^ "]: " ^ compile v in
             let tail = to_pairs xs in
             if tail == "" then b else b ^ ", " ^ tail
         | [] -> ""

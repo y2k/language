@@ -53,14 +53,14 @@ m.LI_SP|};
         request)|}
       "export const fetch = ((request, env, context) => { return request });";
     assert_ __POS__ {|(export-default {:fetch 'fetch_handler})|}
-      {|export default {"fetch": fetch_handler}|};
+      {|export default {["fetch"]: fetch_handler}|};
     assert_ __POS__ {|(export-default {:fetch fetch_export})|}
-      {|export default {"fetch": fetch_export}|};
+      {|export default {["fetch"]: fetch_export}|};
     assert_ __POS__
       {|(defn fetch-handler [request env context] request)
      (export-default {:fetch fetch-handler})|}
       {|export const fetch-handler = ((request, env, context) => { return request });
-export default {"fetch": fetch-handler}|};
+export default {["fetch"]: fetch-handler}|};
     assert_ __POS__ "(println 1 2 3)" "console.info(1, 2, 3)";
     assert_ __POS__ "(defn foo[x]0)(foo (println 1 2 3))"
       "export const foo = ((x) => { return 0 });\nfoo(console.info(1, 2, 3))";
@@ -71,7 +71,7 @@ export default {"fetch": fetch-handler}|};
       "console.info(1, 2, 3)";
     assert_ __POS__
       {|(export-default {:foo 1 :foo2 {:foo 1 :bar "2" :baz false} :bar "2" :baz false})|}
-      {|export default {"foo": 1, "foo2": {"foo": 1, "bar": "2", "baz": false}, "bar": "2", "baz": false}|};
+      {|export default {["foo"]: 1, ["foo2"]: {["foo"]: 1, ["bar"]: "2", ["baz"]: false}, ["bar"]: "2", ["baz"]: false}|};
     assert_ __POS__
       {|(defn foo[x]x)(if (foo 1) 0 1)
    (if (if (foo 'c0) 2 3)
@@ -87,7 +87,7 @@ export default {"fetch": fetch-handler}|};
     assert_ __POS__ "(- 1 (- 10 20))" "(1 - (10 - 20))";
     assert_ __POS__ "(- 1 2 3 4)" "(1 - 2 - 3 - 4)";
     assert_ __POS__ {|{"content-type" "application/json" :a [1 [10 20 30] 3]}|}
-      {|{"content-type": "application/json", "a": [1, [10, 20, 30], 3]}|};
+      {|{["content-type"]: "application/json", ["a"]: [1, [10, 20, 30], 3]}|};
     assert_ __POS__ {|(println "hello world")|} {|console.info("hello world")|};
     assert_ __POS__
       {|(println)
@@ -248,8 +248,8 @@ new Response(1)|};
        import * as fs from 'foo/wrangler';";
     assert_ __POS__ {|(assoc! 'data.db 7 'data.now)|} "data.db[7]=data.now";
     assert_ __POS__ "[:div.tgme]" {|["div.tgme"]|};
-    assert_ __POS__ "{:div.tgme 'foo}" {|{"div.tgme": foo}|};
-    assert_ __POS__ "{:div 'foo}" {|{"div": foo}|};
+    assert_ __POS__ "{:div.tgme 'foo}" {|{["div.tgme"]: foo}|};
+    assert_ __POS__ "{:div 'foo}" {|{["div"]: foo}|};
     assert_ __POS__ "(^export def foo (+ 1 2))" "export const foo = (1 + 2);";
     assert_ __POS__ {|(ignore "foo\"bar")|} {|ignore("foo\"bar")|};
     assert_ __POS__ "(% 1 2)" "(1 % 2)";
@@ -259,7 +259,7 @@ new Response(1)|};
     assert_ __POS__ "(.-play 'r)" "r.play";
     assert_ __POS__ "(. 'r -play)" "r.play";
     assert_ __POS__ {|{:headers {:get (fn [] "TG_SECRET_TOKEN")}}|}
-      {|{"headers": {"get": (() => { return "TG_SECRET_TOKEN" })}}|};
+      {|{["headers"]: {["get"]: (() => { return "TG_SECRET_TOKEN" })}}|};
     assert_ __POS__ {|(cond (str "c") (str "a") :else (str "b"))|}
       {|(("" + "c") ? ("" + "a") : ("" + "b"))|};
     assert_ __POS__ {|[(str "a")]|} {|[("" + "a")]|};
@@ -300,13 +300,13 @@ return e } })()|};
       {|import * as app from './main.shared.js';|};
     assert_ __POS__ {|(.join 'r)|} {|r.join()|};
     assert_ __POS__ {|[(.join 'r)]|} {|[r.join()]|};
-    assert_ __POS__ {|{:b (.join 'r)}|} {|{"b": r.join()}|};
+    assert_ __POS__ {|{:b (.join 'r)}|} {|{["b"]: r.join()}|};
     assert_ __POS__
       {|(defn- tr [user] (let [un "c"] (str "a" un "b" user.id ")")))|}
       {|const tr = ((user) => { return (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })() });|};
     assert_ __POS__
       {|(defn- tr [user] {:cp (let [un "c"] (str "a" un "b" user.id ")"))})|}
-      {|const tr = ((user) => { return {"cp": (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })()} });|};
+      {|const tr = ((user) => { return {["cp"]: (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })()} });|};
     assert_ __POS__ {|(defn f [x] x)(f 1)|}
       "export const f = ((x) => { return x });\nf(1)";
     assert_ __POS__ {|(defn f [x y] y)(f 1 2)|}
@@ -320,6 +320,9 @@ return e } })()|};
     assert_ __POS__ {|((= 3 "https://g.com/a") 1)|}
       {|3 === "https://g.com/a"(1)|};
     assert_ __POS__ "(.-subtle crypto)" "crypto.subtle";
+    assert_ __POS__ {|{:a 1}|} {|{["a"]: 1}|};
+    assert_ __POS__ {|(let [b "c"] {b 2})|}
+      {|(function () { const b = "c"; return {[b]: 2} })()|};
   ]
 
 let test2 =
