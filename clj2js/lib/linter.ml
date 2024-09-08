@@ -59,6 +59,10 @@ type lint_ctx = {
 }
 [@@deriving show]
 
+type local_defs_type = { value : (int * unit) StringMap.t } [@@deriving show]
+
+let show_local_defs x = show_local_defs_type { value = x }
+
 let rec to_pairs = function
   | [] -> []
   | k :: v :: tail -> (k, v) :: to_pairs tail
@@ -165,28 +169,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
-      if
-        (not (StringMap.mem fname ctx.local_defs))
-        (* TODO: убрать хардкод *)
-        && fname <> "console"
-        && fname <> "Math" && fname <> "Date" && fname <> "Buffer"
-        && fname <> "Array" && fname <> "Object" && fname <> "crypto"
-        && fname <> "fx!" && fname <> "gen-class*" && fname <> "set!"
-        && fname <> "alert" && fname <> "Promise" && fname <> "RegExp"
-        && fname <> "JSON" && fname <> "process" && fname <> "String"
-        && fname <> "is*" && fname <> "as*" && fname <> "list"
-        && fname <> "vector" && fname <> "vec" && fname <> "=" && fname <> "str"
-        && fname <> "get" && fname <> "concat" && fname <> "parseInt"
-        && fname <> "while" && fname <> "+" && fname <> "-" && fname <> "*"
-        && fname <> "/" && fname <> ">" && fname <> ">=" && fname <> "<"
-        && fname <> "if" && fname <> "<=" && fname <> "not"
-        && fname <> "document" && fname <> "true" && fname <> "false"
-        && fname <> "setTimeout" && fname <> "eval" && fname <> "fetch"
-        && fname <> "Array" && fname <> "unit" && fname <> "try"
-        && fname <> "assoc" && fname <> "ignore" && fname <> "null"
-        && fname <> "module" && fname <> "new" && fname <> "false"
-        && fname <> "__raw_template" && fname <> "window"
-      then (
+      if not (StringMap.mem fname ctx.local_defs) then (
         prerr_endline @@ show_lint_ctx ctx;
         failwith
           (Printf.sprintf "[%s] Can't find variable [%s|%s] used from %s:%i:%i"
@@ -232,6 +215,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       in
       body |> List.fold_left (fun ctx n -> lint' ctx n |> snd) ctx2 |> ignore;
       (node, ctx)
+  (* Function declaration *)
   | RBList
       [
         Atom (_, "def");
@@ -254,37 +238,27 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       |> List.fold_left (fun ctx n -> lint' ctx n |> snd) local_ctx
       |> ignore;
       (node, local_ctx)
+  (* Variable declaration *)
   | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
       let local_ctx =
         { ctx with local_defs = StringMap.add name (-1, ()) ctx.local_defs }
       in
       lint' local_ctx body |> ignore;
+      (* print_endline @@ "VAR DEC: " ^ name ^ "\n" ^ show_lint_ctx local_ctx; *)
       (node, local_ctx)
   | RBList (Atom (_, "module") :: body) ->
-      body
-      |> List.fold_left_map
-           (fun ctx n ->
-             let _, ctx2 = lint' ctx n in
-             (ctx2, ()))
-           ctx
-      |> ignore;
-      (node, ctx)
+      let local_ctx, _ =
+        body
+        |> List.fold_left_map
+             (fun ctx n ->
+               let _, ctx2 = lint' ctx n in
+               (ctx2, ()))
+             ctx
+      in
+      (node, local_ctx)
   (* Check function call arguments count *)
   | RBList (Atom (m, fname) :: args)
-    when (not (String.contains fname '/'))
-         && (not (String.contains fname '.'))
-         (* TODO: убрать хардкод *)
-         && fname <> "fetch"
-         && fname <> "fx!" && fname <> "gen-class*" && fname <> "set!"
-         && fname <> "alert" && fname <> "RegExp" && fname <> "is*"
-         && fname <> "=" && fname <> "as*" && fname <> "list" && fname <> "vec"
-         && fname <> "vector" && fname <> "str" && fname <> "concat"
-         && fname <> "get" && fname <> "parseInt" && fname <> "+"
-         && fname <> "-" && fname <> "*" && fname <> ">" && fname <> "if"
-         && fname <> ">=" && fname <> "<" && fname <> "<=" && fname <> "not"
-         && fname <> "while" && fname <> "setTimeout" && fname <> "eval"
-         && fname <> "ignore" && fname <> "try" && fname <> "assoc"
-         && fname <> "." && fname <> "new" && fname <> "__raw_template" ->
+    when (not (String.contains fname '/')) && not (String.contains fname '.') ->
       let fname =
         if String.starts_with ~prefix:"'" fname then
           String.sub fname 1 (String.length fname - 1)
@@ -294,8 +268,10 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
         ctx.local_defs |> StringMap.find_opt fname |> function
         | Some x -> x
         | None ->
-            Printf.sprintf "%s: Can't find function '%s' [%s]" __LOC__ fname
+            Printf.sprintf "%s: Can't find function '%s' [%s], with context: %s"
+              __LOC__ fname
               (show_error_location ctx.filename m)
+              (show_local_defs ctx.local_defs)
             |> failwith
       in
       if arg_count < 0 then ()
@@ -339,6 +315,7 @@ let lint interpreter prelude_code filename node =
          }
     |> snd
   in
+  (* print_endline @@ "PRELUDE CONTEXT: " ^ show_lint_ctx prelude_lint_ctx; *)
   lint'
     {
       aliases = StringMap.empty;

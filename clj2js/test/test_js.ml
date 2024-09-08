@@ -122,22 +122,20 @@ new Response(1)|};
     assert_ __POS__ "(or 1)" "(1)";
     assert_ __POS__ "(or 'a 'b 1 2)" "(a || b || 1 || 2)";
     assert_ __POS__ "(or 'a (fn [x] x) 1)" "(a || ((x) => { return x }) || 1)";
-    assert_ __POS__ "(ignore 1)\n\n\n(ignore 3)" "ignore(1)\nignore(3)";
-    assert_ __POS__ "(ignore 1)\n;;(ignore 2)\n(ignore 3)"
-      "ignore(1)\nignore(3)";
-    assert_ __POS__ "(ignore 1)\n;;(ignore 2.1)\n;;(ignore 2.2)\n(ignore 3)"
-      "ignore(1)\nignore(3)";
-    assert_ __POS__ "(ignore 1)\n\n;;(ignore 2.1)\n;;(ignore 2.2)\n\n(ignore 3)"
-      "ignore(1)\nignore(3)";
-    assert_ __POS__
-      "(ignore 1)\n\n;;(ignore 2.1)\n\n;;(ignore 2.2)\n\n(ignore 3)"
-      "ignore(1)\nignore(3)";
-    assert_ __POS__ "(->> 0 (ignore 1) (ignore 2) (ignore 3))"
-      "ignore(3, ignore(2, ignore(1, 0)))";
-    assert_ __POS__ "(if-let [a 1 b 2 c 3] ignore 'bar)"
+    assert_ __POS__ "(alert 1)\n\n\n(alert 3)" "alert(1)\nalert(3)";
+    assert_ __POS__ "(alert 1)\n;;(alert 2)\n(alert 3)" "alert(1)\nalert(3)";
+    assert_ __POS__ "(alert 1)\n;;(alert 2.1)\n;;(alert 2.2)\n(alert 3)"
+      "alert(1)\nalert(3)";
+    assert_ __POS__ "(alert 1)\n\n;;(alert 2.1)\n;;(alert 2.2)\n\n(alert 3)"
+      "alert(1)\nalert(3)";
+    assert_ __POS__ "(alert 1)\n\n;;(alert 2.1)\n\n;;(alert 2.2)\n\n(alert 3)"
+      "alert(1)\nalert(3)";
+    assert_ __POS__ "(->> 0 (alert 1) (alert 2) (alert 3))"
+      "alert(3, alert(2, alert(1, 0)))";
+    assert_ __POS__ "(if-let [a 1 b 2 c 3] alert 'bar)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
-       return (b ? (function () { const c = 3; return (c ? ignore : bar) })() \
-       : bar) })() : bar) })()";
+       return (b ? (function () { const c = 3; return (c ? alert : bar) })() : \
+       bar) })() : bar) })()";
     assert_ __POS__ "(if-let [a 1 b 2 c 3] (+ a b c) -1)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
        return (b ? (function () { const c = 3; return (c ? (a + b + c) : -1) \
@@ -161,12 +159,12 @@ new Response(1)|};
     assert_ __POS__ {|(assoc 'person :city "NY")|} {|{ ...person, city: "NY" }|};
     assert_ __POS__ {|(assoc 'data.db 'user_id 'data.now)|}
       {|(function(){const temp={...data.db};temp[user_id]=data.now;return temp})()|};
-    assert_ __POS__ {|(-> (ignore 'person) (assoc :city "NY"))|}
-      {|{ ...ignore(person), city: "NY" }|};
+    assert_ __POS__ {|(-> (alert 'person) (assoc :city "NY"))|}
+      {|{ ...alert(person), city: "NY" }|};
     assert_ __POS__ {|(-> 'person (assoc :city "NY"))|}
       {|{ ...person, city: "NY" }|};
     assert_ __POS__ "(merge 'object1 'object2)" "{ ...object1, ...object2 }";
-    assert_ __POS__ "(ignore (spread [1 2 3]))" "ignore(...[1, 2, 3])";
+    assert_ __POS__ "(alert (spread [1 2 3]))" "alert(...[1, 2, 3])";
     assert_ __POS__ "(conj [1 2] 3)" "[...[1, 2], 3]";
     assert_ __POS__ "(concat [1 2] [3 4])" "[...[1, 2], ...[3, 4]]";
     assert_ __POS__ "[]" "[]";
@@ -179,10 +177,10 @@ new Response(1)|};
     assert_ __POS__ "(defn- foo [x] x)" "const foo = ((x) => { return x });";
     assert_ __POS__ "(defn foo [x] x)"
       "export const foo = ((x) => { return x });";
-    assert_ __POS__ "(ignore (FIXME))"
-      {|ignore((function(){throw new Error(("" + "FIXME main.clj:1:9 - "))})())|};
-    assert_ __POS__ "(ignore (FIXME 'A1 2))"
-      {|ignore((function(){throw new Error(("" + "FIXME main.clj:1:9 - " + A1 + 2))})())|};
+    assert_ __POS__ "(alert (FIXME))"
+      {|alert((function(){throw new Error(("" + "FIXME main.clj:1:8 - "))})())|};
+    assert_ __POS__ "(alert (FIXME 'A1 2))"
+      {|alert((function(){throw new Error(("" + "FIXME main.clj:1:8 - " + A1 + 2))})())|};
     assert_ __POS__ {|(println)|} {|console.info()|};
     assert_ __POS__ {|(println "hello" 'world 123)|}
       {|console.info("hello", world, 123)|};
@@ -196,32 +194,29 @@ new Response(1)|};
        import * as app from './main.js';";
     assert_ __POS__ {|(cond (= 1 2) 3 (= 4 5) 6 (= 7 8) 9 :else 0)|}
       {|(1 === 2 ? 3 : (4 === 5 ? 6 : (7 === 8 ? 9 : 0)))|};
-    assert_ __POS__ "(do (ignore 1 2) (ignore 3 4) (ignore 5 6))"
-      "(function () { ignore(1, 2); ignore(3, 4); return ignore(5, 6) })()";
+    assert_ __POS__ "(do (alert 1 2) (alert 3 4) (alert 5 6))"
+      "(function () { alert(1, 2); alert(3, 4); return alert(5, 6) })()";
     assert_ __POS__ "(str 'a (if 'b 'c 'd))" {|("" + a + (b ? c : d))|};
     assert_ __POS__ "(set! 'foo 1)" "(foo = 1);";
     assert_ __POS__ "(set! 'foo.bar 1)" "(foo.bar = 1);";
     assert_ __POS__ "(set! (.-bar 'foo) 1)" "(foo.bar = 1);";
-    assert_ __POS__ "(set! (.-bar (ignore 2)) 1)" "(ignore(2).bar = 1);";
+    assert_ __POS__ "(set! (.-bar (alert 2)) 1)" "(alert(2).bar = 1);";
     assert_ __POS__ "(set! (.-bar (get 'xs 2)) 1)" "(xs[2].bar = 1);";
-    assert_ __POS__ "(defmacro foo [a b] (list a 1)) (foo ignore d)" "ignore(1)";
+    assert_ __POS__ "(defmacro foo [a b] (list a 1)) (foo alert d)" "alert(1)";
     assert_ __POS__
-      "(defmacro foo [a b] (list 'do (list a 1) (list b 2))) (foo ignore \
-       ignore)"
-      "(function () { ignore(1); return ignore(2) })()";
+      "(defmacro foo [a b] (list 'do (list a 1) (list b 2))) (foo alert alert)"
+      "(function () { alert(1); return alert(2) })()";
     assert_ __POS__ "(type 1)" "typeof 1";
     assert_ __POS__ {|(= (type 'a) "String")|} {|typeof a === "String"|};
     assert_ __POS__ "(not 'a)" "!(a)";
     assert_ __POS__ "(not (+ 1 2))" "!((1 + 2))";
     assert_ __POS__ "(get 'xs 7)" "xs[7]";
-    assert_ __POS__
-      "(case (ignore 1) 2 (ignore 22) (ignore 3) 'baz :qwe 3 'other)"
-      {|(function () { const gen_1 = ignore(1); return (gen_1 === 2 ? ignore(22) : (gen_1 === ignore(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
-    assert_ __POS__ "(case 'key 2 (ignore 22) (ignore 3) 'baz :qwe 3 'other)"
-      {|(function () { const gen_1 = key; return (gen_1 === 2 ? ignore(22) : (gen_1 === ignore(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
-    assert_ __POS__
-      "(case 'key 2 (ignore 22) (ignore 3) 'baz :qwe 3 (ignore 'a))"
-      {|(function () { const gen_1 = key; return (gen_1 === 2 ? ignore(22) : (gen_1 === ignore(3) ? baz : (gen_1 === "qwe" ? 3 : ignore(a)))) })()|};
+    assert_ __POS__ "(case (alert 1) 2 (alert 22) (alert 3) 'baz :qwe 3 'other)"
+      {|(function () { const gen_1 = alert(1); return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
+    assert_ __POS__ "(case 'key 2 (alert 22) (alert 3) 'baz :qwe 3 'other)"
+      {|(function () { const gen_1 = key; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
+    assert_ __POS__ "(case 'key 2 (alert 22) (alert 3) 'baz :qwe 3 (alert 'a))"
+      {|(function () { const gen_1 = key; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : alert(a)))) })()|};
     assert_ __POS__ "(fn [xs] (let [a (get xs 0) b (get xs 1)] (+ a b)))"
       "((xs) => { return (function () { const a = xs[0]; const b = xs[1]; \
        return (a + b) })() })";
@@ -251,9 +246,9 @@ new Response(1)|};
     assert_ __POS__ "{:div.tgme 'foo}" {|{["div.tgme"]: foo}|};
     assert_ __POS__ "{:div 'foo}" {|{["div"]: foo}|};
     assert_ __POS__ "(^export def foo (+ 1 2))" "export const foo = (1 + 2);";
-    assert_ __POS__ {|(ignore "foo\"bar")|} {|ignore("foo\"bar")|};
+    assert_ __POS__ {|(alert "foo\"bar")|} {|alert("foo\"bar")|};
     assert_ __POS__ "(% 1 2)" "(1 % 2)";
-    assert_ __POS__ {|(ignore "a\"b")|} {|ignore("a\"b")|};
+    assert_ __POS__ {|(alert "a\"b")|} {|alert("a\"b")|};
     assert_ __POS__ "(.play 'r)" "r.play()";
     assert_ __POS__ "(. 'r play)" "r.play()";
     assert_ __POS__ "(.-play 'r)" "r.play";
@@ -263,7 +258,7 @@ new Response(1)|};
     assert_ __POS__ {|(cond (str "c") (str "a") :else (str "b"))|}
       {|(("" + "c") ? ("" + "a") : ("" + "b"))|};
     assert_ __POS__ {|[(str "a")]|} {|[("" + "a")]|};
-    assert_ __POS__ "((ignore 'c 'd) 'a 'b)" "ignore(c, d)(a, b)";
+    assert_ __POS__ "((alert 'c 'd) 'a 'b)" "alert(c, d)(a, b)";
     assert_ __POS__ {|(let [[a b] 'c] a)|}
       {|(function () { const p__1 = c; const a = p__1[0]; const b = p__1[1]; return a })()|};
     assert_ __POS__ {|(:a 'b)|} {|b["a"]|};
@@ -326,6 +321,7 @@ return e } })()|};
     assert_ __POS__
       {|(defmacro foo [xs] (list '.at (list '.from 'Array xs) -1)) (foo [])|}
       {|Array.from([]).at(-1)|};
+      assert_ __POS__ {|(alert globalThis)|} {|alert(globalThis)|};
   ]
 
 let linter_tests =
