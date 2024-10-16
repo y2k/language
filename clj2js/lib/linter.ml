@@ -34,7 +34,7 @@ let read_exports_from_file interpreter prelude_code name : exports =
         [
           Atom (_, "__raw_template");
           Atom (_, "\"export default \"");
-          RBList [ Atom (_, "quote"); CBList def_exps ];
+          CBList def_exps;
         ] ->
         let rec loop exports = function
           | [] -> exports

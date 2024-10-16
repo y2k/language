@@ -18,6 +18,12 @@ let rec unpack_to_map = function
   | Atom (_, k) :: v :: tail -> (k, v) :: unpack_to_map tail
   | n -> failnode __LOC__ n
 
+let rec sexp_to_string = function
+  | Atom (_, s) -> s
+  | RBList xs -> "(" ^ String.concat " " (List.map sexp_to_string xs) ^ ")"
+  | SBList xs -> "[" ^ String.concat " " (List.map sexp_to_string xs) ^ "]"
+  | CBList xs -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}"
+
 let rec interpret (context : context) (node : cljexp) : context * cljexp =
   let interpret_ x = interpret context x |> snd in
   let with_context x = (context, x) in
@@ -73,7 +79,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
                     && String.ends_with ~suffix:"\"" x ->
                  String.sub x 1 (String.length x - 2)
              | Atom (_, x) -> x
-             | n -> failnode __LOC__ [ n ])
+             | n -> sexp_to_string n)
         |> String.concat ""
       in
       (context, Atom (unknown_location, "\"" ^ result ^ "\""))

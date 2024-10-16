@@ -16,7 +16,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Expressions *)
-  | RBList [ Atom (_, "quote"); arg ] -> compile_ context arg
+  (* | RBList [ Atom (_, "quote"); arg ] -> compile_ context arg *)
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")

@@ -54,8 +54,9 @@ m.LI_SP|};
       "export const fetch = ((request, env, context) => { return request });";
     assert_ __POS__ {|(export-default {:fetch 'fetch_handler})|}
       {|export default {["fetch"]: fetch_handler}|};
-    assert_ __POS__ {|(export-default {:fetch fetch_export})|}
-      {|export default {["fetch"]: fetch_export}|};
+    assert_ __POS__ {|(defn- foo[x]x)(export-default {:fetch foo})|}
+      {|const foo = ((x) => { return x });
+export default {["fetch"]: foo}|};
     assert_ __POS__
       {|(defn fetch-handler [request env context] request)
      (export-default {:fetch fetch-handler})|}
@@ -321,7 +322,7 @@ return e } })()|};
     assert_ __POS__
       {|(defmacro foo [xs] (list '.at (list '.from 'Array xs) -1)) (foo [])|}
       {|Array.from([]).at(-1)|};
-      assert_ __POS__ {|(alert globalThis)|} {|alert(globalThis)|};
+    assert_ __POS__ {|(alert globalThis)|} {|alert(globalThis)|};
   ]
 
 let linter_tests =
@@ -363,6 +364,9 @@ let test2 =
       "((p__1) => { return (function () { const p__2 = p__1[0]; const a = \
        p__2[\"b\"]; const c = p__2[\"d\"]; const e = p__1[1]; return (a + c + \
        e) })() })";
+    assert_ __POS__ {|(defn- foo [r e w]0)(export-default {:fetch foo})|}
+      {|const foo = ((r, e, w) => { return 0 });
+export default {["fetch"]: foo}|};
   ]
 
 let main () =
