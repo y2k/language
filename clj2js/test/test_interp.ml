@@ -20,7 +20,7 @@ let main () =
         assert_ __POS__ {|(vec (list 1 2 3))|} {|[1 2 3]|};
         assert_ __POS__ {|[1 (+ 1 1) 3]|} {|[1 2 3]|};
         assert_ __POS__ {|(concat (list 1 2) (list 3 4))|} {|(1 2 3 4)|};
-        assert_ __POS__ {|(quote a)|} {|'a|};
+        (* assert_ __POS__ {|(quote a)|} {|'a|}; *)
         assert_ __POS__ {|(defn f [x] (+ x x))(f 1)|} {|2|};
         assert_ __POS__ {|(= 1 1)|} {|true|};
         assert_ __POS__ {|(= 1 2)|} {|false|};

@@ -11,8 +11,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Atoms *)
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
-  | Atom (_, x) when String.starts_with ~prefix:"'" x ->
-      unpack_symbol x |> with_context
+  (* | Atom (_, x) when String.starts_with ~prefix:"'" x ->
+      unpack_symbol x |> with_context *)
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Expressions *)
@@ -54,16 +54,20 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       args |> List.map compile
       |> List.mapi (fun i x -> if i mod 2 = 0 then unpack_string x else x)
       |> List.reduce ( ^ ) |> with_context
-  | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
-    when String.starts_with ~prefix:":" key ->
-      Printf.sprintf "{ ...%s, %s: %s }" (compile map)
-        (String.sub key 1 (String.length key - 1))
-        (compile value)
-      |> with_context
-  | RBList [ Atom (_, "assoc"); map; key; value ] ->
+  (* | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
+     when String.starts_with ~prefix:":" key ->
+       Printf.sprintf "{ ...%s, [%s]: %s }" (compile map)
+         (String.sub key 1 (String.length key - 1))
+         (compile value)
+       |> with_context *)
+  (* | RBList [ Atom (_, "assoc"); map; key; value ] ->
       Printf.sprintf
         "(function(){const temp={...%s};temp[%s]=%s;return temp})()"
         (compile map) (compile key) (compile value)
+      |> with_context *)
+  | RBList [ Atom (_, "assoc"); map; key; value ] ->
+      Printf.sprintf "{ ...%s, [%s]: %s }" (compile map) (compile key)
+        (compile value)
       |> with_context
   | RBList (Atom (_, "try") :: body) ->
       (let to_string_with_returns nodes =
@@ -171,19 +175,19 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       "(function () { " ^ svals ^ sbody ^ " })()" |> with_context
   (* Interop field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
-    when String.starts_with ~prefix:"'-" field ->
+    when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target)
         (String.sub field 2 (String.length field - 2))
       |> with_context
   (* Interop method *)
-  | RBList (Atom (_, ".") :: target :: mname :: args) ->
+  | RBList (Atom (_, ".") :: target :: Atom (_, mname) :: args) ->
       let sargs =
         match args with
         | [] -> ""
         | args ->
             args |> List.map compile |> List.reduce (Printf.sprintf "%s, %s")
       in
-      Printf.sprintf "%s.%s(%s)" (compile target) (compile mname) sargs
+      Printf.sprintf "%s.%s(%s)" (compile target) (unpack_symbol mname) sargs
       |> with_context
   (* Constructor *)
   | RBList (Atom (_, "new") :: Atom (_, cnst_name) :: args) ->

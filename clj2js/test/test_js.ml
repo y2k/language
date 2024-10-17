@@ -39,9 +39,9 @@ m.LI_SP|};
        export const fetch = ((r, e, c) => { return b(0) });";
     assert_ __POS__
       {|(.next
-       (.json 'request null)
+       (.json :request null)
        (fn [text] (println "hello")))|}
-      {|request.json(null).next(((text) => { return console.info("hello") }))|};
+      {|"request".json(null).next(((text) => { return console.info("hello") }))|};
     assert_ __POS__
       {|(defn fetch [request env context]
         (->
@@ -52,8 +52,8 @@ m.LI_SP|};
       {|(defn fetch [request env context]
         request)|}
       "export const fetch = ((request, env, context) => { return request });";
-    assert_ __POS__ {|(export-default {:fetch 'fetch_handler})|}
-      {|export default {["fetch"]: fetch_handler}|};
+    assert_ __POS__ {|(export-default {:fetch :fetch_handler})|}
+      {|export default {["fetch"]: "fetch_handler"}|};
     assert_ __POS__ {|(defn- foo[x]x)(export-default {:fetch foo})|}
       {|const foo = ((x) => { return x });
 export default {["fetch"]: foo}|};
@@ -75,14 +75,15 @@ export default {["fetch"]: fetch-handler}|};
       {|export default {["foo"]: 1, ["foo2"]: {["foo"]: 1, ["bar"]: "2", ["baz"]: false}, ["bar"]: "2", ["baz"]: false}|};
     assert_ __POS__
       {|(defn foo[x]x)(if (foo 1) 0 1)
-   (if (if (foo 'c0) 2 3)
-     (if (foo 'c1) 4 5)
-     (if (foo 'c2) 6 7))
+   (if (if (foo :c0) 2 3)
+     (if (foo :c1) 4 5)
+     (if (foo :c2) 6 7))
      (if (= 1 2) 8 9)|}
-      "export const foo = ((x) => { return x });\n\
-       (foo(1) ? 0 : 1)\n\
-       ((foo(c0) ? 2 : 3) ? (foo(c1) ? 4 : 5) : (foo(c2) ? 6 : 7))\n\
-       (1 === 2 ? 8 : 9)";
+      {|export const foo = ((x) => { return x });
+(foo(1) ? 0 : 1)
+((foo("c0") ? 2 : 3) ? (foo("c1") ? 4 : 5) : (foo("c2") ? 6 : 7))
+(1 === 2 ? 8 : 9)|};
+    assert_ __POS__ {|(+ 1 2)|} {|(1 + 2)|};
     assert_ __POS__ "(+ 1 (+ 10 20 30) 3 (str 1) 5)"
       {|(1 + (10 + 20 + 30) + 3 + ("" + 1) + 5)|};
     assert_ __POS__ "(- 1 (- 10 20))" "(1 - (10 - 20))";
@@ -104,25 +105,27 @@ new Response()
 new Response()
 new Response(1)|};
     assert_ __POS__
-      {|(defn map[a b]0)(map (fn [] 0) 'xs)
-   (map (fn [x] x) 'xs)|}
-      "export const map = ((a, b) => { return 0 });\n\
-       map((() => { return 0 }), xs)\n\
-       map(((x) => { return x }), xs)";
+      {|(defn map[a b]0)(map (fn [] 0) :xs)
+   (map (fn [x] x) :xs)|}
+      {|export const map = ((a, b) => { return 0 });
+map((() => { return 0 }), "xs")
+map(((x) => { return x }), "xs")|};
     assert_ __POS__ "(and 1)" "(1)";
     assert_ __POS__ "(and 1 2)" "(1 && 2)";
-    assert_ __POS__ "(and 'a (and 1 2 3) 'c 'd)"
-      "(a && (1 && 2 && 3) && c && d)";
-    assert_ __POS__ "(< 'x 1)(> 'y 2)" "(x < 1)\n(y > 2)";
-    assert_ __POS__ "(<= 'x 1)(>= 'y 2)" "(x <= 1)\n(y >= 2)";
+    assert_ __POS__ {|(and :a (and 1 2 3) :c :d)|}
+      {|("a" && (1 && 2 && 3) && "c" && "d")|};
+    assert_ __POS__ "(< :x 1)(> :y 2)" {|("x" < 1)
+("y" > 2)|};
+    assert_ __POS__ "(<= 3 1)(>= 4 2)" "(3 <= 1)\n(4 >= 2)";
     assert_ __POS__ "(def foo (+ 1 2))" "export const foo = (1 + 2);";
     assert_ __POS__ "(let [b 1 a b?.c?.d?.e] a)"
       "(function () { const b = 1; const a = b?.c?.d?.e; return a })()";
     assert_ __POS__ "(let [b 1 a b.c.d.e] a)"
       "(function () { const b = 1; const a = b.c.d.e; return a })()";
     assert_ __POS__ "(or 1)" "(1)";
-    assert_ __POS__ "(or 'a 'b 1 2)" "(a || b || 1 || 2)";
-    assert_ __POS__ "(or 'a (fn [x] x) 1)" "(a || ((x) => { return x }) || 1)";
+    assert_ __POS__ "(or :a :b 1 2)" {|("a" || "b" || 1 || 2)|};
+    assert_ __POS__ "(or :a (fn [x] x) 1)"
+      {|("a" || ((x) => { return x }) || 1)|};
     assert_ __POS__ "(alert 1)\n\n\n(alert 3)" "alert(1)\nalert(3)";
     assert_ __POS__ "(alert 1)\n;;(alert 2)\n(alert 3)" "alert(1)\nalert(3)";
     assert_ __POS__ "(alert 1)\n;;(alert 2.1)\n;;(alert 2.2)\n(alert 3)"
@@ -133,10 +136,10 @@ new Response(1)|};
       "alert(1)\nalert(3)";
     assert_ __POS__ "(->> 0 (alert 1) (alert 2) (alert 3))"
       "alert(3, alert(2, alert(1, 0)))";
-    assert_ __POS__ "(if-let [a 1 b 2 c 3] alert 'bar)"
+    assert_ __POS__ "(if-let [a 1 b 2 c 3] alert :bar)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
-       return (b ? (function () { const c = 3; return (c ? alert : bar) })() : \
-       bar) })() : bar) })()";
+       return (b ? (function () { const c = 3; return (c ? alert : \"bar\") \
+       })() : \"bar\") })() : \"bar\") })()";
     assert_ __POS__ "(if-let [a 1 b 2 c 3] (+ a b c) -1)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
        return (b ? (function () { const c = 3; return (c ? (a + b + c) : -1) \
@@ -145,10 +148,10 @@ new Response(1)|};
       "(function () { const _ = 1; return (_ ? (function () { const _ = 2; \
        return (_ ? (function () { const _ = 3; return (_ ? 6 : -1) })() : -1) \
        })() : -1) })()";
-    assert_ __POS__ "(if-let* [a 1 b 2 c 3] 'foo 'bar)"
+    assert_ __POS__ "(if-let* [a 1 b 2 c 3] :foo :bar)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
-       return (b ? (function () { const c = 3; return (c ? foo : bar) })() : \
-       bar) })() : bar) })()";
+       return (b ? (function () { const c = 3; return (c ? \"foo\" : \"bar\") \
+       })() : \"bar\") })() : \"bar\") })()";
     assert_ __POS__ "(if-let* [a 1 b 2 c 3] (+ a b c) -1)"
       "(function () { const a = 1; return (a ? (function () { const b = 2; \
        return (b ? (function () { const c = 3; return (c ? (a + b + c) : -1) \
@@ -157,14 +160,18 @@ new Response(1)|};
       "(function () { const _ = 1; return (_ ? (function () { const _ = 2; \
        return (_ ? (function () { const _ = 3; return (_ ? 6 : -1) })() : -1) \
        })() : -1) })()";
-    assert_ __POS__ {|(assoc 'person :city "NY")|} {|{ ...person, city: "NY" }|};
-    assert_ __POS__ {|(assoc 'data.db 'user_id 'data.now)|}
-      {|(function(){const temp={...data.db};temp[user_id]=data.now;return temp})()|};
-    assert_ __POS__ {|(-> (alert 'person) (assoc :city "NY"))|}
-      {|{ ...alert(person), city: "NY" }|};
-    assert_ __POS__ {|(-> 'person (assoc :city "NY"))|}
-      {|{ ...person, city: "NY" }|};
-    assert_ __POS__ "(merge 'object1 'object2)" "{ ...object1, ...object2 }";
+    assert_ __POS__ {|(def- a {})(assoc a :city "NY")|}
+      {|const a = {};
+{ ...a, ["city"]: "NY" }|};
+    assert_ __POS__ {|(def- a {})(assoc a :user_id :data.now)|}
+      {|const a = {};
+{ ...a, ["user_id"]: "data.now" }|};
+    assert_ __POS__ {|(-> (alert :person) (assoc :city "NY"))|}
+      {|{ ...alert("person"), ["city"]: "NY" }|};
+    assert_ __POS__ {|(-> :person (assoc :city "NY"))|}
+      {|{ ..."person", ["city"]: "NY" }|};
+    assert_ __POS__ "(def- a {})(def- b {})(merge a b)"
+      "const a = {};\nconst b = {};\n{ ...a, ...b }";
     assert_ __POS__ "(alert (spread [1 2 3]))" "alert(...[1, 2, 3])";
     assert_ __POS__ "(conj [1 2] 3)" "[...[1, 2], 3]";
     assert_ __POS__ "(concat [1 2] [3 4])" "[...[1, 2], ...[3, 4]]";
@@ -172,7 +179,7 @@ new Response(1)|};
     assert_ __POS__ "{}" "{}";
     assert_ __POS__ {|(throw (Error. "foo"))|}
       {|(function(){throw new Error("foo")})()|};
-    assert_ __POS__ "(not= 'a 'b)" "!(a === b)";
+    assert_ __POS__ "(not= 1 2)" "!(1 === 2)";
     assert_ __POS__ "(/ 5 (/ 17 3))" "(5 / (17 / 3))";
     assert_ __POS__ "(* 1 (* 2 3 4))" "(1 * (2 * 3 * 4))";
     assert_ __POS__ "(defn- foo [x] x)" "const foo = ((x) => { return x });";
@@ -180,11 +187,12 @@ new Response(1)|};
       "export const foo = ((x) => { return x });";
     assert_ __POS__ "(alert (FIXME))"
       {|alert((function(){throw new Error(("" + "FIXME main.clj:1:8 - "))})())|};
-    assert_ __POS__ "(alert (FIXME 'A1 2))"
-      {|alert((function(){throw new Error(("" + "FIXME main.clj:1:8 - " + A1 + 2))})())|};
+    assert_ __POS__ "(alert (FIXME :A1 2))"
+      {|alert((function(){throw new Error(("" + "FIXME main.clj:1:8 - " + "A1" + 2))})())|};
     assert_ __POS__ {|(println)|} {|console.info()|};
-    assert_ __POS__ {|(println "hello" 'world 123)|}
-      {|console.info("hello", world, 123)|};
+    assert_ __POS__ {|(def- a 1)(println "hello" a 123)|}
+      {|const a = 1;
+console.info("hello", a, 123)|};
     (* assert_ "(ns a (:import [fs.promises fs]))" "import * as fs from 'fs/promises';"; *)
     assert_ __POS__ "(ns a (:require [js.fs.promises :as fs]))"
       "import * as fs from 'fs/promises';";
@@ -197,27 +205,31 @@ new Response(1)|};
       {|(1 === 2 ? 3 : (4 === 5 ? 6 : (7 === 8 ? 9 : 0)))|};
     assert_ __POS__ "(do (alert 1 2) (alert 3 4) (alert 5 6))"
       "(function () { alert(1, 2); alert(3, 4); return alert(5, 6) })()";
-    assert_ __POS__ "(str 'a (if 'b 'c 'd))" {|("" + a + (b ? c : d))|};
-    assert_ __POS__ "(set! 'foo 1)" "(foo = 1);";
-    assert_ __POS__ "(set! 'foo.bar 1)" "(foo.bar = 1);";
-    assert_ __POS__ "(set! (.-bar 'foo) 1)" "(foo.bar = 1);";
+    assert_ __POS__ "(str :a (if :b :c :d))" {|("" + "a" + ("b" ? "c" : "d"))|};
+    assert_ __POS__ "(set! :foo 1)" {|("foo" = 1);|};
+    assert_ __POS__ "(def- a {})(set! a.bar 1)" "const a = {};\n(a.bar = 1);";
+    assert_ __POS__ "(def- a {})(set! (.-bar a) 1)"
+      "const a = {};\n(a.bar = 1);";
     assert_ __POS__ "(set! (.-bar (alert 2)) 1)" "(alert(2).bar = 1);";
-    assert_ __POS__ "(set! (.-bar (get 'xs 2)) 1)" "(xs[2].bar = 1);";
+    assert_ __POS__ "(def- a {})(set! (.-bar (get a 2)) 1)"
+      "const a = {};\n(a[2].bar = 1);";
     assert_ __POS__ "(defmacro foo [a b] (list a 1)) (foo alert d)" "alert(1)";
     assert_ __POS__
       "(defmacro foo [a b] (list 'do (list a 1) (list b 2))) (foo alert alert)"
       "(function () { alert(1); return alert(2) })()";
     assert_ __POS__ "(type 1)" "typeof 1";
-    assert_ __POS__ {|(= (type 'a) "String")|} {|typeof a === "String"|};
-    assert_ __POS__ "(not 'a)" "!(a)";
+    assert_ __POS__ {|(def- a "")(= (type a) "String")|}
+      {|const a = "";
+typeof a === "String"|};
+    assert_ __POS__ "(not 1)" "!(1)";
     assert_ __POS__ "(not (+ 1 2))" "!((1 + 2))";
-    assert_ __POS__ "(get 'xs 7)" "xs[7]";
-    assert_ __POS__ "(case (alert 1) 2 (alert 22) (alert 3) 'baz :qwe 3 'other)"
-      {|(function () { const gen_1 = alert(1); return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
-    assert_ __POS__ "(case 'key 2 (alert 22) (alert 3) 'baz :qwe 3 'other)"
-      {|(function () { const gen_1 = key; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : other))) })()|};
-    assert_ __POS__ "(case 'key 2 (alert 22) (alert 3) 'baz :qwe 3 (alert 'a))"
-      {|(function () { const gen_1 = key; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? baz : (gen_1 === "qwe" ? 3 : alert(a)))) })()|};
+    assert_ __POS__ "(def- a [])(get a 7)" "const a = [];\na[7]";
+    assert_ __POS__ "(case (alert 1) 2 (alert 22) (alert 3) :baz :qwe 3 :other)"
+      {|(function () { const gen_1 = alert(1); return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? "baz" : (gen_1 === "qwe" ? 3 : "other"))) })()|};
+    assert_ __POS__ "(case :key 2 (alert 22) (alert 3) :baz :qwe 3 :other)"
+      {|(function () { const gen_1 = "key"; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? "baz" : (gen_1 === "qwe" ? 3 : "other"))) })()|};
+    assert_ __POS__ "(case :key 2 (alert 22) (alert 3) :baz :qwe 3 (alert :a))"
+      {|(function () { const gen_1 = "key"; return (gen_1 === 2 ? alert(22) : (gen_1 === alert(3) ? "baz" : (gen_1 === "qwe" ? 3 : alert("a")))) })()|};
     assert_ __POS__ "(fn [xs] (let [a (get xs 0) b (get xs 1)] (+ a b)))"
       "((xs) => { return (function () { const a = xs[0]; const b = xs[1]; \
        return (a + b) })() })";
@@ -242,38 +254,43 @@ new Response(1)|};
       "(ns app (:require [vendor.effects :as e] [js.foo.wrangler :as fs]))"
       "import * as e from './vendor.effects.js';\n\
        import * as fs from 'foo/wrangler';";
-    assert_ __POS__ {|(assoc! 'data.db 7 'data.now)|} "data.db[7]=data.now";
+    assert_ __POS__ {|(def- a {})(assoc! a.db 7 a.now)|}
+      "const a = {};\na.db[7]=a.now";
     assert_ __POS__ "[:div.tgme]" {|["div.tgme"]|};
-    assert_ __POS__ "{:div.tgme 'foo}" {|{["div.tgme"]: foo}|};
-    assert_ __POS__ "{:div 'foo}" {|{["div"]: foo}|};
+    assert_ __POS__ "{:div.tgme :foo}" {|{["div.tgme"]: "foo"}|};
+    assert_ __POS__ "{:div :foo}" {|{["div"]: "foo"}|};
     assert_ __POS__ "(^export def foo (+ 1 2))" "export const foo = (1 + 2);";
     assert_ __POS__ {|(alert "foo\"bar")|} {|alert("foo\"bar")|};
     assert_ __POS__ "(% 1 2)" "(1 % 2)";
     assert_ __POS__ {|(alert "a\"b")|} {|alert("a\"b")|};
-    assert_ __POS__ "(.play 'r)" "r.play()";
-    assert_ __POS__ "(. 'r play)" "r.play()";
-    assert_ __POS__ "(.-play 'r)" "r.play";
-    assert_ __POS__ "(. 'r -play)" "r.play";
+    assert_ __POS__ "(def- r {})(.play r)(. r play)"
+      "const r = {};\nr.play()\nr.play()";
+    assert_ __POS__ "(def- r {})(.-play r)" "const r = {};\nr.play";
+    assert_ __POS__ "(def- r {})(. r -play)" "const r = {};\nr.play";
     assert_ __POS__ {|{:headers {:get (fn [] "TG_SECRET_TOKEN")}}|}
       {|{["headers"]: {["get"]: (() => { return "TG_SECRET_TOKEN" })}}|};
     assert_ __POS__ {|(cond (str "c") (str "a") :else (str "b"))|}
       {|(("" + "c") ? ("" + "a") : ("" + "b"))|};
     assert_ __POS__ {|[(str "a")]|} {|[("" + "a")]|};
-    assert_ __POS__ "((alert 'c 'd) 'a 'b)" "alert(c, d)(a, b)";
-    assert_ __POS__ {|(let [[a b] 'c] a)|}
-      {|(function () { const p__1 = c; const a = p__1[0]; const b = p__1[1]; return a })()|};
-    assert_ __POS__ {|(:a 'b)|} {|b["a"]|};
+    assert_ __POS__ "((alert :c :d) :a :b)" {|alert("c", "d")("a", "b")|};
+    assert_ __POS__ {|(let [[a b] :c] a)|}
+      {|(function () { const p__1 = "c"; const a = p__1[0]; const b = p__1[1]; return a })()|};
+    assert_ __POS__ {|(def- b {})(:a b)|} {|const b = {};
+b["a"]|};
     assert_ __POS__ {|(jvm! (def a 1) (def b 2))|} {||};
     assert_ __POS__ {|(js! (def a 1) (def b 2))|}
       "export const a = 1;\nexport const b = 2;";
     assert_ __POS__ {|(fn [{a :url b :props}] [a b])|}
       {|((p__1) => { return (function () { const a = p__1["url"]; const b = p__1["props"]; return [a, b] })() })|};
     assert_ __POS__ {|(atom 1)|} {|Array.of(1)|};
-    assert_ __POS__ {|(deref 'x)|} {|x[0]|};
-    assert_ __POS__ {|(reset! 'x 2)|}
-      {|(function () { x.fill(2); return 2 })()|};
-    assert_ __POS__ {|(swap! 'a (fn [x] x))|}
-      {|a.splice(0, 1, (((x) => { return x }))(a[0]))[0]|};
+    assert_ __POS__ {|(def- x 1)(deref x)|} {|const x = 1;
+x[0]|};
+    assert_ __POS__ {|(def- x 1)(reset! x 2)|}
+      {|const x = 1;
+(function () { x.fill(2); return 2 })()|};
+    assert_ __POS__ {|(def- a {})(swap! a (fn [x] x))|}
+      {|const a = {};
+a.splice(0, 1, (((x) => { return x }))(a[0]))[0]|};
     assert_ __POS__ {|(fn [a {b :b} c] (a b c))|}
       {|((a, p__1, c) => { return (function () { const b = p__1["b"]; return a(b, c) })() })|};
     assert_ __POS__ {|(fn [a [b c] d] (a b c d))|}
@@ -294,9 +311,9 @@ return e } })()|};
     assert_ __POS__ {|(jvm! (foo 1))(str 2)|} {|("" + 2)|};
     assert_ __POS__ {|(ns resources (:require [main.shared :as app]))|}
       {|import * as app from './main.shared.js';|};
-    assert_ __POS__ {|(.join 'r)|} {|r.join()|};
-    assert_ __POS__ {|[(.join 'r)]|} {|[r.join()]|};
-    assert_ __POS__ {|{:b (.join 'r)}|} {|{["b"]: r.join()}|};
+    assert_ __POS__ {|(.join :r)|} {|"r".join()|};
+    assert_ __POS__ {|[(.join :r)]|} {|["r".join()]|};
+    assert_ __POS__ {|{:b (.join :r)}|} {|{["b"]: "r".join()}|};
     assert_ __POS__
       {|(defn- tr [user] (let [un "c"] (str "a" un "b" user.id ")")))|}
       {|const tr = ((user) => { return (function () { const un = "c"; return ("" + "a" + un + "b" + user.id + ")") })() });|};
@@ -323,6 +340,10 @@ return e } })()|};
       {|(defmacro foo [xs] (list '.at (list '.from 'Array xs) -1)) (foo [])|}
       {|Array.from([]).at(-1)|};
     assert_ __POS__ {|(alert globalThis)|} {|alert(globalThis)|};
+    assert_ __POS__ {|(alert (quote a))|}
+      {|alert({["__y2k_type"]: "quote", ["value"]: "a"})|};
+    assert_ __POS__ {|(alert 'a)|}
+      {|alert({["__y2k_type"]: "quote", ["value"]: "a"})|};
   ]
 
 let linter_tests =
@@ -348,10 +369,10 @@ let test2 =
       "export const foo = ((a, b) => { return a });";
     assert_ __POS__ {|(defn foo [ ^"(App)->aaa.Bbb" a ^"(Baz)->foo.Bar" b] a)|}
       "export const foo = ((a, b) => { return a });";
-    assert_ __POS__ "(defn foo [a b] (let [x (str 'e)] x))"
-      {|export const foo = ((a, b) => { return (function () { const x = ("" + e); return x })() });|};
+    assert_ __POS__ "(defn foo [a b] (let [x (str :e)] x))"
+      {|export const foo = ((a, b) => { return (function () { const x = ("" + "e"); return x })() });|};
     assert_ __POS__ "(Foo.)" "new Foo()";
-    assert_ __POS__ "(Foo. 'a 1)" "new Foo(a, 1)";
+    assert_ __POS__ "(Foo. :a 1)" "new Foo(\"a\", 1)";
     assert_ __POS__ {|(let [fx 1] (fx 2))|}
       {|(function () { const fx = 1; return fx(2) })()|};
     assert_ __POS__ {|(defn f [fx] (fx 2))|}

@@ -99,6 +99,13 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   let expand_core_macro2 x = desugar_and_register context x |> snd in
   let with_context x = (context, x) in
   match node with
+  | Atom (l, x) when String.starts_with ~prefix:"'" x ->
+      RBList
+        [
+          Atom (unknown_location, "quote");
+          Atom (l, String.sub x 1 (String.length x - 1));
+        ]
+      |> expand_core_macro1
   | Atom _ -> node |> with_context
   | CBList xs -> CBList (xs |> List.map expand_core_macro2) |> with_context
   | RBList (Atom (_, "fn*") :: _) as o -> o |> with_context
@@ -213,7 +220,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       loop body |> expand_core_macro2 |> with_context
   | RBList (Atom (l, "if-let") :: tail) ->
       expand_core_macro1 (RBList (Atom (l, "if-let*") :: tail))
-  | RBList [ Atom (_, "if-let*"); SBList bindings; then'; else' ] ->
+  | RBList [ Atom (_, "if-let*"); SBList bindings; then_; else_ ] ->
       let rec loop = function
         | Atom (l, name) :: value :: tail ->
             RBList
@@ -225,10 +232,10 @@ let rec desugar_and_register (context : context) node : context * cljexp =
                     Atom (unknown_location, "if");
                     Atom (unknown_location, name);
                     loop tail;
-                    else';
+                    else_;
                   ];
               ]
-        | [] -> then'
+        | [] -> then_
         | _ ->
             failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] "
             ^ __LOC__
@@ -324,7 +331,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   (* Desugar interop function call *)
   | RBList (Atom (l, fname) :: target :: args)
     when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
-      let mname = "'" ^ String.sub fname 1 (String.length fname - 1) in
+      let mname = ":" ^ String.sub fname 1 (String.length fname - 1) in
       RBList
         (Atom (l, ".")
         :: expand_core_macro2 target
@@ -332,10 +339,11 @@ let rec desugar_and_register (context : context) node : context * cljexp =
         :: List.map expand_core_macro2 args)
       |> with_context
   (* Desugar . macro *)
+  (* FIXME *)
   | RBList (Atom (l, ".") :: target :: Atom (lp, prop) :: args)
-    when not (String.starts_with ~prefix:"'" prop) ->
+    when not (String.starts_with ~prefix:":" prop) ->
       let args = List.map expand_core_macro2 args in
-      RBList (Atom (l, ".") :: target :: Atom (lp, "'" ^ prop) :: args)
+      RBList (Atom (l, ".") :: target :: Atom (lp, ":" ^ prop) :: args)
       |> with_context
   (* Call macro *)
   | RBList (Atom (l, fname) :: args)
@@ -345,6 +353,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       Macro_interpreter.run { context with loc = l }
         (StringMap.find fname context.macros)
         args
+      (* |> log_sexp "MACRO RESULT: " *)
       |> expand_core_macro1
   | RBList [ Atom (l, name); x ] when String.starts_with ~prefix:":" name ->
       RBList [ Atom (l, "get"); x; Atom (unknown_location, name) ]

@@ -2,16 +2,16 @@ open Common
 
 let compute_args (arg_names : cljexp list) (arg_values : cljexp list) :
     cljexp StringMap.t =
-  let rec compute_args' acc arg_names arg_values =
+  let rec compute_args_ acc arg_names arg_values =
     match (arg_names, arg_values) with
     | [ Atom (_, "&"); Atom (_, name) ], vt ->
         StringMap.add name (RBList vt) acc
     | Atom (_, name) :: nt, v :: vt ->
-        compute_args' (StringMap.add name v acc) nt vt
+        compute_args_ (StringMap.add name v acc) nt vt
     | [], [] -> acc
     | a, b -> failnode __LOC__ (List.concat [ a; b ])
   in
-  compute_args' StringMap.empty arg_names arg_values
+  compute_args_ StringMap.empty arg_names arg_values
 
 let rec unpack_to_map = function
   | [] -> []
@@ -25,6 +25,7 @@ let rec sexp_to_string = function
   | CBList xs -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}"
 
 let rec interpret (context : context) (node : cljexp) : context * cljexp =
+  (* log_sexp "interpret: " node |> ignore; *)
   let interpret_ x = interpret context x |> snd in
   let with_context x = (context, x) in
   match node with
@@ -98,8 +99,12 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       |> with_context
   | RBList [ Atom (l, "quote"); arg ] -> (
       match arg with
-      | Atom (l, x) -> (context, Atom (l, "'" ^ x))
+      | Atom (l, x) -> (context, Atom (l, x))
       | n -> (context, RBList [ Atom (l, "quote"); n ]))
+  (* | RBList [ Atom (l, "quote"); arg ] -> (
+      match arg with
+      | Atom (l, x) -> (context, Atom (l, "'" ^ x))
+      | n -> (context, RBList [ Atom (l, "quote"); n ])) *)
   | RBList [ Atom (_, op); ea; eb ]
     when op = "-" || op = "+" || op = "*" || op = "/" -> (
       match (interpret_ ea, interpret_ eb) with

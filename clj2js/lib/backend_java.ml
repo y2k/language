@@ -416,13 +416,8 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       in
       Literal result
   (* Interop method call *)
-  | RBList (Atom (_, ".") :: target :: method_ :: args) ->
-      let sfname =
-        match compile_ ctx method_ with
-        | Literal x -> x
-        | _ -> failnode __LOC__ [ method_ ]
-      in
-
+  | RBList (Atom (_, ".") :: target :: Atom (_, method_) :: args) ->
+      let sfname = unpack_symbol method_ in
       let target_r = compile_ ctx target in
       let target_statments =
         match target_r with

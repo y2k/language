@@ -28,21 +28,6 @@ let run (ctx : context) (macro : cljexp) (macro_args : cljexp list) : cljexp =
     | n -> failnode __LOC__ [ n ]
   in
 
-  (* (match macro_arg_names with
-     | [ _; Atom (_, "&"); _ ] ->
-      failnode __LOC__ macro_args
-     | _ -> ()); *)
-  (* macro_args |> List.map show_sexp
-     |> List.reduce_opt (Printf.sprintf "%s\n%s")
-     |> Option.value ~default:"<EMPTY>"
-     |> Printf.sprintf "[LOG1] %s:\n======\n%s\n======" __LOC__
-     |> prerr_endline; *)
-  (* prerr_endline @@ "[LOG2] " ^ show_context ctx.scope; *)
-  (* ctx.scope |> StringMap.to_list
-  |> List.map (fun (k, _) -> k)
-  |> List.reduce_opt (Printf.sprintf "%s %s")
-  |> Option.value ~default:"" |> Printf.sprintf "[LOG3] %s" |> print_endline; *)
-
   let args =
     compute_args macro_arg_names macro_args
     |> StringMap.map (fun x -> (x, ctx))
