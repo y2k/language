@@ -173,16 +173,18 @@ let assert_strings =
     assert_ __POS__
       {|(defn foo [a b] (foo (if true 2 3) (if true 6 7))(foo (if false 4 5) (if true 8 9)))|}
       {|public static Object foo(final Object a,final Object b){final Object p__1;if(true){p__1=2;}else{p__1=3;}final Object p__2;if(true){p__2=6;}else{p__2=7;}foo(p__1,p__2);final Object p__3;if(false){p__3=4;}else{p__3=5;}final Object p__4;if(true){p__4=8;}else{p__4=9;}return foo(p__3,p__4);}|};
-    (* assert1 __POS__
-       {|(defn- get_status [env]
-       (let [^Context ctx (:context env)
-             ^WebView wv (:webview env)
-             level (.getIntExtra (.registerReceiver ctx null (IntentFilter. Intent/ACTION_BATTERY_CHANGED)) "level" -1)
-             m (/ (JobInfo/getMinPeriodMillis) 1000)
-             reason (.getPendingJob (.getSystemService ctx (class JobScheduler)) 123)]
-         (.evaluateJavascript wv (str "window.update_ui(\"#text_job_status\", \"" level "% | " LIMIT_CHARGE "% | " m " sec | " reason "\")") null)))|}
-       {||}; *)
     assert_ __POS__ "(ns html)" "package html;";
+    assert_ __POS__ {|(:a :b)|} {|y2k.RT.get("b","a")|};
+    assert_ __POS__
+      {|
+(gen-class
+ :name MainActivity
+ :extends Activity
+ :constructors {[] []}
+ :prefix "a_"
+ :methods [[^Override onCreate [Bundle] void]])
+|}
+      {|public static class MainActivity extends Activity{public java.util.List<Object> state;@Override public void onCreate(Bundle p0){super.onCreate(p0);a_onCreate(this,p0);}}|};
   ]
 
 let main () =
