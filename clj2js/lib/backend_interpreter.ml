@@ -134,7 +134,8 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   (* Resolve scope value *)
   | Atom (m, x) when StringMap.exists (fun k _ -> k = x) context.scope -> (
       match StringMap.find x context.scope with
-      | Atom (_, arg_val), ctx -> (ctx, Atom (m, arg_val))
+      | Atom (m2, arg_val), ctx ->
+          (ctx, Atom ({ m with pos = m2.pos; line = m2.line }, arg_val))
       | x, ctx -> (ctx, x))
   (* /Resolve scope value *)
   | RBList (Atom (_, "module") :: body) ->

@@ -99,6 +99,8 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   let expand_core_macro2 x = desugar_and_register context x |> snd in
   let with_context x = (context, x) in
   match node with
+  | Atom (l, "__POS__") ->
+      Atom (l, Printf.sprintf {|"%s:%d:%d"|} context.filename l.line l.pos) |> with_context
   | Atom (l, x) when String.starts_with ~prefix:"'" x ->
       RBList
         [

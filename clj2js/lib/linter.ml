@@ -57,7 +57,22 @@ type lint_ctx = {
   interpreter : context -> cljexp -> context * cljexp;
   recursion : int;
 }
-[@@deriving show]
+(* [@@deriving show] *)
+
+let debug_show_lint_ctx (_ctx : lint_ctx) =
+  `Assoc
+    [
+      ("filename", `String _ctx.filename);
+      ( "aliases",
+        `Assoc
+          (StringMap.bindings _ctx.aliases
+          |> List.map (fun (k, v) -> (k, `String v))) );
+      ( "local_defs",
+        `Assoc
+          (StringMap.bindings _ctx.local_defs
+          |> List.map (fun (k, (a, _)) -> (k, `Int a))) );
+    ]
+  |> Yojson.Safe.pretty_to_string
 
 type local_defs_type = { value : (int * unit) StringMap.t } [@@deriving show]
 
@@ -151,8 +166,9 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
            failwith
              (Printf.sprintf
                 "Can't resolve reference '%s/%s' to file '%s.clj' used in \
-                 %s:%i:%i"
-                alias reference extenal_file ctx.filename l.line l.pos));
+                 %s:%i:%i [%s]"
+                alias reference extenal_file ctx.filename l.line l.pos
+                (loc __POS__)));
 
       (a, ctx)
   (* Check local variable *)
@@ -169,8 +185,11 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       let parts = String.split_on_char '.' vname in
       let parts = String.split_on_char '?' (List.nth parts 0) in
       let fname = List.nth parts 0 in
-      if not (StringMap.mem fname ctx.local_defs) then (
-        prerr_endline @@ show_lint_ctx ctx;
+      if
+        (not (StringMap.mem fname ctx.local_defs))
+        && not (StringMap.mem fname ctx.aliases)
+      then (
+        prerr_endline @@ debug_show_lint_ctx ctx;
         failwith
           (Printf.sprintf "[%s] Can't find variable [%s|%s] used from %s:%i:%i"
              __LOC__ fname vname ctx.filename l.line l.pos));
@@ -268,11 +287,12 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
         ctx.local_defs |> StringMap.find_opt fname |> function
         | Some x -> x
         | None ->
-            Printf.sprintf "%s: Can't find function '%s' [%s], with context: %s"
+            Printf.sprintf "%s Can't find function '%s' [%s], with context:\n%s"
               __LOC__ fname
               (show_error_location ctx.filename m)
-              (show_local_defs ctx.local_defs)
-            |> failwith
+              (debug_show_lint_ctx ctx)
+            |> prerr_endline;
+            failwith ""
       in
       if arg_count < 0 then ()
       else if arg_count >= 1000 && List.length args < arg_count mod 1000 then

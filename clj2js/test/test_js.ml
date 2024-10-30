@@ -344,6 +344,9 @@ return e } })()|};
       {|alert({["__y2k_type"]: "quote", ["value"]: "a"})|};
     assert_ __POS__ {|(alert 'a)|}
       {|alert({["__y2k_type"]: "quote", ["value"]: "a"})|};
+    assert_ __POS__ {|(FIXME)|}
+      {|(function(){throw new Error(("" + "FIXME main.clj:1:1 - "))})()|};
+    assert_ __POS__ {|__POS__|} {|"main.clj:1:1"|};
   ]
 
 let linter_tests =

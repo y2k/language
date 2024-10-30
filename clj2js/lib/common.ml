@@ -1,3 +1,5 @@
+let loc (a, b, c, _) = Printf.sprintf "%s:%i:%i" a b c
+
 type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 
 let unknown_location = { line = 0; pos = 0; symbol = "" }
@@ -39,7 +41,8 @@ type context = {
 }
 [@@deriving show]
 
-let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
+let show_error_location filename m =
+  Printf.sprintf "%s:%d:%d" filename m.line m.pos
 
 let empty_context =
   {
@@ -87,8 +90,21 @@ module List = struct
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
 end
 
+let debug_show_cljexp nodes =
+  let rec debug_show_cljexp_ = function
+    | Atom (_, x) -> `String x
+    | RBList xs -> `List (List.map debug_show_cljexp_ xs)
+    | SBList xs -> `List (List.map debug_show_cljexp_ xs)
+    | CBList xs -> `List (List.map debug_show_cljexp_ xs)
+  in
+  (match nodes with
+  | [ n ] -> debug_show_cljexp_ n
+  | xs -> `List (List.map debug_show_cljexp_ xs))
+  |> Yojson.Safe.pretty_to_string
+
 let failnode prefix es =
-  es |> List.map show_cljexp
+  es
+  |> List.map (fun x -> debug_show_cljexp [ x ])
   |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
   |> Option.value ~default:""
   |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"
