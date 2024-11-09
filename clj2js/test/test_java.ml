@@ -57,7 +57,7 @@ let assert_strings =
       "package _;import a.b.List;class Main{public static Object b=(a \
        instanceof List);}";
     assert_ __POS__ "(ns _ (:import [a.b List]))(def b (as 'a List))"
-      "package _;import a.b.List;class Main{public static Object b=(List)a;}";
+      "package _;import a.b.List;class Main{public static Object b=((List)a);}";
     assert_ __POS__
       {|(ns im.y2k.chargetimer (:import [android.app Activity NotificationChannel]))(defn foo [x] x)|}
       {|package im.y2k.chargetimer;import android.app.Activity;import android.app.NotificationChannel;class Main{public static Object foo(final Object x){return x;}}|};
@@ -148,7 +148,7 @@ let assert_strings =
     assert_ __POS__
       {|(ns im.y2k.ch (:import [an.co Ctx AuMa]))
 (defn- foo [context] (as (.getSySe context Ctx/AU_SE) AuMa))|}
-      {|package im.y2k.ch;import an.co.Ctx;import an.co.AuMa;class Main{private static Object foo(final Object context){return (AuMa)context.getSySe(Ctx.AU_SE);}}|};
+      {|package im.y2k.ch;import an.co.Ctx;import an.co.AuMa;class Main{private static Object foo(final Object context){return ((AuMa)context.getSySe(Ctx.AU_SE));}}|};
     assert_ __POS__
       {|(ns im.y2k.ch (:import [an.co Ctx AuMa]))
 (defn- foo [context] (is (.getSySe context Ctx/AU_SE) AuMa))|}
@@ -185,6 +185,16 @@ let assert_strings =
  :methods [[^Override onCreate [Bundle] void]])
 |}
       {|public static class MainActivity extends Activity{public java.util.List<Object> state;@Override public void onCreate(Bundle p0){super.onCreate(p0);a_onCreate(this,p0);}}|};
+    assert_ __POS__ {|(into-array [1 2 3])|}
+      {|y2k.RT.into_array(java.util.List.of(1,2,3))|};
+    assert_ __POS__ {|(defn f [a] (as a String))|}
+      {|public static Object f(final Object a){return ((String)a);}|};
+    assert_ __POS__ {|(defn f [a] (as a "String[]"))|}
+      {|public static Object f(final Object a){return ((String[])a);}|};
+    (* Field access *)
+    assert_ __POS__ {|(.-length "")|} {|"".length|};
+    assert_ __POS__ {|(set! (.-length "") 1)|} {|"".length=1|};
+    assert_ __POS__ {|(println (.-length ""))|} {|y2k.RT.println("".length)|};
   ]
 
 let main () =

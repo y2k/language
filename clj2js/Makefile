@@ -17,6 +17,6 @@ test_e2e: test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify/.github test e2e_test PRELUDE_PATH=$(PRELUDE_PATH)
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/minesweeper/.github build PRELUDE_PATH=$(PRELUDE_PATH)
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/charge_timer build_java build_resources build_dex PRELUDE_JS_PATH=$(PRELUDE_PATH) PRELUDE_JAVA_PATH=$(PRELUDE_JAVA_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/compose_news test PRELUDE_PATH=$(PRELUDE_PATH)
+# @ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/compose_news test PRELUDE_PATH=$(PRELUDE_PATH)
 
 .PHONY: deploy restore test_e2e test

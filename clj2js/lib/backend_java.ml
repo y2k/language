@@ -66,6 +66,8 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
                args
                |> List.mapi (fun i a ->
                       match a with
+                      | Atom (_, a) when String.starts_with ~prefix:"\"" a ->
+                          Printf.sprintf "%s p%i" (unpack_string a) i
                       | Atom (_, a) -> Printf.sprintf "%s p%i" a i
                       | x -> failnode __LOC__ [ x ])
                |> List.reduce (Printf.sprintf "%s, %s")
@@ -120,15 +122,28 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let x = String.map (function '/' -> '.' | x -> x) x in
       Literal x
   (* ==================== *)
+  | RBList [Atom (_,"set!"); target; value] ->
+      let t = compile_ ctx target in
+      let v = compile_ ctx value in
+      let t = result_get_expression t in
+      let v = result_get_expression v in
+      Call ("", Printf.sprintf "%s=%s" t v)
   | RBList [ Atom (_, "quote"); arg ] -> compile_ ctx arg
   | RBList [ Atom (_, op); a; b ]
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<"
          || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
-  | RBList [ Atom (_, op); a; b ] when op = "is*" ->
+  | RBList [ Atom (_, "is*"); a; b ] ->
       make_operator a b (Printf.sprintf "(%s instanceof %s)")
-  | RBList [ Atom (_, op); a; b ] when op = "as*" ->
-      make_operator b a (Printf.sprintf "(%s)%s")
+  | RBList [ Atom (_, "as*"); instance; Atom (type_meta, type_) ] ->
+      let unescp_type =
+        if String.starts_with ~prefix:"\"" type_ then unpack_string type_
+        else type_
+      in
+      make_operator
+        (Atom (type_meta, unescp_type))
+        instance
+        (Printf.sprintf "((%s)%s)")
   | RBList [ Atom (_, "not"); x ] ->
       let rx = compile_ ctx x in
       let r_call = rx |> result_get_expression |> Printf.sprintf "!%s" in
@@ -415,6 +430,24 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
           | IfCall _ -> failwith __LOC__)
       in
       Literal result
+  (* Interop field read *)
+  | RBList [ Atom (_, "."); target; Atom (_, method_) ]
+    when String.starts_with ~prefix:":-" method_ ->
+      let sfname = String.sub method_ 2 (String.length method_ - 2) in
+      let target_r = compile_ ctx target in
+      let target_statments =
+        match target_r with
+        | Literal _ -> ""
+        | Call (xs, _) -> xs
+        | IfCall _ -> failwith __LOC__
+      in
+      let target_exp =
+        match target_r with
+        | Literal x -> x
+        | Call (_, x) -> x
+        | IfCall _ -> failwith __LOC__
+      in
+      Call (target_statments, Printf.sprintf "%s.%s" target_exp sfname)
   (* Interop method call *)
   | RBList (Atom (_, ".") :: target :: Atom (_, method_) :: args) ->
       let sfname = unpack_symbol method_ in
