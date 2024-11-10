@@ -15,8 +15,30 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       unpack_symbol x |> with_context *)
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
+  (* Version 2.0 *)
+  | RBList (Atom (_, "do*") :: _body) ->
+      (* failwith __LOC__ *)
+      let js_body =
+        _body |> List.map compile |> List.reduce (Printf.sprintf "%s\n%s")
+      in
+      with_context js_body
+  | RBList [ Atom (_, "bind*"); Atom (_, name) ] ->
+      let js_code = Printf.sprintf "let %s;" name in
+      with_context js_code
+  | RBList [ Atom (_, "bind*"); Atom (_, name); value ] ->
+      let js_code = Printf.sprintf "const %s = %s;" name (compile value) in
+      with_context js_code
+  | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
+      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
+      with_context js_code
+  | RBList [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ] ->
+      Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
+        (compile then_) (compile else_)
+      |> with_context
+  | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
+      Printf.sprintf "...%s" value |> with_context
+  (* Version 2.0 *)
   (* Expressions *)
-  (* | RBList [ Atom (_, "quote"); arg ] -> compile_ context arg *)
   | RBList (Atom (_, "module") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
@@ -153,7 +175,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         body |> List.map compile |> List.rev
         |> List.mapi (fun i x -> if i = 0 then "return " ^ x else x)
         |> List.rev
-        |> List.reduce (Printf.sprintf "%s; %s")
+        |> List.reduce (Printf.sprintf "%s;\n%s")
       in
       Printf.sprintf "((%s) => { %s })" sargs sbody |> with_context
   | RBList (Atom (_, "let*") :: SBList vals :: body) ->
@@ -214,7 +236,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 let run_linter prelude_macros filename (ctx, exp) =
   (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
 
-let main (filename : string) prelude_macros code =
+let main (log : bool) (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
     |> Frontend.parse_and_simplify
@@ -222,7 +244,6 @@ let main (filename : string) prelude_macros code =
          "prelude"
     |> fst
   in
-  code
-  |> Frontend.parse_and_simplify macros_ctx filename
-  |> run_linter prelude_macros filename
+  code |> Frontend.parse_and_simplify { macros_ctx with log } filename
+  (* |> run_linter prelude_macros filename *)
   |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim

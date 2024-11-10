@@ -32,6 +32,7 @@ type function_decl = { params : cljexp list; body : cljexp list }
 [@@deriving show]
 
 type context = {
+  log : bool;
   filename : string;
   loc : meta;
   start_line : int;
@@ -46,6 +47,7 @@ let show_error_location filename m =
 
 let empty_context =
   {
+    log = false;
     filename = "";
     loc = unknown_location;
     start_line = 0;

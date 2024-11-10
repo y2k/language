@@ -22,7 +22,7 @@ let () =
                   (* prerr_endline @@ Sys.getenv "PWD" ^ " | " ^ filename; *)
                   In_channel.(with_open_bin path input_all))
                 (fun _ ->
-                  Clj2js.main_js_with_strict filename prelude_macros code)
+                  Clj2js.main_js_with_strict false filename prelude_macros code)
         | "java" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_java filename prelude

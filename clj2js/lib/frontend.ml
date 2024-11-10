@@ -391,14 +391,21 @@ let remove_comments_from_module = function
   | x -> x
 
 let parse_and_simplify (prelude_context : context) filename code =
-  (* if filename <> "prelude" then
-    print_endline "==| DEBUG |==============================================\n"; *)
+  if prelude_context.log && filename <> "prelude" then
+    print_endline "==| DEBUG |==============================================\n";
   let sexp =
     RBList
       (Atom (unknown_location, "module") :: Frontend_parser.string_to_sexp code)
   in
-  (* if filename <> "prelude" then print_endline (show_cljexp sexp); *)
-  desugar_and_register { prelude_context with filename } sexp |> fun (ctx, x) ->
+  if prelude_context.log && filename <> "prelude" then
+    print_endline (debug_show_cljexp [ sexp ]);
+  let ctx, x = desugar_and_register { prelude_context with filename } sexp in
+  if prelude_context.log && filename <> "prelude" then
+    print_endline (debug_show_cljexp [ x ]);
+  let x = Statment_converter.convert x in
+  if prelude_context.log && filename <> "prelude" then
+    print_endline (debug_show_cljexp [ x ]);
   let x = remove_comments_from_module x in
-  (* if filename <> "prelude" then print_endline (show_cljexp x); *)
+  (* if prelude_context.log && filename <> "prelude" then
+     print_endline (debug_show_cljexp [ x ]); *)
   (ctx, x)
