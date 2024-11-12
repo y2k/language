@@ -6,10 +6,28 @@ let assert_with_import =
 let assert_file =
   Utils.assert_file (Lib.main_js true) "js/src/prelude.clj" ".js"
 
+let _test00 () =
+  let lines =
+    In_channel.with_open_bin "../../../test/samples/default_js.txt"
+      In_channel.input_lines
+  in
+  let result =
+    lines
+    |> List.map (fun line ->
+           print_endline @@ "COMPILE: " ^ line;
+           Utils.compile_code (Lib.main_js true) "js/src/prelude.clj" line)
+    |> List.fold_left (Printf.sprintf "%s\n\n%s") ""
+  in
+  Out_channel.with_open_bin "../../../test/samples/default_js.out.txt"
+    Out_channel.output_string result;
+  []
+
 (*  *)
 let test0 =
   [
-    assert_ __POS__ "(ns _) (defn foo [a] (fetch (spread a)))" "...";
+    (* assert_ __POS__ "(try 1 (catch :default e 2 3 e))" ""; *)
+    assert_ __POS__ "(ns _) (defn foo [a] (fetch (spread a)))"
+      "export const foo = ((a) => { const p__6 = a;;\nreturn fetch(...p__6) });";
     assert_ __POS__ {|(fetch (spread [1 2 3]))|}
       "const p__6 = [1, 2, 3];\nfetch(...p__6)";
     assert_ __POS__ {|(fetch (spread (alert [1 2 3])))|}
@@ -555,6 +573,7 @@ export default {["fetch"]: foo}|};
 
 let main () =
   [
+    (* ("JS - test00", _test00); *)
     ("JS - test0", test0);
     ("JS - test1", test1);
     ("JS - test2", test2);
