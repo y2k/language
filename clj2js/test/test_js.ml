@@ -1,3 +1,5 @@
+module U = Utils
+
 let assert_ = Utils.assert_ (Lib.main_js true) "js/src/prelude.clj"
 
 let assert_with_import =
@@ -6,26 +8,47 @@ let assert_with_import =
 let assert_file =
   Utils.assert_file (Lib.main_js true) "js/src/prelude.clj" ".js"
 
-let _test00 () =
-  let lines =
-    In_channel.with_open_bin "../../../test/samples/default_js.txt"
-      In_channel.input_lines
-  in
-  let result =
-    lines
-    |> List.map (fun line ->
-           print_endline @@ "COMPILE: " ^ line;
-           Utils.compile_code (Lib.main_js true) "js/src/prelude.clj" line)
-    |> List.fold_left (Printf.sprintf "%s\n\n%s") ""
-  in
-  Out_channel.with_open_bin "../../../test/samples/default_js.out.txt"
-    Out_channel.output_string result;
-  []
+(* module List = struct
+  include List
+
+  let reduce f xs =
+    match xs with
+    | [] -> failwith __LOC__
+    | [ x ] -> x
+    | x :: xs -> List.fold_left f x xs
+end *)
+
+(* let make_samples_test compiler name file_name =
+   Alcotest.test_case name `Quick (fun () ->
+       let actual =
+         In_channel.with_open_bin
+           ("../../../test/samples/" ^ file_name ^ ".txt")
+           In_channel.input_lines
+         |> List.map (fun line ->
+                (* print_endline @@ "COMPILE: " ^ line; *)
+                Utils.compile_code (compiler true) "js/src/prelude.clj" line)
+         |> List.reduce
+              (Printf.sprintf "%s\n================================\n%s")
+       in
+       let expected =
+         try
+           In_channel.with_open_bin
+             ("../../../test/samples/" ^ file_name ^ ".out.txt")
+             In_channel.input_all
+         with _ ->
+           Out_channel.with_open_bin
+             ("../../../test/samples/" ^ file_name ^ ".out.txt")
+             (Fun.flip Out_channel.output_string actual);
+           actual
+       in
+       if actual <> expected then Alcotest.fail __LOC__) *)
 
 (*  *)
 let test0 =
   [
-    (* assert_ __POS__ "(try 1 (catch :default e 2 3 e))" ""; *)
+    (* assert_ __POS__ "(and 1 2 3)" "(1 && 2 && 3)";
+       assert_ __POS__ "(and (alert 1) (alert 2) (alert 3))" "const p__6 = alert(1);\nconst p__7 = alert(2);\nconst p__8 = alert(3);\n(p__6 && p__7 && p__8)";
+       assert_ __POS__ "(try 1 (catch :default e 2 3 e))" ""; *)
     assert_ __POS__ "(ns _) (defn foo [a] (fetch (spread a)))"
       "export const foo = ((a) => { const p__6 = a;;\nreturn fetch(...p__6) });";
     assert_ __POS__ {|(fetch (spread [1 2 3]))|}
@@ -573,15 +596,15 @@ export default {["fetch"]: foo}|};
 
 let main () =
   [
-    (* ("JS - test00", _test00); *)
-    ("JS - test0", test0);
-    ("JS - test1", test1);
-    ("JS - test2", test2);
-    ("JS - Linter tests", linter_tests);
-    ( "JS - files",
-      [
-        assert_file __POS__ "hotreload-client.clj";
-        assert_file __POS__ "sample1.clj";
-        assert_file __POS__ "main.shared.clj";
-      ] );
+    ("JS - samples", [ U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js" ]);
+    (* ("JS - test0", test0);
+       ("JS - test1", test1);
+       ("JS - test2", test2);
+       ("JS - Linter tests", linter_tests); *)
+    (* ( "JS - files",
+       [
+         assert_file __POS__ "hotreload-client.clj";
+         assert_file __POS__ "sample1.clj";
+         assert_file __POS__ "main.shared.clj";
+       ] ); *)
   ]

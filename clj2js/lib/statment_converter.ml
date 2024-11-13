@@ -179,7 +179,7 @@ let rec convert (form : cljexp) : cljexp =
       let bindins = convert_key_value_to_bind bindins in
       let body = body |> List.concat_map (fun x -> unpack_do (convert x)) in
       RBList ([ Atom (unknown_location, "do*") ] @ bindins @ body)
-  | RBList ((Atom (_, "module") as m) :: args) ->
+  | RBList ((Atom (_, "do*") as m) :: args) ->
       let args =
         args
         |> List.concat_map (fun x ->

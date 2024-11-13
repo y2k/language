@@ -46,7 +46,7 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
                  else type1
                in
                Printf.sprintf "%s p%i" type2 i)
-        |> List.reduce (Printf.sprintf "%s,%s")
+        |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
   in
   let state =
     match params with
@@ -54,7 +54,7 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
     | params ->
         params
         |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-        |> List.reduce (Printf.sprintf "%s,%s")
+        |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
         |> Printf.sprintf "public %s(%s){state=java.util.List.of(%s);}" clsName
              cnt_params
   in
@@ -70,12 +70,12 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
                           Printf.sprintf "%s p%i" (unpack_string a) i
                       | Atom (_, a) -> Printf.sprintf "%s p%i" a i
                       | x -> failnode __LOC__ [ x ])
-               |> List.reduce (Printf.sprintf "%s, %s")
+               |> List.reduce __LOC__ (Printf.sprintf "%s, %s")
              in
              let args__ =
                args
                |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-               |> List.reduce (Printf.sprintf "%s,%s")
+               |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
              in
              let annot = match m.symbol with "" -> "" | x -> "@" ^ x ^ " " in
              let return_ =
@@ -89,7 +89,7 @@ let generate_class (compile_exp : cljexp -> result2) prefix params clsName
              Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot rtype
                mname args_ call_super return_ prefix mname args__
          | x -> failnode __LOC__ [ x ])
-    |> List.reduce (Printf.sprintf "%s%s")
+    |> List.reduce __LOC__ (Printf.sprintf "%s%s")
   in
   Printf.sprintf
     "public static class %s extends %s{public java.util.List<Object> \
@@ -122,7 +122,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let x = String.map (function '/' -> '.' | x -> x) x in
       Literal x
   (* ==================== *)
-  | RBList [Atom (_,"set!"); target; value] ->
+  | RBList [ Atom (_, "set!"); target; value ] ->
       let t = compile_ ctx target in
       let v = compile_ ctx value in
       let t = result_get_expression t in
@@ -148,11 +148,11 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       let rx = compile_ ctx x in
       let r_call = rx |> result_get_expression |> Printf.sprintf "!%s" in
       Call (result_get_statments rx, r_call)
-  (* Function definition *)
   | CBList xs ->
       compile_ ctx (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
   | SBList xs ->
       compile_ ctx (RBList (Atom (unknown_location, "java.util.List/of") :: xs))
+  (* Function definition *)
   | RBList
       [
         Atom (_, "def");
@@ -298,9 +298,9 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
                             classes
                           |> List.map (fun c ->
                                  Printf.sprintf "import %s.%s;" pkg c)
-                          |> List.reduce (Printf.sprintf "%s%s")
+                          |> List.reduce __LOC__ (Printf.sprintf "%s%s")
                       | n -> failnode __LOC__ [ n ])
-                 |> List.reduce (Printf.sprintf "%s%s")
+                 |> List.reduce __LOC__ (Printf.sprintf "%s%s")
              | n -> failnode __LOC__ [ n ])
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
@@ -379,7 +379,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       Call (val_statments ^ body_statments ^ result_statments, result_expresion)
   | RBList (Atom (_, "comment") :: _) -> Literal ""
-  | RBList (Atom (_, "module") :: body) ->
+  | RBList (Atom (_, "do*") :: body) ->
       let ns_, body =
         match body with
         | (RBList (Atom (_, "ns") :: _) as ns) :: body ->
@@ -551,7 +551,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 let run_linter prelude_macros filename (ctx, exp) =
   (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
 
-let main (filename : string) prelude_macros code =
+let main log (filename : string) prelude_macros code =
   let macros_ctx =
     prelude_macros
     |> Frontend.parse_and_simplify
@@ -560,8 +560,8 @@ let main (filename : string) prelude_macros code =
     |> fst
   in
   code
-  |> Frontend.parse_and_simplify macros_ctx filename
-  |> run_linter prelude_macros filename
+  |> Frontend.parse_and_simplify { macros_ctx with log } filename
+  (* |> run_linter prelude_macros filename *)
   |> (fun (ctx, exp) -> compile_ ctx exp)
   |> (function
        | Literal x -> x | Call (xs, x) -> xs ^ x | IfCall (xs, x) -> xs ^ x)

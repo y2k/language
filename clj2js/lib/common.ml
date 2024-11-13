@@ -84,12 +84,12 @@ module List = struct
     | a :: b :: rest -> (a, b) :: split_into_pairs rest
     | _ -> []
 
-  let reduce f xs =
+  let reduce loc f xs =
     match xs with
-    | [] -> failwith "[REDUCE] List is empty"
+    | [] -> failwith loc
     | xs -> List.fold_left f (List.hd xs) (List.tl xs)
 
-  let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce f xs)
+  let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
 
 let debug_show_cljexp nodes =

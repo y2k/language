@@ -7,6 +7,34 @@ let compile_code compile prelude_path code =
   in
   NameGenerator.with_scope (fun _ -> compile "main.clj" prelude code)
 
+let make_samples_test compiler prelude_path file_name =
+  Alcotest.test_case file_name `Quick (fun () ->
+      let actual =
+        In_channel.with_open_bin
+          ("../../../test/samples/" ^ file_name ^ ".txt")
+          In_channel.input_lines
+        |> List.mapi (fun index line ->
+               print_endline @@ "COMPILE (" ^ file_name ^ ".txt:"
+               ^ string_of_int (index + 1)
+               ^ "): " ^ line;
+               let r = compile_code compiler prelude_path line in
+               Printf.sprintf "===| %i |===========================\n%s\n"
+                 (index + 1) r)
+        |> List.reduce __LOC__ (Printf.sprintf "%s%s")
+      in
+      let expected =
+        try
+          In_channel.with_open_bin
+            ("../../../test/samples/" ^ file_name ^ ".out.txt")
+            In_channel.input_all
+        with _ ->
+          Out_channel.with_open_bin
+            ("../../../test/samples/" ^ file_name ^ ".out.txt")
+            (Fun.flip Out_channel.output_string actual);
+          actual
+      in
+      if actual <> expected then Alcotest.fail __LOC__)
+
 let assert_ compile prelude_path pos code expected =
   let inner_assert () =
     let actual = compile_code compile prelude_path code in

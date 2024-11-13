@@ -1,5 +1,9 @@
-let assert_ = Utils.assert_ Lib.main_java "java/src/prelude.clj"
-let assert_file = Utils.assert_file Lib.main_java "java/src/prelude.clj" ".java"
+module U = Utils
+
+let assert_ = Utils.assert_ (Lib.main_java true) "java/src/prelude.clj"
+
+let assert_file =
+  Utils.assert_file (Lib.main_java true) "java/src/prelude.clj" ".java"
 
 let assert_strings =
   [
@@ -199,6 +203,11 @@ let assert_strings =
 
 let main () =
   [
-    ("Java - string", assert_strings);
-    ("Java - files", [ assert_file __POS__ "main.shared.clj" ]);
+    ( "Java - samples",
+      [
+        U.make_samples_test (Lib.main_java true) "java/src/prelude.clj"
+          "samples.java";
+      ] );
+    (* ("Java - string", assert_strings);
+       ("Java - files", [ assert_file __POS__ "main.shared.clj" ]); *)
   ]

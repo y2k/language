@@ -244,6 +244,8 @@ let rec desugar_and_register (context : context) node : context * cljexp =
             ^ __LOC__
       in
       loop bindings |> expand_core_macro1
+  | RBList (Atom (l, "comment") :: _) ->
+      RBList [ Atom (l, "do*") ] |> with_context
   | RBList (Atom (l, "fn") :: SBList args :: body) ->
       let result =
         match desugar_fn_arguments expand_core_macro2 args with
@@ -300,7 +302,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       (context, fn)
   | RBList (Atom (_, "->") :: body) ->
       body
-      |> List.reduce (fun acc x ->
+      |> List.reduce __LOC__ (fun acc x ->
              match x with
              | Atom (l, z) -> RBList [ Atom (l, z); acc ]
              | RBList (a :: bs) -> RBList (a :: acc :: bs)
@@ -308,7 +310,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       |> expand_core_macro1
   | RBList (Atom (_, "->>") :: body) ->
       body
-      |> List.reduce (fun acc x ->
+      |> List.reduce __LOC__ (fun acc x ->
              match x with
              | Atom (l, z) -> RBList [ acc; Atom (l, z) ]
              | RBList (a :: bs) -> RBList ((a :: bs) @ [ acc ])
@@ -318,12 +320,12 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       (* print_endline @@ "[LOG] defmacro: " ^ name; *)
       ( { context with macros = StringMap.add name macro context.macros },
         RBList [ Atom (l, "comment") ] )
-  | RBList ((Atom (_, "module") as x) :: body) ->
+  | RBList ((Atom (_, "do*") as x) :: body) ->
       let ctx2, exp2 = List.fold_left_map desugar_and_register context body in
       let xs =
         x :: exp2
         |> List.concat_map (function
-             | RBList (Atom (_, "module") :: xs) -> xs
+             | RBList (Atom (_, "do*") :: xs) -> xs
              | x -> [ x ])
       in
       (ctx2, RBList xs)
@@ -380,14 +382,14 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | x -> failnode __LOC__ [ x ]
 
 let remove_comments_from_module = function
-  | RBList (Atom (l, "module") :: xs) -> (
+  | RBList (Atom (l, "do*") :: xs) -> (
       let xs =
         xs
         |> List.filter (function
              | RBList [ Atom (_, "comment") ] -> false
              | _ -> true)
       in
-      match xs with [ x ] -> x | xs -> RBList (Atom (l, "module") :: xs))
+      match xs with [ x ] -> x | xs -> RBList (Atom (l, "do*") :: xs))
   | x -> x
 
 let parse_and_simplify (prelude_context : context) filename code =
@@ -395,7 +397,7 @@ let parse_and_simplify (prelude_context : context) filename code =
     print_endline "==| DEBUG |==============================================\n";
   let sexp =
     RBList
-      (Atom (unknown_location, "module") :: Frontend_parser.string_to_sexp code)
+      (Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code)
   in
   if prelude_context.log && filename <> "prelude" then
     print_endline (debug_show_cljexp [ sexp ]);

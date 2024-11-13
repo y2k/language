@@ -25,7 +25,7 @@ let () =
                   Clj2js.main_js_with_strict false filename prelude_macros code)
         | "java" ->
             let prelude = read_code_file Sys.argv.(3) in
-            Clj2js.main_java filename prelude
+            Clj2js.main_java false filename prelude
         | "repl" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_interpreter filename prelude
