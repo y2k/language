@@ -204,10 +204,8 @@ let assert_strings =
 let main () =
   [
     ( "Java - samples",
-      [
-        U.make_samples_test (Lib.main_java true) "java/src/prelude.clj"
-          "samples.java";
-      ] );
+      U.make_samples_test (Lib.main_java true) "java/src/prelude.clj"
+        "samples.java" );
     (* ("Java - string", assert_strings);
        ("Java - files", [ assert_file __POS__ "main.shared.clj" ]); *)
   ]

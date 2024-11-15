@@ -85,12 +85,7 @@ let convert_items convert args =
 
 let rec convert (form : cljexp) : cljexp =
   match form with
-  (* | RBList [ (Atom (_, "spread") as spread); value ] -> (
-      let values = convert value |> unpack_do in
-      print_endline @@ "LOG4: " ^ debug_show_cljexp values;
-      match values with
-      | [ _ ] -> form
-      | values -> wrap_do (butlast values @ [ RBList [ spread; last values ] ])) *)
+  | RBList (Atom (_, "quote") :: _) as form -> form
   | CBList items ->
       let converted_items = convert_items convert items in
       (* print_endline @@ "LOG2: " ^ show_code_builder converted_items; *)

@@ -9,14 +9,14 @@ let assert_file =
   Utils.assert_file (Lib.main_js true) "js/src/prelude.clj" ".js"
 
 (* module List = struct
-  include List
+     include List
 
-  let reduce f xs =
-    match xs with
-    | [] -> failwith __LOC__
-    | [ x ] -> x
-    | x :: xs -> List.fold_left f x xs
-end *)
+     let reduce f xs =
+       match xs with
+       | [] -> failwith __LOC__
+       | [ x ] -> x
+       | x :: xs -> List.fold_left f x xs
+   end *)
 
 (* let make_samples_test compiler name file_name =
    Alcotest.test_case name `Quick (fun () ->
@@ -596,7 +596,9 @@ export default {["fetch"]: foo}|};
 
 let main () =
   [
-    ("JS - samples", [ U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js" ]);
+    ( "JS - samples",
+      U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js"
+    );
     (* ("JS - test0", test0);
        ("JS - test1", test1);
        ("JS - test2", test2);

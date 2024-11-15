@@ -7,33 +7,77 @@ let compile_code compile prelude_path code =
   in
   NameGenerator.with_scope (fun _ -> compile "main.clj" prelude code)
 
+let split_string str sep =
+  let regexp_sep = Str.regexp_string sep in
+  Str.split regexp_sep str
+
+let fold_samples xs (line : string) =
+  if line = "=============================" then "" :: xs
+  else
+    match List.hd xs with
+    | "" -> line :: List.tl xs
+    | x -> (x ^ "\n" ^ line) :: List.tl xs
+
 let make_samples_test compiler prelude_path file_name =
-  Alcotest.test_case file_name `Quick (fun () ->
-      let actual =
-        In_channel.with_open_bin
-          ("../../../test/samples/" ^ file_name ^ ".txt")
-          In_channel.input_lines
-        |> List.mapi (fun index line ->
-               print_endline @@ "COMPILE (" ^ file_name ^ ".txt:"
-               ^ string_of_int (index + 1)
-               ^ "): " ^ line;
+  let output_file_name = "../../../test/samples/" ^ file_name ^ ".out.txt" in
+  let samples =
+    In_channel.with_open_bin
+      ("../../../test/samples/" ^ file_name ^ ".txt")
+      In_channel.input_lines
+  in
+  let expected =
+    try
+      In_channel.with_open_bin output_file_name
+        (In_channel.fold_lines fold_samples [])
+      |> List.rev
+    with _ ->
+      let compiled =
+        samples
+        |> List.map (fun line ->
                let r = compile_code compiler prelude_path line in
-               Printf.sprintf "===| %i |===========================\n%s\n"
-                 (index + 1) r)
-        |> List.reduce __LOC__ (Printf.sprintf "%s%s")
+               "=============================\n" ^ r)
+        |> List.reduce __LOC__ (Printf.sprintf "%s\n%s")
       in
-      let expected =
-        try
-          In_channel.with_open_bin
-            ("../../../test/samples/" ^ file_name ^ ".out.txt")
-            In_channel.input_all
-        with _ ->
-          Out_channel.with_open_bin
-            ("../../../test/samples/" ^ file_name ^ ".out.txt")
-            (Fun.flip Out_channel.output_string actual);
-          actual
-      in
-      if actual <> expected then Alcotest.fail __LOC__)
+      Out_channel.with_open_bin output_file_name
+        (Fun.flip Out_channel.output_string compiled);
+      []
+  in
+  if expected = [] then []
+  else
+    samples
+    |> List.map2
+         (fun expected line ->
+           Alcotest.test_case line `Quick (fun () ->
+               let actual : string = compile_code compiler prelude_path line in
+               Alcotest.(check ~pos:__POS__ string) "#" expected actual))
+         expected
+
+(* let actual =
+     In_channel.with_open_bin
+       ("../../../test/samples/" ^ file_name ^ ".txt")
+       In_channel.input_lines
+     |> List.mapi (fun index line ->
+            print_endline @@ "COMPILE (" ^ file_name ^ ".txt:"
+            ^ string_of_int (index + 1)
+            ^ "): " ^ line;
+            let r = compile_code compiler prelude_path line in
+            Printf.sprintf "===| %i |===========================\n%s\n"
+              (index + 1) r)
+     |> List.reduce __LOC__ (Printf.sprintf "%s%s")
+   in *)
+(* Alcotest.test_case file_name `Quick (fun () ->
+    let expected =
+      try
+        In_channel.with_open_bin
+          ("../../../test/samples/" ^ file_name ^ ".out.txt")
+          In_channel.input_all
+      with _ ->
+        Out_channel.with_open_bin
+          ("../../../test/samples/" ^ file_name ^ ".out.txt")
+          (Fun.flip Out_channel.output_string actual);
+        actual
+    in
+    if actual <> expected then Alcotest.fail __LOC__) *)
 
 let assert_ compile prelude_path pos code expected =
   let inner_assert () =
