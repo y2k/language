@@ -32,10 +32,71 @@ java.util.Objects.equals("a", "b")
 =============================
 ("a">="b")
 =============================
-var p__1 = ()->{
+var p__1 = document.foo();
+Object p__3;
+if (p__1) {
+p__3 = document.bar();
+} else {
+p__3 = p__1;
+}
+p__3
+=============================
+document.foo()
+=============================
+var p__1 = alert(1);
+Object p__4;
+if (p__1) {
+var p__5 = fetch(2);
+var p__2 = alert(p__5);
+Object p__7;
+if (p__2) {
+p__7 = alert(3);
+} else {
+p__7 = p__2;
+}
+p__4 = p__7;
+} else {
+p__4 = p__1;
+}
+p__4
+=============================
+var p__1 = alert(1);
+Object p__4;
+if (p__1) {
+var p__2 = alert(2);
+Object p__6;
+if (p__2) {
+p__6 = alert(3);
+} else {
+p__6 = p__2;
+}
+p__4 = p__6;
+} else {
+p__4 = p__1;
+}
+p__4
+=============================
+var p__1 = 1;
+Object p__4;
+if (p__1) {
+var p__2 = 2;
+Object p__6;
+if (p__2) {
+p__6 = 3;
+} else {
+p__6 = p__2;
+}
+p__4 = p__6;
+} else {
+p__4 = p__1;
+}
+p__4
+=============================
+1
+=============================
+y2k.RT.try_(()->{
 return y2k.RT.str();
-};
-y2k.RT.try_(p__1)
+})
 =============================
 quote(foo.bar.Baz.class)
 =============================
@@ -44,6 +105,15 @@ quote(foo.bar.Baz.class)
 public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
+=============================
+public static Object foo=new("java.util.concurrent.atomic.AtomicReference", {});
+=============================
+public static Object foo=var p__1 = oof(1);
+bar(p__1);
+=============================
+public static Object foo=bar(1);
+=============================
+public static Object foo=1;
 =============================
 public static Object LIMIT_CHARGE=80;
 =============================
@@ -281,8 +351,14 @@ return y2k.RT.str("b", "c");
 =============================
 new("Foo", "a", "b", 1)
 =============================
-var p__1 = quote(:name(MainActivity, "extends", Activity, "constructors", {[[]]: []}, "prefix", "a_", "methods", [[onCreate, [Bundle], void]]));
-gen-class*(p__1)
+public static class MainActivity extends Activity {
+public java.util.List<Object> state;
+@Override public void onCreate(Bundle p0, int p1) {
+super.onCreate(p0, p1);
+a_onCreate(this, p0, p1); }
+public String foo(int p0, double p1) {
+return (String)a_foo(this, p0, p1); }
+}
 =============================
 y2k.RT.get("xs", 1)
 =============================
@@ -445,24 +521,89 @@ public static Object foo (final Object x) {
 return x;
 }}
 =============================
+var p__1 = document.foo();
+Object p__3;
+if (p__1) {
+p__3 = p__1;
+} else {
+p__3 = document.bar();
+}
+p__3
+=============================
+document.foo()
+=============================
+var p__1 = alert(1);
+Object p__4;
+if (p__1) {
+p__4 = p__1;
+} else {
+var p__5 = fetch(2);
+var p__2 = alert(p__5);
+Object p__7;
+if (p__2) {
+p__7 = p__2;
+} else {
+p__7 = alert(3);
+}
+p__4 = p__7;
+}
+p__4
+=============================
+var p__1 = alert(1);
+Object p__4;
+if (p__1) {
+p__4 = p__1;
+} else {
+var p__2 = alert(2);
+Object p__6;
+if (p__2) {
+p__6 = p__2;
+} else {
+p__6 = alert(3);
+}
+p__4 = p__6;
+}
+p__4
+=============================
+var p__1 = 1;
+Object p__4;
+if (p__1) {
+p__4 = p__1;
+} else {
+var p__2 = 2;
+Object p__6;
+if (p__2) {
+p__6 = p__2;
+} else {
+p__6 = 3;
+}
+p__4 = p__6;
+}
+p__4
+=============================
+1
+=============================
 y2k.RT.println("a", 1, "b")
 =============================
 var p__1 = "".length;
 y2k.RT.println(p__1)
 =============================
-var p__1 = "".length;
-set!(p__1, 1)
+y2k.RT.println((p__1)->{
+var a = y2k.RT.get(p__1, 0);;
+return a;
+})
+=============================
+"".length = 1;
 =============================
 y2k.RT.str("a", "b", 3)
 =============================
 y2k.RT.str("Context/AUDIO_SERVICE")
 =============================
-var p__2 = (p__1)->{
+y2k.RT.str((p__1)->{
 var a = y2k.RT.get(p__1, 0);;
 var b = y2k.RT.get(p__1, 1);;
 return java.util.Objects.equals(a, b);
-};
-y2k.RT.str(p__2)
+})
 =============================
 Object p__3;
 if ("a") {
@@ -494,3 +635,8 @@ var p__1 = y2k.RT.str(1);
 [1]
 =============================
 {["a"]: "b", ["c"]: "d"}
+=============================
+{["fetch"]: ()->{
+var world = 0;;
+return 1;
+}}

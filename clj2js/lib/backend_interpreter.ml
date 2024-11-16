@@ -138,7 +138,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           (ctx, Atom ({ m with pos = m2.pos; line = m2.line }, arg_val))
       | x, ctx -> (ctx, x))
   (* /Resolve scope value *)
-  | RBList (Atom (_, "module") :: body) ->
+  | RBList (Atom (_, "do") :: body) ->
       let context2, results =
         body |> List.fold_left_map (fun ctx x -> interpret ctx x) context
       in

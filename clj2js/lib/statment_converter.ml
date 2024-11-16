@@ -5,16 +5,25 @@ type code_builder = { new_code : cljexp list; args : cljexp list }
 
 let butlast xs = match List.rev xs with [] -> [] | _ :: tail -> List.rev tail
 let last xs = match List.rev xs with [] -> failwith __LOC__ | x :: _ -> x
-let unpack_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
-let wrap_do xs = RBList (Atom (unknown_location, "do*") :: xs)
+let unpack_do = function RBList (Atom (_, "do") :: xs) -> xs | x -> [ x ]
+let pack_do xs = RBList (Atom (unknown_location, "do") :: xs)
 
-let convert_items convert args =
+let convert_args convert args =
   args
   |> List.fold_left
        (fun acc arg ->
          (* print_endline @@ "LOG: " ^ show_cljexp arg; *)
          match arg with
+         | SBList [] as x -> { acc with args = acc.args @ [ x ] }
+         | CBList [] as x -> { acc with args = acc.args @ [ x ] }
          | Atom _ -> { acc with args = acc.args @ [ arg ] }
+         | RBList (Atom (_, "fn*") :: _) as arg ->
+             (* print_endline @@ "LOG: 1.1\n" ^ show_cljexp arg; *)
+             let arg2 = convert arg in
+             (* print_endline @@ "LOG: 1.2\n" ^ show_cljexp arg2; *)
+             { acc with args = acc.args @ [ arg2 ] }
+         | RBList (Atom (_, "quote") :: _) ->
+             { acc with args = acc.args @ [ arg ] }
          | RBList [ (Atom (_, "spread") as spread); value ] -> (
              let values = convert value |> unpack_do in
              match values with
@@ -57,7 +66,7 @@ let convert_items convert args =
              let nn = NameGenerator.get_new_var () in
              let new_code =
                match convert arg with
-               | RBList (Atom (_, "do*") :: exp_arg_items) ->
+               | RBList (Atom (_, "do") :: exp_arg_items) ->
                    (exp_arg_items |> List.rev |> List.tl |> List.rev)
                    @ [
                        RBList
@@ -82,20 +91,90 @@ let convert_items convert args =
                args = acc.args @ [ Atom (unknown_location, nn) ];
              })
        { new_code = []; args = [] }
+(* |> fun x ->
+   print_endline @@ "LOG 4.1\n" ^ show_code_builder x;
+   x *)
+
+let unpack_field_name tr = String.sub tr 2 (String.length tr - 2)
+let last xs = xs |> List.rev |> List.hd
+let butlast xs = xs |> List.rev |> List.tl |> List.rev
+
+let rec flatter_binds node =
+  (* print_endline @@ __LOC__ ^ " " ^ debug_show_cljexp [ node ]; *)
+  (* failnode __LOC__ [ node ] |> ignore; *)
+  match node with
+  | RBList [ (Atom (m, "bind*") as b); target; value ] -> (
+      match value with
+      | Atom _ as v -> RBList [ b; target; v ]
+      | RBList (Atom (_, "bind*") :: t2 :: _) as v ->
+          RBList [ Atom (m, "do"); v; RBList [ b; target; t2 ] ]
+      | RBList (Atom (_, "do") :: xs) ->
+          RBList
+            (List.concat
+               [
+                 [ Atom (m, "do") ];
+                 butlast xs;
+                 [ RBList [ b; target; last xs ] ];
+               ])
+          (* failnode __LOC__ [ b; target; value ] *)
+      | v -> RBList [ b; target; v ])
+  | RBList ((Atom (_, "do") as d) :: xs) ->
+      let ys =
+        xs
+        |> List.concat_map (fun x ->
+               match flatter_binds x with
+               | RBList (Atom (_, "do") :: xs) -> xs
+               | x -> [ x ])
+      in
+      RBList (d :: ys)
+  | xs -> xs
 
 let rec convert (form : cljexp) : cljexp =
+  (* print_endline @@ __LOC__ ^ " " ^ debug_show_cljexp [ form ]; *)
   match form with
+  | RBList [ Atom (m, "set!"); target; value ] -> (
+      match target with
+      | Atom _ -> RBList [ Atom (m, "bind-update*"); target; value ]
+      | RBList [ Atom (_, "."); Atom (m2, tl); Atom (_, tr) ] ->
+          RBList
+            [
+              Atom (m, "bind-update*");
+              Atom (m2, tl ^ "." ^ unpack_field_name tr);
+              value;
+            ]
+      | RBList [ Atom (_, "."); t; Atom (_, field) ] ->
+          let t = convert t in
+          let var = NameGenerator.get_new_var () in
+          (* let t = RBList [ Atom (m, "bind*"); Atom (m, var); t ] in *)
+          let t =
+            RBList
+              [
+                Atom (m, "do");
+                RBList [ Atom (m, "bind*"); Atom (m, var); t ];
+                RBList
+                  [
+                    Atom (m, "bind-update*");
+                    Atom (m, var ^ "." ^ unpack_field_name field);
+                    value;
+                  ];
+              ]
+          in
+          let t = flatter_binds t in
+          (* failnode __LOC__ [ target; t ] |> ignore; *)
+          t
+      | n -> failnode __LOC__ [ n ])
   | RBList (Atom (_, "quote") :: _) as form -> form
   | CBList items ->
-      let converted_items = convert_items convert items in
+      let converted_items = convert_args convert items in
       (* print_endline @@ "LOG2: " ^ show_code_builder converted_items; *)
-      if converted_items.new_code = [] then form
-      else wrap_do (converted_items.new_code @ [ CBList converted_items.args ])
+      if converted_items.new_code = [] then CBList converted_items.args
+      else pack_do (converted_items.new_code @ [ CBList converted_items.args ])
   | SBList items ->
-      let converted_items = convert_items convert items in
-      if converted_items.new_code = [] then form
-      else wrap_do (converted_items.new_code @ [ SBList converted_items.args ])
+      let converted_items = convert_args convert items in
+      if converted_items.new_code = [] then SBList converted_items.args
+      else pack_do (converted_items.new_code @ [ SBList converted_items.args ])
   | RBList [ Atom (_, "if"); cond; then_; else_ ] ->
+      (* print_endline @@ __LOC__ ^ " " ^ debug_show_cljexp [ form ]; *)
       let cond = convert cond in
       let cond_var = NameGenerator.get_new_var () in
       let result_var = NameGenerator.get_new_var () in
@@ -115,9 +194,10 @@ let rec convert (form : cljexp) : cljexp =
         in
         match butlast nodes with
         | [] -> update_result
-        | xs -> wrap_do (xs @ [ update_result ])
+        | xs -> pack_do (xs @ [ update_result ])
       in
       let unpacked_cond = unpack_do cond in
+      (* print_endline @@ __LOC__ ^ " " ^ debug_show_cljexp unpacked_cond; *)
       let cond_is_complex =
         match unpacked_cond with [ Atom _ ] -> false | _ -> true
       in
@@ -125,12 +205,12 @@ let rec convert (form : cljexp) : cljexp =
         (List.concat
            [
              [
-               Atom (unknown_location, "do*");
+               Atom (unknown_location, "do");
                RBList
                  [
                    Atom (unknown_location, "bind*");
                    Atom (unknown_location, result_var);
-                   (* Atom (unknown_location, "null"); *)
+                   (* Atom (unknown_location, "undefined"); *)
                  ];
              ];
              unpacked_cond |> butlast;
@@ -159,9 +239,14 @@ let rec convert (form : cljexp) : cljexp =
   | RBList [ (Atom (_, "def") as def); name; args ] ->
       RBList [ def; name; convert args ]
   | RBList ((Atom (_, "fn*") as fn) :: (SBList _ as args) :: body) ->
+      (* print_endline @@ "LOG2: " ^ show_cljexp form; *)
       let body = body |> List.concat_map (fun x -> unpack_do (convert x)) in
       RBList (fn :: args :: body)
+      (* |> fun r ->
+         print_endline @@ "LOG 2.2: " ^ show_cljexp r;
+         r *)
   | RBList (Atom (_, "let*") :: SBList bindins :: body) ->
+      (* print_endline @@ "LOG3: " ^ show_cljexp form; *)
       let rec convert_key_value_to_bind = function
         | [] -> []
         | key :: value :: tail ->
@@ -173,23 +258,26 @@ let rec convert (form : cljexp) : cljexp =
       in
       let bindins = convert_key_value_to_bind bindins in
       let body = body |> List.concat_map (fun x -> unpack_do (convert x)) in
-      RBList ([ Atom (unknown_location, "do*") ] @ bindins @ body)
-  | RBList ((Atom (_, "do*") as m) :: args) ->
+      RBList ([ Atom (unknown_location, "do") ] @ bindins @ body)
+      (* |> fun r ->
+         print_endline @@ "LOG 3.2: " ^ show_cljexp r;
+         r *)
+  | RBList ((Atom (_, "do") as m) :: args) ->
       let args =
         args
         |> List.concat_map (fun x ->
                match convert x with
-               | RBList (Atom (_, "do*") :: xs) -> xs
+               | RBList (Atom (_, "do") :: xs) -> xs
                | x -> [ x ])
       in
       RBList (m :: args)
   | RBList (Atom (_, "ns") :: _) -> form
   | RBList ((Atom _ as fname) :: args) ->
-      (* print_endline @@ "LOG1.1: "
-         ^ (args |> List.map show_cljexp
-           |> List.fold_left (Printf.sprintf "%s, %s") ""); *)
-      let new_args = convert_items convert args in
-      (* print_endline @@ "LOG1.2: " ^ show_code_builder new_args; *)
-      if new_args.new_code = [] then form
-      else wrap_do (new_args.new_code @ [ RBList (fname :: new_args.args) ])
+      (* print_endline @@ "LOG 5.1:\n" ^ debug_show_cljexp [ form ]; *)
+      let new_args = convert_args convert args in
+      if new_args.new_code = [] then RBList (fname :: new_args.args)
+      else pack_do (new_args.new_code @ [ RBList (fname :: new_args.args) ])
+      (* |> fun r ->
+         print_endline @@ "LOG 5.2:\n" ^ debug_show_cljexp [ r ];
+         r *)
   | _ -> form

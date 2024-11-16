@@ -34,7 +34,7 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
         params
         |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
         |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
-        |> Printf.sprintf "public %s(%s){state=java.util.List.of(%s);}" clsName
+        |> Printf.sprintf "public %s(%s) {\nstate=java.util.List.of(%s);\n}" clsName
              cnt_params
   in
   let ms =
@@ -54,7 +54,7 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
              let args__ =
                args
                |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-               |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
+               |> List.reduce __LOC__ (Printf.sprintf "%s, %s")
              in
              let annot = match m.symbol with "" -> "" | x -> "@" ^ x ^ " " in
              let return_ =
@@ -62,17 +62,17 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
              in
              let call_super =
                if annot = "@Override " then
-                 Printf.sprintf "super.%s(%s);" mname args__
+                 Printf.sprintf "super.%s(%s);\n" mname args__
                else ""
              in
-             Printf.sprintf "%spublic %s %s(%s){%s%s%s%s(this,%s);}" annot rtype
+             Printf.sprintf "%spublic %s %s(%s) {\n%s%s%s%s(this, %s); }\n" annot rtype
                mname args_ call_super return_ prefix mname args__
          | x -> failnode __LOC__ [ x ])
     |> List.reduce __LOC__ (Printf.sprintf "%s%s")
   in
   Printf.sprintf
-    "public static class %s extends %s{public java.util.List<Object> \
-     state;%s%s}"
+    "public static class %s extends %s {\npublic java.util.List<Object> \
+     state;\n%s%s}"
     clsName superCls state ms
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
@@ -94,7 +94,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<"
          || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
-  | RBList (Atom (_, "do*") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
+  | RBList (Atom (_, "do") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos =
         (String.rindex_opt context.filename '/' |> Option.value ~default:(-1))
         + 1
@@ -116,7 +116,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Printf.sprintf "%sclass %s{\n%s}" ns_ cls_name
       |> with_context
   (* Version 2.0 *)
-  | RBList (Atom (_, "do*") :: _body) ->
+  | RBList (Atom (_, "do") :: _body) ->
       (* failwith __LOC__ *)
       let js_body =
         _body |> List.map compile

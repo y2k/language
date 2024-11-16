@@ -14,7 +14,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Version 2.0 *)
-  | RBList (Atom (_, "do*") :: _body) ->
+  | RBList (Atom (_, "do") :: _body) ->
       (* failwith __LOC__ *)
       let js_body =
         _body |> List.map compile
@@ -39,7 +39,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "...%s" value |> with_context
   (* Version 2.0 *)
   (* Expressions *)
-  (* | RBList (Atom (_, "do*") :: body) ->
+  (* | RBList (Atom (_, "do") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
       |> with_context *)
@@ -76,17 +76,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       args |> List.map compile
       |> List.mapi (fun i x -> if i mod 2 = 0 then unpack_string x else x)
       |> List.reduce __LOC__ ( ^ ) |> with_context
-  (* | RBList [ Atom (_, "assoc"); map; Atom (_, key); value ]
-     when String.starts_with ~prefix:":" key ->
-       Printf.sprintf "{ ...%s, [%s]: %s }" (compile map)
-         (String.sub key 1 (String.length key - 1))
-         (compile value)
-       |> with_context *)
-  (* | RBList [ Atom (_, "assoc"); map; key; value ] ->
-      Printf.sprintf
-        "(function(){const temp={...%s};temp[%s]=%s;return temp})()"
-        (compile map) (compile key) (compile value)
-      |> with_context *)
   | RBList [ Atom (_, "assoc"); map; key; value ] ->
       Printf.sprintf "{ ...%s, [%s]: %s }" (compile map) (compile key)
         (compile value)
@@ -178,24 +167,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.rev
         |> List.reduce __LOC__ (Printf.sprintf "%s;\n%s")
       in
-      Printf.sprintf "((%s) => { %s })" sargs sbody |> with_context
-  | RBList (Atom (_, "let*") :: SBList vals :: body) ->
-      let rec parse_vals nodes =
-        match nodes with
-        | Atom (_, val_name) :: val_body :: remain ->
-            "const " ^ val_name ^ " = " ^ compile val_body ^ "; "
-            ^ parse_vals remain
-        | [] -> ""
-        | xs -> failnode __LOC__ xs
-      in
-      let svals = parse_vals vals in
-      let sbody =
-        body |> List.map compile |> List.rev
-        |> List.mapi (fun i x -> if i = 0 then "return " ^ x else x)
-        |> List.rev
-        |> List.reduce __LOC__ (Printf.sprintf "%s; %s")
-      in
-      "(function () { " ^ svals ^ sbody ^ " })()" |> with_context
+      Printf.sprintf "((%s) => {\n%s })" sargs sbody |> with_context
   (* Interop field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
     when String.starts_with ~prefix:":-" field ->

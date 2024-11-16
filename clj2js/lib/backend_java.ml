@@ -379,7 +379,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       Call (val_statments ^ body_statments ^ result_statments, result_expresion)
   | RBList (Atom (_, "comment") :: _) -> Literal ""
-  | RBList (Atom (_, "do*") :: body) ->
+  | RBList (Atom (_, "do") :: body) ->
       let ns_, body =
         match body with
         | (RBList (Atom (_, "ns") :: _) as ns) :: body ->
