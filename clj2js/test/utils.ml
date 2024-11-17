@@ -34,6 +34,7 @@ let make_samples_test compiler prelude_path file_name =
       let compiled =
         samples
         |> List.map (fun line ->
+               print_endline @@ __LOC__ ^ " " ^ line;
                let r = compile_code compiler prelude_path line in
                "=============================\n" ^ r)
         |> List.reduce __LOC__ (Printf.sprintf "%s\n%s")

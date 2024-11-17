@@ -5,11 +5,7 @@ let _assert = Utils.assert_ (Lib.main_js true) "js/src/prelude.clj"
 let () =
   Alcotest.run "Tests"
     [
-      ( "Local",
-        [
-          _assert __POS__ {|(def state (atom {:field 1}))|} "";
-          (* _assert __POS__ {||} ""; *)
-        ] );
+      ("Local", [ (* _assert __POS__ {||} ""; *) ]);
       ( "JS",
         U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js"
       );
@@ -23,7 +19,6 @@ let () =
         U.make_samples_test (Lib.main_java true) "java/src/prelude.clj"
           "samples.java" );
       (* ("Java - files", [ assert_file __POS__ "main.shared.clj" ]);  *)
-      (* Test_interp.main () *)
     ]
 
 (* let assert_ = Utils.assert_ (Lib.main_java true) "java/src/prelude.clj"

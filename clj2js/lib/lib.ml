@@ -6,7 +6,7 @@ let main_js_with_strict log (filename : string) (prelude_macros : string) code =
   |> Printf.sprintf "\"use strict\";\n%s"
 
 let main_java log (filename : string) (prelude_macros : string) code =
-  Backend_java2.main log filename prelude_macros code
+  Backend_java.main log filename prelude_macros code
 
 let main_interpreter (filename : string) (prelude_macros : string) code =
   Backend_interpreter.main filename prelude_macros code

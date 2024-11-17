@@ -278,6 +278,9 @@ export const foo = [{}];
 =============================
 export const LI_SP = 600;
 =============================
+const p__5 = {["field"]: 1};
+export const state = [p__5];
+=============================
 const a = "";
 const p__5 = typeof a;
 p__5 === "String"

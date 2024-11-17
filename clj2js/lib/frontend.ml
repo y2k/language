@@ -189,6 +189,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
            :: rest))
   | RBList [ Atom (_, "__inject_raw_sexp"); x ] -> with_context x
   | RBList (Atom (l, "case") :: target :: body) ->
+      let var = NameGenerator.get_new_var () in
       let rec loop = function
         | cond :: then_ :: body ->
             RBList
@@ -197,7 +198,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
                 RBList
                   [
                     Atom (unknown_location, "=");
-                    Atom (unknown_location, "gen_1");
+                    Atom (unknown_location, var);
                     cond;
                   ];
                 then_;
@@ -209,7 +210,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       RBList
         [
           Atom (l, "let");
-          SBList [ Atom (unknown_location, "gen_1"); target ];
+          SBList [ Atom (unknown_location, var); target ];
           loop body;
         ]
       |> expand_core_macro1

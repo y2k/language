@@ -163,6 +163,12 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       | Atom (_, "true") -> (context, interpret_ a)
       | Atom (_, "false") -> (context, interpret_ b)
       | n -> failnode __LOC__ [ n ])
+  | RBList [ Atom (m, "bind*"); Atom (_, name); v ] ->
+      ( {
+          context with
+          scope = StringMap.add name (interpret_ v, context) context.scope;
+        },
+        RBList [ Atom (m, "do") ] )
   | RBList (Atom (_, "let*") :: SBList bindings :: body) ->
       let scope =
         bindings |> List.split_into_pairs
@@ -243,6 +249,6 @@ let main (filename : string) prelude_macros code =
   in
   code
   |> Frontend.parse_and_simplify macros_ctx filename
-  |> run_linter prelude_macros filename
+  (* |> run_linter prelude_macros filename *)
   |> (fun (ctx, exp) -> interpret ctx exp |> snd)
   |> show_sexp |> String.trim

@@ -43,6 +43,7 @@ __POS__
 (def foo (+ 1 2))
 (def foo (atom {}))
 (def LI_SP 600)
+(def state (atom {:field 1}))
 (def- a "")(= (type a) "String")
 (def- a [])(get a 7)
 (def- a {})(assoc a :city "NY")

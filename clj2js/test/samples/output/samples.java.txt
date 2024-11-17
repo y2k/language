@@ -98,7 +98,9 @@ y2k.RT.try_(()->{
 return y2k.RT.str();
 })
 =============================
-quote(foo.bar.Baz.class)
+foo.bar.Baz.class
+=============================
+JobScheduler.class
 =============================
 
 =============================
@@ -106,16 +108,19 @@ public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
 =============================
-public static Object foo=new("java.util.concurrent.atomic.AtomicReference", {});
+public static Object foo=new java.util.concurrent.atomic.AtomicReference(java.util.Map.of());
 =============================
-public static Object foo=var p__1 = oof(1);
-bar(p__1);
+var p__1 = oof(1);
+public static Object foo=bar(p__1);
 =============================
 public static Object foo=bar(1);
 =============================
 public static Object foo=1;
 =============================
 public static Object LIMIT_CHARGE=80;
+=============================
+var p__1 = java.util.Map.of("field", 1);
+public static Object state=new java.util.concurrent.atomic.AtomicReference(p__1);
 =============================
 private static Object LIMIT_CHARGE=80;
 =============================
@@ -168,11 +173,11 @@ return 4;
 }
 =============================
 public static Object f (final Object a) {
-return as*(a, "String[]");
+return ((String[])a);
 }
 =============================
 public static Object f (final Object a) {
-return as*(a, String);
+return ((String)a);
 }
 =============================
 public static Object foo (final Object p__1) {
@@ -320,7 +325,7 @@ return a;
 =============================
 private static Object foo (final Object context) {
 var p__1 = context.getSySe(Ctx.AU_SE);;
-return as*(p__1, AuMa);
+return ((AuMa)p__1);
 }
 =============================
 private static Object foo (final Object context) {
@@ -349,7 +354,7 @@ return x;
 return y2k.RT.str("b", "c");
 }
 =============================
-new("Foo", "a", "b", 1)
+new Foo("a","b",1)
 =============================
 public static class MainActivity extends Activity {
 public java.util.List<Object> state;
@@ -409,7 +414,7 @@ Object p__2;
 if (false) {
 p__2 = null;
 } else {
-var p__3 = new("Exception", "foo");
+var p__3 = new Exception("foo");
 p__2 = y2k.RT.throw_(p__3);
 }
 p__2
@@ -478,7 +483,7 @@ not(p__1)
 package _;
 import a.b.List;
 class Main{
-public static Object b=as*("a", List);}
+public static Object b=((List)"a");}
 =============================
 package _;
 import a.b.List;
@@ -634,9 +639,11 @@ var p__1 = y2k.RT.str(1);
 =============================
 [1]
 =============================
-{["a"]: "b", ["c"]: "d"}
+java.util.Map.of("a", "b", "c", "d")
 =============================
-{["fetch"]: ()->{
+java.util.Map.of("fetch", ()->{
 var world = 0;;
 return 1;
-}}
+})
+=============================
+(Object)null

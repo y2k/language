@@ -97,7 +97,19 @@ let debug_show_cljexp nodes =
     | Atom (_, x) -> `String x
     | RBList xs -> `List (List.map debug_show_cljexp_ xs)
     | SBList xs -> `List (List.map debug_show_cljexp_ xs)
-    | CBList xs -> `List (List.map debug_show_cljexp_ xs)
+    | CBList xs -> (
+        let rec loop xs =
+          match xs with
+          | [] -> Some []
+          | Atom (_, k) :: v :: tail -> (
+              match loop tail with
+              | Some xs -> Some ((k, debug_show_cljexp_ v) :: xs)
+              | None -> None)
+          | _ -> None
+        in
+        loop xs |> Option.map (fun xs -> `Assoc xs) |> function
+        | None -> `List (List.map debug_show_cljexp_ xs)
+        | Some x -> x)
   in
   (match nodes with
   | [ n ] -> debug_show_cljexp_ n

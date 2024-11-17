@@ -21,6 +21,7 @@
 (and 1)
 (checked! (str))
 (class foo.bar.Baz)
+(class JobScheduler)
 (comment (defn a [] 1) (defn b [] 2))
 (def ^int LIMIT_CHARGE 80)
 (def a (ClassLoader/getSystemClassLoader))
@@ -29,6 +30,7 @@
 (def foo (bar 1))
 (def foo 1)
 (def LIMIT_CHARGE 80)
+(def state (atom {:field 1}))
 (def- LIMIT_CHARGE 80)
 (defn ^String foo [^int a ^int b] a)
 (defn a [] (str) (str) (str))
@@ -116,3 +118,4 @@
 [1]
 {:a :b :c :d}
 {:fetch (fn [] (let [world 0] 1))}
+unit

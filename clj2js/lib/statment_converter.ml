@@ -236,8 +236,33 @@ let rec convert (form : cljexp) : cljexp =
                Atom (unknown_location, result_var);
              ];
            ])
-  | RBList [ (Atom (_, "def") as def); name; args ] ->
-      RBList [ def; name; convert args ]
+  (* | RBList
+      [
+        (Atom (_, "def") as def);
+        name;
+        RBList ((Atom (_, "do") as d) :: arg_body);
+      ] ->
+      failnode __LOC__ [ form ] |> ignore;
+      RBList
+        (List.concat
+           [ [ d ]; butlast arg_body; [ RBList [ def; name; last arg_body ] ] ]) *)
+  | RBList [ (Atom (_, "def") as def); name; arg ] -> (
+      match RBList [ def; name; convert arg ] with
+      | RBList
+          [
+            (Atom (_, "def") as def);
+            name;
+            RBList ((Atom (_, "do") as d) :: arg_body);
+          ] ->
+          (* failnode __LOC__ [ form ] |> ignore; *)
+          RBList
+            (List.concat
+               [
+                 [ d ];
+                 butlast arg_body;
+                 [ RBList [ def; name; last arg_body ] ];
+               ])
+      | x -> x)
   | RBList ((Atom (_, "fn*") as fn) :: (SBList _ as args) :: body) ->
       (* print_endline @@ "LOG2: " ^ show_cljexp form; *)
       let body = body |> List.concat_map (fun x -> unpack_do (convert x)) in
