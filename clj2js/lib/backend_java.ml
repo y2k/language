@@ -96,6 +96,47 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<"
          || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
+  (* Version 2.0 *)
+  | RBList [ Atom (_, "bind*"); Atom (m, name) ] ->
+      let js_code = Printf.sprintf "%s %s;" (get_type m) name in
+      with_context js_code
+  | RBList [ Atom (_, "bind*"); Atom (m, name); value ] ->
+      let js_code =
+        Printf.sprintf "%s %s = %s;" (get_type_or_var m) name (compile value)
+      in
+      with_context js_code
+  | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
+      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
+      with_context js_code
+  | RBList [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ] ->
+      Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
+        (compile then_) (compile else_)
+      |> with_context
+  | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
+      Printf.sprintf "...%s" value |> with_context
+  (* /Version 2.0 *)
+  | RBList [ Atom (_, "not"); x ] ->
+      compile x |> Printf.sprintf "!%s" |> with_context
+  | RBList [ Atom (_, "is*"); a; b ] ->
+      make_operator a b (Printf.sprintf "(%s instanceof %s)")
+  | RBList [ Atom (_, "as*"); instance; Atom (type_meta, type_) ] ->
+      let unescp_type =
+        if String.starts_with ~prefix:"\"" type_ then unpack_string type_
+        else type_
+      in
+      make_operator
+        (Atom (type_meta, unescp_type))
+        instance
+        (Printf.sprintf "((%s)%s)")
+  | RBList [ Atom (_, "quote"); arg ] -> compile arg |> with_context
+  | SBList xs ->
+      xs |> List.map compile
+      |> List.reduce_opt (Printf.sprintf "%s, %s")
+      |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
+  | CBList xs ->
+      compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
+      |> with_context
+  (* Namespaces *)
   | RBList (Atom (_, "do") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos =
         (String.rindex_opt context.filename '/' |> Option.value ~default:(-1))
@@ -115,51 +156,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> List.map (fun x -> compile x)
       |> List.reduce_opt (Printf.sprintf "%s%s")
       |> Option.value ~default:""
-      |> Printf.sprintf "%sclass %s{\n%s}" ns_ cls_name
-      |> with_context
-  (* Version 2.0 *)
-  | RBList (Atom (_, "do") :: _body) ->
-      (* failwith __LOC__ *)
-      let js_body =
-        _body |> List.map compile
-        |> List.reduce_opt (Printf.sprintf "%s\n%s")
-        |> Option.value ~default:""
-      in
-      with_context js_body
-  | RBList [ Atom (_, "bind*"); Atom (m, name) ] ->
-      let js_code = Printf.sprintf "%s %s;" (get_type m) name in
-      with_context js_code
-  | RBList [ Atom (_, "bind*"); Atom (m, name); value ] ->
-      let js_code =
-        Printf.sprintf "%s %s = %s;" (get_type_or_var m) name (compile value)
-      in
-      with_context js_code
-  | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
-      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
-      with_context js_code
-  | RBList [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ] ->
-      Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
-        (compile then_) (compile else_)
-      |> with_context
-  | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
-      Printf.sprintf "...%s" value |> with_context
-  (* /Version 2.0 *)
-  | RBList [ Atom (_, "as*"); instance; Atom (type_meta, type_) ] ->
-      let unescp_type =
-        if String.starts_with ~prefix:"\"" type_ then unpack_string type_
-        else type_
-      in
-      make_operator
-        (Atom (type_meta, unescp_type))
-        instance
-        (Printf.sprintf "((%s)%s)")
-  | RBList [ Atom (_, "quote"); arg ] -> compile arg |> with_context
-  | SBList xs ->
-      xs |> List.map compile
-      |> List.reduce_opt (Printf.sprintf "%s, %s")
-      |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
-  | CBList xs ->
-      compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
+      |> Printf.sprintf "%spublic class %s{\n%s}" ns_ cls_name
       |> with_context
   | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
       let imports =
@@ -179,6 +176,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Printf.sprintf "package %s;\n%s" name imports |> with_context
+  | RBList (Atom (_, "do") :: _body) ->
+      (* failwith __LOC__ *)
+      let js_body =
+        _body |> List.map compile
+        |> List.reduce_opt (Printf.sprintf "%s\n%s")
+        |> Option.value ~default:""
+      in
+      with_context js_body
   | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         args
@@ -237,9 +242,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> Option.map (Printf.sprintf "%s;\n")
         |> Option.value ~default:""
       in
+      let return_ =
+        match fname_meta.symbol with "void" -> "" | _ -> "return "
+      in
       let last_exp = body |> List.rev |> List.hd |> compile in
-      Printf.sprintf "%s static %s %s (%s) {\n%sreturn %s;\n}" modifier
-        (get_type fname_meta) fname sargs sbody last_exp
+      Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}" modifier
+        (get_type fname_meta) fname sargs sbody return_ last_exp
       |> with_context
   (* Static field *)
   | RBList [ Atom (_, "def"); Atom (fname_meta, fname); body ] ->

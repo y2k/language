@@ -128,6 +128,10 @@ public static String foo (final int a,final int b) {
 return a;
 }
 =============================
+public static void f () {
+y2k.RT.println("a");
+}
+=============================
 public static Object a () {
 y2k.RT.str();
 y2k.RT.str();
@@ -170,6 +174,10 @@ return 3;
 }
 public static Object d () {
 return 4;
+}
+=============================
+public static Object f () {
+return y2k.RT.println("a");
 }
 =============================
 public static Object f (final Object a) {
@@ -330,7 +338,7 @@ return ((AuMa)p__1);
 =============================
 private static Object foo (final Object context) {
 var p__1 = context.getSySe(Ctx.AU_SE);;
-return is*(p__1, AuMa);
+return (p__1 instanceof AuMa);
 }
 =============================
 y2k.RT.str()
@@ -438,7 +446,7 @@ return env;
 package im.y2k.c3;
 import a1.b2.Foo;
 import a1.b2.Bar;
-class Main{
+public class Main{
 public static Object foo (final Object a) {
 return a;
 }}
@@ -477,27 +485,29 @@ y2k.RT.str()
 y2k.RT.str()
 y2k.RT.str()
 =============================
+!true
+=============================
 var p__1 = java.util.Objects.equals("a", "b");
-not(p__1)
+!p__1
 =============================
 package _;
 import a.b.List;
-class Main{
+public class Main{
 public static Object b=((List)"a");}
 =============================
 package _;
 import a.b.List;
-class Main{
-public static Object b=is*("a", List);}
+public class Main{
+public static Object b=("a" instanceof List);}
 =============================
 package _;
 import b.Context;
-class Main{
+public class Main{
 public static Object a=Context.AUDIO_SERVICE;}
 =============================
 package _;
 import b.Ctx;
-class Main{
+public class Main{
 public static Object a=y2k.RT.str(Ctx.A_S);}
 =============================
 package gg.h7.i8;
@@ -521,7 +531,7 @@ import an.co.AuMa;
 package im.y2k.chargetimer;
 import android.app.Activity;
 import android.app.NotificationChannel;
-class Main{
+public class Main{
 public static Object foo (final Object x) {
 return x;
 }}

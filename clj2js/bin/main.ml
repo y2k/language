@@ -1,11 +1,12 @@
-module Clj2js = Lib
 open Lib__.Common
+module Clj2js = Lib
+module Bs = Build_script
 
 let read_code_file filename =
   if filename = "prelude" then ""
   else In_channel.(with_open_bin filename input_all)
 
-let () =
+let combile_file () =
   let target = Sys.argv.(1) in
   let filename = Sys.argv.(2) in
   NameGenerator.with_scope (fun _ ->
@@ -32,3 +33,8 @@ let () =
         | t -> failwith @@ "Invalid target " ^ t
       in
       filename |> read_code_file |> compiler |> print_endline)
+
+let () =
+  match Sys.argv.(1) with
+  | "make_build_script" -> Bs.make_build_script Sys.argv.(2)
+  | _ -> combile_file ()

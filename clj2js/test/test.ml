@@ -1,6 +1,7 @@
 module U = Utils
 
 let _assert = Utils.assert_ (Lib.main_js true) "js/src/prelude.clj"
+let _assert_java = Utils.assert_ (Lib.main_java true) "java/src/prelude.clj"
 
 let () =
   Alcotest.run "Tests"
