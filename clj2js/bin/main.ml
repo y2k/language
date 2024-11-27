@@ -36,5 +36,5 @@ let combile_file () =
 
 let () =
   match Sys.argv.(1) with
-  | "make_build_script" -> Bs.make_build_script Sys.argv.(2)
+  | "make_build_script" -> Bs.make_build_script Sys.argv.(2) Sys.argv.(3)
   | _ -> combile_file ()
