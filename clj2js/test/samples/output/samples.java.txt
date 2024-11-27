@@ -9,7 +9,7 @@ y2k.RT.get("env", "webview")
 =============================
 "a".foo("b", 1)
 =============================
-var p__1 = [1, 2, 3];
+var p__1 = java.util.Arrays.asList(1, 2, 3);;
 String.join("", p__1)
 =============================
 ("a"*"b")
@@ -32,67 +32,69 @@ java.util.Objects.equals("a", "b")
 =============================
 ("a">="b")
 =============================
-var p__1 = document.foo();
-Object p__3;
+var p__1 = document.foo();;
+Object p__3;;
 if (p__1) {
 p__3 = document.bar();
 } else {
 p__3 = p__1;
-}
+};
 p__3
 =============================
 document.foo()
 =============================
-var p__1 = alert(1);
-Object p__4;
+var p__1 = alert(1);;
+Object p__4;;
 if (p__1) {
-var p__5 = fetch(2);
-var p__2 = alert(p__5);
-Object p__7;
+var p__5 = fetch(2);;
+var p__2 = alert(p__5);;
+Object p__7;;
 if (p__2) {
 p__7 = alert(3);
 } else {
 p__7 = p__2;
-}
+};
 p__4 = p__7;
 } else {
 p__4 = p__1;
-}
+};
 p__4
 =============================
-var p__1 = alert(1);
-Object p__4;
+var p__1 = alert(1);;
+Object p__4;;
 if (p__1) {
-var p__2 = alert(2);
-Object p__6;
+var p__2 = alert(2);;
+Object p__6;;
 if (p__2) {
 p__6 = alert(3);
 } else {
 p__6 = p__2;
-}
+};
 p__4 = p__6;
 } else {
 p__4 = p__1;
-}
+};
 p__4
 =============================
-var p__1 = 1;
-Object p__4;
+var p__1 = 1;;
+Object p__4;;
 if (p__1) {
-var p__2 = 2;
-Object p__6;
+var p__2 = 2;;
+Object p__6;;
 if (p__2) {
 p__6 = 3;
 } else {
 p__6 = p__2;
-}
+};
 p__4 = p__6;
 } else {
 p__4 = p__1;
-}
+};
 p__4
 =============================
 1
+=============================
+y2k.RT.assoc(java.util.Map.of(), "k", "v")
 =============================
 y2k.RT.try_(()->{
 return y2k.RT.str();
@@ -104,13 +106,22 @@ JobScheduler.class
 =============================
 
 =============================
+y2k.RT.concat(java.util.Arrays.asList(), java.util.Arrays.asList())
+=============================
+var p__1 = java.util.Arrays.asList(1, 2);;
+var p__2 = java.util.Arrays.asList(3, 4);;
+y2k.RT.concat(p__1, p__2)
+=============================
+var p__1 = java.util.Arrays.asList(1, 2);;
+y2k.RT.conj(p__1, 3)
+=============================
 public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(java.util.Map.of());
 =============================
-var p__1 = oof(1);
+var p__1 = oof(1);;
 public static Object foo=bar(p__1);
 =============================
 public static Object foo=bar(1);
@@ -119,10 +130,14 @@ public static Object foo=1;
 =============================
 public static Object LIMIT_CHARGE=80;
 =============================
-var p__1 = java.util.Map.of("field", 1);
+var p__1 = java.util.Map.of("field", 1);;
 public static Object state=new java.util.concurrent.atomic.AtomicReference(p__1);
 =============================
 private static Object LIMIT_CHARGE=80;
+=============================
+var p__1 = java.util.Arrays.asList(xs);;
+var p__2 = y2k.RT.assoc(xs, "k", "v");;
+defn(p__1, p__2)
 =============================
 public static String foo (final int a,final int b) {
 return a;
@@ -140,7 +155,7 @@ return y2k.RT.str();
 =============================
 public static Object a () {
 return 1;
-}
+};
 public static Object b () {
 return 2;
 }
@@ -164,14 +179,14 @@ return a;
 =============================
 public static Object c () {
 return 3;
-}
+};
 public static Object d () {
 return 4;
 }
 =============================
 public static Object c () {
 return 3;
-}
+};
 public static Object d () {
 return 4;
 }
@@ -260,7 +275,7 @@ return y2k.RT.println();
 =============================
 public static Object foo (final Object a,final Object b,final Object c) {
 return a;
-}
+};
 foo("a", "b", 1)
 =============================
 public static Object foo (final Object a,final Object b) {
@@ -327,6 +342,15 @@ foo(3);
 return foo(4);
 }
 =============================
+public static Object foo (final Object xs) {
+var p__2 = ((java.util.List)xs);;
+var p__4 = ((java.util.List)xs);;
+var p__3 = p__4.size();;
+var p__1 = p__2.subList(1, p__3);;
+var a = y2k.RT.get(p__1, 0);;
+return a;
+}
+=============================
 private static Object foo (final Object a) {
 return a;
 }
@@ -336,13 +360,11 @@ var p__1 = context.getSySe(Ctx.AU_SE);;
 return ((AuMa)p__1);
 }
 =============================
-private static Object foo (final Object context) {
-var p__1 = context.getSySe(Ctx.AU_SE);;
-return (p__1 instanceof AuMa);
-}
-=============================
-y2k.RT.str()
+y2k.RT.str();
 y2k.RT.println()
+=============================
+var p__1 = java.util.Arrays.asList(1, 2);;
+y2k.RT.empty(p__1)
 =============================
 (p__1)->{
 var a = y2k.RT.get(p__1, 0);;
@@ -375,66 +397,66 @@ return (String)a_foo(this, p0, p1); }
 =============================
 y2k.RT.get("xs", 1)
 =============================
-Object p__2;
+Object p__2;;
 if ("a") {
 p__2 = "b";
 } else {
 p__2 = "c";
-}
+};
 p__2
 =============================
-Object p__2;
+Object p__2;;
 if ("a") {
 p__2 = "b";
 } else {
 p__2 = y2k.RT.println("c");
-}
+};
 p__2
 =============================
-Object p__4;
-Object p__2;
+Object p__4;;
+Object p__2;;
 if ("a1") {
 p__2 = "a2";
 } else {
 p__2 = "a3";
-}
-var p__3 = p__2;
+};
+var p__3 = p__2;;
 if (p__3) {
-Object p__8;
+Object p__8;;
 if ("b1") {
 p__8 = "b2";
 } else {
 p__8 = "b3";
-}
+};
 p__4 = p__8;
 } else {
-Object p__6;
+Object p__6;;
 if ("c1") {
 p__6 = "c2";
 } else {
 p__6 = "c3";
-}
+};
 p__4 = p__6;
-}
+};
 p__4
 =============================
-Object p__2;
+Object p__2;;
 if (false) {
 p__2 = null;
 } else {
-var p__3 = new Exception("foo");
+var p__3 = new Exception("foo");;
 p__2 = y2k.RT.throw_(p__3);
-}
+};
 p__2
 =============================
-var p__1 = [1, 2, 3];
+var p__1 = java.util.Arrays.asList(1, 2, 3);;
 y2k.RT.into_array(p__1)
 =============================
 
 =============================
 public static Object a () {
 return 1;
-}
+};
 public static Object b () {
 return 2;
 }
@@ -454,46 +476,41 @@ return a;
 package im.y2k.chargetimer;
 import a.b.Ab;
 =============================
-var p__1 = "b";
-var a = y2k.RT.get(p__1, 0);
+var p__1 = "b";;
+var a = y2k.RT.get(p__1, 0);;
 a
 =============================
-Object p__2;
+Object p__2;;
 if (true) {
 p__2 = 1;
 } else {
 p__2 = 2;
-}
-p__2
+};
+p__2;
 y2k.RT.str()
 =============================
-y2k.RT.str()
+y2k.RT.str();
 y2k.RT.println()
 =============================
-String a = "b";
+String a = "b";;
 a
 =============================
-var a = y2k.RT.get("c", "b");
+var a = y2k.RT.get("c", "b");;
 a
 =============================
-var a = "c".b(123);
-y2k.RT.println("a")
+var a = "c".b(123);;
+y2k.RT.println("a");
 y2k.RT.str()
 =============================
-var a = 1;
-y2k.RT.str()
-y2k.RT.str()
+var a = 1;;
+y2k.RT.str();
+y2k.RT.str();
 y2k.RT.str()
 =============================
 !true
 =============================
-var p__1 = java.util.Objects.equals("a", "b");
+var p__1 = java.util.Objects.equals("a", "b");;
 !p__1
-=============================
-package _;
-import a.b.List;
-public class Main{
-public static Object b=((List)"a");}
 =============================
 package _;
 import a.b.List;
@@ -524,10 +541,6 @@ package im.y2k.ch;
 import an.co.Ctx;
 import an.co.AuMa;
 =============================
-package im.y2k.ch;
-import an.co.Ctx;
-import an.co.AuMa;
-=============================
 package im.y2k.chargetimer;
 import android.app.Activity;
 import android.app.NotificationChannel;
@@ -536,77 +549,84 @@ public static Object foo (final Object x) {
 return x;
 }}
 =============================
-var p__1 = document.foo();
-Object p__3;
+var p__1 = document.foo();;
+Object p__3;;
 if (p__1) {
 p__3 = p__1;
 } else {
 p__3 = document.bar();
-}
+};
 p__3
 =============================
 document.foo()
 =============================
-var p__1 = alert(1);
-Object p__4;
+var p__1 = alert(1);;
+Object p__4;;
 if (p__1) {
 p__4 = p__1;
 } else {
-var p__5 = fetch(2);
-var p__2 = alert(p__5);
-Object p__7;
+var p__5 = fetch(2);;
+var p__2 = alert(p__5);;
+Object p__7;;
 if (p__2) {
 p__7 = p__2;
 } else {
 p__7 = alert(3);
-}
+};
 p__4 = p__7;
-}
+};
 p__4
 =============================
-var p__1 = alert(1);
-Object p__4;
+var p__1 = alert(1);;
+Object p__4;;
 if (p__1) {
 p__4 = p__1;
 } else {
-var p__2 = alert(2);
-Object p__6;
+var p__2 = alert(2);;
+Object p__6;;
 if (p__2) {
 p__6 = p__2;
 } else {
 p__6 = alert(3);
-}
+};
 p__4 = p__6;
-}
+};
 p__4
 =============================
-var p__1 = 1;
-Object p__4;
+var p__1 = 1;;
+Object p__4;;
 if (p__1) {
 p__4 = p__1;
 } else {
-var p__2 = 2;
-Object p__6;
+var p__2 = 2;;
+Object p__6;;
 if (p__2) {
 p__6 = p__2;
 } else {
 p__6 = 3;
-}
+};
 p__4 = p__6;
-}
+};
 p__4
 =============================
 1
 =============================
 y2k.RT.println("a", 1, "b")
 =============================
-var p__1 = "".length;
+var p__1 = "".length;;
 y2k.RT.println(p__1)
 =============================
 y2k.RT.println((p__1)->{
 var a = y2k.RT.get(p__1, 0);;
 return a;
 })
+=============================
+var p__2 = java.util.Arrays.asList(1, 2, 3);;
+var p__1 = ((java.util.List)p__2);;
+var p__5 = java.util.Arrays.asList(1, 2, 3);;
+var p__4 = ((java.util.List)p__5);;
+var p__3 = p__4.size();;
+p__1.subList(1, p__3)
 =============================
 "".length = 1;
 =============================
@@ -620,34 +640,34 @@ var b = y2k.RT.get(p__1, 1);;
 return java.util.Objects.equals(a, b);
 })
 =============================
-Object p__3;
+Object p__3;;
 if ("a") {
 p__3 = "b";
 } else {
 p__3 = "c";
-}
-var p__1 = p__3;
+};
+var p__1 = p__3;;
 y2k.RT.str(p__1)
 =============================
 String.valueOf("level")
 =============================
-Object p__3;
+Object p__3;;
 if (true) {
 p__3 = 1;
 } else {
 p__3 = 2;
-}
-var p__1 = p__3;
-[p__1]
+};
+var p__1 = p__3;;
+java.util.Arrays.asList(p__1)
 =============================
-var p__1 = y2k.RT.str(1);
-[p__1]
+var p__1 = y2k.RT.str(1);;
+java.util.Arrays.asList(p__1)
 =============================
-[]
+java.util.Arrays.asList()
 =============================
-[1, 2, 3]
+java.util.Arrays.asList(1, 2, 3)
 =============================
-[1]
+java.util.Arrays.asList(1)
 =============================
 java.util.Map.of("a", "b", "c", "d")
 =============================

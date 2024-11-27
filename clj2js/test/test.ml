@@ -6,7 +6,7 @@ let _assert_java = Utils.assert_ (Lib.main_java true) "java/src/prelude.clj"
 let () =
   Alcotest.run "Tests"
     [
-      ("Local", [ (* _assert __POS__ {||} ""; *) ]);
+      ("Local", [ (* _assert_java __POS__ {||} ""; *) ]);
       ( "JS",
         U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js"
       );

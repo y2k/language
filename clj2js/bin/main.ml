@@ -27,6 +27,9 @@ let combile_file () =
         | "java" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_java false filename prelude
+        | "bytecode" ->
+            let prelude = read_code_file Sys.argv.(3) in
+            Clj2js.main_bytecode false filename prelude
         | "repl" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_interpreter filename prelude

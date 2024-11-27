@@ -113,8 +113,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (compile then_) (compile else_)
       |> with_context
   | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
-      Printf.sprintf "...%s" value |> with_context
-  (* /Version 2.0 *)
+      Printf.sprintf "...%s" value |> with_context (* /Version 2.0 *)
   | RBList [ Atom (_, "not"); x ] ->
       compile x |> Printf.sprintf "!%s" |> with_context
   | RBList [ Atom (_, "is*"); a; b ] ->
@@ -129,13 +128,20 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         instance
         (Printf.sprintf "((%s)%s)")
   | RBList [ Atom (_, "quote"); arg ] -> compile arg |> with_context
-  | SBList xs ->
-      xs |> List.map compile
-      |> List.reduce_opt (Printf.sprintf "%s, %s")
-      |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
   | CBList xs ->
       compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
       |> with_context
+  | SBList xs ->
+      compile
+        (RBList (Atom (unknown_location, "java.util.Arrays/asList") :: xs))
+      |> with_context
+  (* | SBList xs ->
+         xs |> List.map compile
+         |> List.reduce_opt (Printf.sprintf "%s, %s")
+         |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
+     | CBList xs ->
+         compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
+         |> with_context *)
   (* Namespaces *)
   | RBList (Atom (_, "do") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos =
@@ -177,10 +183,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       Printf.sprintf "package %s;\n%s" name imports |> with_context
   | RBList (Atom (_, "do") :: _body) ->
-      (* failwith __LOC__ *)
       let js_body =
         _body |> List.map compile
-        |> List.reduce_opt (Printf.sprintf "%s\n%s")
+        |> List.reduce_opt (Printf.sprintf "%s;\n%s")
         |> Option.value ~default:""
       in
       with_context js_body

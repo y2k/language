@@ -113,6 +113,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | CBList xs -> CBList (xs |> List.map expand_core_macro2) |> with_context
   | RBList (Atom (_, "fn*") :: _) as o -> o |> with_context
   | RBList (Atom (_, "let*") :: _) as o -> o |> with_context
+  (* Desugar LET *)
   | RBList (Atom (_, "let") :: SBList vals :: body) ->
       let unpack_let_args args =
         let rec loop = function
@@ -120,7 +121,9 @@ let rec desugar_and_register (context : context) node : context * cljexp =
           | (Atom _ as k) :: v :: tail -> k :: expand_core_macro2 v :: loop tail
           | SBList xs :: v :: tail ->
               let temp_val = NameGenerator.get_new_var () in
-              let a = [ Atom (unknown_location, temp_val); v ] in
+              let a =
+                [ Atom (unknown_location, temp_val); expand_core_macro2 v ]
+              in
               let b =
                 xs
                 |> List.fold_left
