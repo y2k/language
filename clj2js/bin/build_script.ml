@@ -60,8 +60,8 @@ let make_build_script path target_path =
              (change_extension (convert_clj_filename_to_java file) ".java")
          in
          (*  *)
-         print_endline @@ "# [LOG] " ^ __LOC__ ^ ": " ^ file ^ " | "
-         ^ convert_clj_filename_to_java file;
+         (* print_endline @@ "# [LOG] " ^ __LOC__ ^ ": " ^ file ^ " | "
+         ^ convert_clj_filename_to_java file; *)
          (*  *)
          let create_dir =
            Printf.sprintf "mkdir -p %s" (Filename.dirname target_file)

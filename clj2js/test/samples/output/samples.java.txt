@@ -155,7 +155,8 @@ return y2k.RT.str();
 =============================
 public static Object a () {
 return 1;
-};
+}
+;
 public static Object b () {
 return 2;
 }
@@ -179,14 +180,16 @@ return a;
 =============================
 public static Object c () {
 return 3;
-};
+}
+;
 public static Object d () {
 return 4;
 }
 =============================
 public static Object c () {
 return 3;
-};
+}
+;
 public static Object d () {
 return 4;
 }
@@ -275,7 +278,8 @@ return y2k.RT.println();
 =============================
 public static Object foo (final Object a,final Object b,final Object c) {
 return a;
-};
+}
+;
 foo("a", "b", 1)
 =============================
 public static Object foo (final Object a,final Object b) {
@@ -456,7 +460,8 @@ y2k.RT.into_array(p__1)
 =============================
 public static Object a () {
 return 1;
-};
+}
+;
 public static Object b () {
 return 2;
 }
@@ -471,7 +476,8 @@ import a1.b2.Bar;
 public class Main{
 public static Object foo (final Object a) {
 return a;
-}}
+}
+}
 =============================
 package im.y2k.chargetimer;
 import a.b.Ab;
@@ -547,7 +553,8 @@ import android.app.NotificationChannel;
 public class Main{
 public static Object foo (final Object x) {
 return x;
-}}
+}
+}
 =============================
 var p__1 = document.foo();;
 Object p__3;;

@@ -189,6 +189,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> Option.value ~default:""
       in
       with_context js_body
+  (* Lambda *)
   | RBList (Atom (_, "fn*") :: SBList args :: body) ->
       let sargs =
         args
@@ -251,7 +252,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         match fname_meta.symbol with "void" -> "" | _ -> "return "
       in
       let last_exp = body |> List.rev |> List.hd |> compile in
-      Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}" modifier
+      Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}\n" modifier
         (get_type fname_meta) fname sargs sbody return_ last_exp
       |> with_context
   (* Static field *)

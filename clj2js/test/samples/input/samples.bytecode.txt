@@ -1,0 +1,5 @@
+(defn foo [a b] (+ a b))
+(ns bar)(defn foo [a b] (+ a b))
+(defn foo [a b] (+ a b)) (foo 1 2)
+(defn foo [a b] (+ a b)) (defn main [] (foo 1 2))
+(defn foo [a b] (+ a b)) (defn main [x] (foo (foo 1 2) x))
