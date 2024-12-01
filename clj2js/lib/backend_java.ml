@@ -34,7 +34,7 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
         params
         |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
         |> List.reduce __LOC__ (Printf.sprintf "%s,%s")
-        |> Printf.sprintf "public %s(%s) {\nstate=java.util.List.of(%s);\n}"
+        |> Printf.sprintf "public %s(%s) {\nstate=java.util.List.of(%s);\n}\n"
              clsName cnt_params
   in
   let ms =
@@ -113,7 +113,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (compile then_) (compile else_)
       |> with_context
   | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
-      Printf.sprintf "...%s" value |> with_context (* /Version 2.0 *)
+      Printf.sprintf "...%s" value |> with_context
+  (* /Version 2.0 *)
   | RBList [ Atom (_, "not"); x ] ->
       compile x |> Printf.sprintf "!%s" |> with_context
   | RBList [ Atom (_, "is*"); a; b ] ->
@@ -160,7 +161,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let ns_ = compile ns in
       body
       |> List.map (fun x -> compile x)
-      |> List.reduce_opt (Printf.sprintf "%s%s")
+      |> List.reduce_opt (Printf.sprintf "%s\n%s")
       |> Option.value ~default:""
       |> Printf.sprintf "%spublic class %s{\n%s}" ns_ cls_name
       |> with_context

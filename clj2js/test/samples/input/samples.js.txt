@@ -109,6 +109,7 @@ __POS__
 (let [c 1 b c a b] a)
 (let [fx 1] (fx 2))
 (let [r 0] (.json r))
+(merge {:a 1} {:b 2})
 (not (+ 1 2))
 (not 1)
 (not= 1 2)

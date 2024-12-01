@@ -25,7 +25,11 @@ let invoke (node : cljexp) : cljexp =
     | RBList (Atom (m, fn_name) :: args) ->
         let args = List.map (invoke ctx) args in
         let prefix =
-          match fn_name with "fn*" | "+" -> "" | _ -> ctx.ns ^ "/"
+          match fn_name with
+          | "fn*" | "+" | "list" | "vector" | "atom" | "deref" | "reset!"
+          | "swap!" | "str" ->
+              ""
+          | _ -> ctx.ns ^ "/"
         in
         RBList (Atom (m, prefix ^ fn_name) :: args)
     | node -> node

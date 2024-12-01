@@ -94,6 +94,7 @@
 (let [a (:b :c)] a)
 (let [a (.b :c 123)] (println "a") (str))
 (let [a 1] (str) (str) (str))
+(merge {:a 1} {:b 2})
 (not true)
 (not= :a :b)
 (ns _ (:import [a.b List]))(def b (is :a List))

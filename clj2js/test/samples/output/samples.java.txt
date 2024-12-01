@@ -513,6 +513,10 @@ y2k.RT.str();
 y2k.RT.str();
 y2k.RT.str()
 =============================
+var p__1 = java.util.Map.of("a", 1);;
+var p__2 = java.util.Map.of("b", 2);;
+y2k.RT.merge(p__1, p__2)
+=============================
 !true
 =============================
 var p__1 = java.util.Objects.equals("a", "b");;
