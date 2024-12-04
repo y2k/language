@@ -5,3 +5,4 @@
 (list 1 2 3)
 (ns bar)(defn foo [a b] (+ a b))
 (vector 1 2 3)
+(defonce a 1)

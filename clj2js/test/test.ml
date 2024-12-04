@@ -8,8 +8,8 @@ let () =
     [
       ("Local", [ (* _assert_java __POS__ {||} ""; *) ]);
       ( "Bytecode",
-        U.make_samples_test (Lib.main_bytecode true)
-          "interpreter/src/prelude.clj" "samples.bytecode" );
+        U.make_samples_test (Lib.main_bytecode true) "bytecode/prelude.clj"
+          "samples.bytecode" );
       ( "JS",
         U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js"
       );
