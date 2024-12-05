@@ -428,7 +428,7 @@ let remove_comments_from_module = function
       match xs with [ x ] -> x | xs -> RBList (Atom (l, "do") :: xs))
   | x -> x
 
-let parse_and_simplify (prelude_context : context) filename code =
+let parse_and_simplify2 (prelude_context : context) filename code =
   if prelude_context.log && filename <> "prelude" then
     print_endline "==| DEBUG |==============================================\n";
   let sexp =
@@ -441,9 +441,11 @@ let parse_and_simplify (prelude_context : context) filename code =
   (*  *)
   if prelude_context.log && filename <> "prelude" then
     print_endline (debug_show_cljexp [ x ]);
-  let x = Statment_converter.convert x in
+  (ctx, x)
+
+let parse_and_simplify (prelude_context : context) filename code =
+  let ctx, x = parse_and_simplify2 prelude_context filename code in
+  let x = Stage_a_normal_form.convert x in
   if prelude_context.log && filename <> "prelude" then
     print_endline (debug_show_cljexp [ x ]);
-  (* if prelude_context.log && filename <> "prelude" then
-     print_endline (debug_show_cljexp [ x ]); *)
   (ctx, x)

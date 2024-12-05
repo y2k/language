@@ -236,16 +236,6 @@ let rec convert (form : cljexp) : cljexp =
                Atom (unknown_location, result_var);
              ];
            ])
-  (* | RBList
-      [
-        (Atom (_, "def") as def);
-        name;
-        RBList ((Atom (_, "do") as d) :: arg_body);
-      ] ->
-      failnode __LOC__ [ form ] |> ignore;
-      RBList
-        (List.concat
-           [ [ d ]; butlast arg_body; [ RBList [ def; name; last arg_body ] ] ]) *)
   | RBList [ (Atom (_, "def") as def); name; arg ] -> (
       match RBList [ def; name; convert arg ] with
       | RBList

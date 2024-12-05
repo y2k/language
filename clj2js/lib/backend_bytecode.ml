@@ -1,5 +1,4 @@
 open Common
-module Uns = Stage_unwrap_ns
 
 let rec compile (node : cljexp) : string =
   match node with
@@ -20,7 +19,7 @@ let main (log : bool) (filename : string) prelude_macros code =
     |> fst
   in
   code
-  |> Frontend.parse_and_simplify { macros_ctx with log } filename
+  |> Frontend.parse_and_simplify2 { macros_ctx with log } filename
   (* |> run_linter prelude_macros filename *)
   |> snd
-  |> Uns.invoke |> compile |> String.trim
+  |> Stage_unwrap_ns.invoke |> compile |> String.trim
