@@ -1,11 +1,15 @@
 (def a 1)
 (def a)
+(defn foo [{a :b}] a)
 (defn foo [a b] (+ a b))
 (defn foo [a b] (+ a b)) (defn main [] (foo 1 2))
 (defn foo [a b] (+ a b)) (defn main [x] (foo (foo 1 2) x))
 (defn foo [a b] (+ a b)) (foo 1 2)
 (defonce foo 3)
+(let [[a] 1] a)
+(let [a 1] a)
 (list 1 2 3)
-(ns bar)(defn foo [a b] (+ a b))
+(ns bar) (defn foo [a b] (+ a b))
 (vector 1 2 3)
+{:k1 1 :k2 "v2" "k3" :v3}
 foo

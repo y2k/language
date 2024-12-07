@@ -10,6 +10,9 @@ let invoke (node : cljexp) : cljexp =
   let rec invoke (ctx : contex) = function
     | RBList [ (Atom (_, "if") as i); cond; then_; else_ ] ->
         RBList [ i; invoke ctx cond; invoke ctx then_; invoke ctx else_ ]
+    | RBList ((Atom (_, "let*") as l) :: bindings :: body) ->
+        (* RBList [ l; bindings; RBList (List.map (invoke ctx) body) ] *)
+        RBList (l :: bindings :: List.map (invoke ctx) body)
     | RBList [ (Atom (_, "if*") as i); cond; then_; else_ ] ->
         RBList [ i; invoke ctx cond; invoke ctx then_; invoke ctx else_ ]
     | RBList [ (Atom (_, "bind*") as b); n ] -> RBList [ b; n ]
