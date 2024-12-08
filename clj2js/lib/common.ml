@@ -38,6 +38,7 @@ type context = {
   start_line : int;
   macros : cljexp StringMap.t;
   scope : (cljexp * context) StringMap.t;
+  prelude_scope : unit StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
 }
 [@@deriving show]
@@ -53,6 +54,7 @@ let empty_context =
     start_line = 0;
     macros = StringMap.empty;
     scope = StringMap.empty;
+    prelude_scope = StringMap.empty;
     interpreter = (fun _ _ -> failwith __LOC__);
   }
 
