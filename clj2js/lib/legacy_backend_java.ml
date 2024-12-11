@@ -155,7 +155,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
   (* Function definition *)
   | RBList
       [
-        Atom (_, "def");
+        Atom (_, "def*");
         Atom (fname_meta, fname);
         RBList (Atom (_, "fn*") :: SBList args :: body);
       ] ->
@@ -379,7 +379,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
 
       Call (val_statments ^ body_statments ^ result_statments, result_expresion)
   | RBList (Atom (_, "comment") :: _) -> Literal ""
-  | RBList (Atom (_, "do") :: body) ->
+  | RBList (Atom (_, "do*") :: body) ->
       let ns_, body =
         match body with
         | (RBList (Atom (_, "ns") :: _) as ns) :: body ->
@@ -415,7 +415,7 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       in
       Literal result
   (* Static field *)
-  | RBList [ Atom (_, "def"); Atom (fname_meta, fname); body ] ->
+  | RBList [ Atom (_, "def*"); Atom (fname_meta, fname); body ] ->
       let vis =
         if fname_meta.symbol = ":private" then "private" else "public"
       in
@@ -547,9 +547,6 @@ let rec compile_ (ctx : context) (node : cljexp) : result2 =
       Call (statments, Printf.sprintf "%s(%s)" sfname args)
   (* Default *)
   | x -> failnode __LOC__ [ x ]
-
-let run_linter prelude_macros filename (ctx, exp) =
-  (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
 
 let main log (filename : string) prelude_macros code =
   let macros_ctx =

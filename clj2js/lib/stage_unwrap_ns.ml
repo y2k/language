@@ -3,7 +3,7 @@ open Common
 type ns_contex = { ns : string }
 
 let try_unwrap_do = function
-  | RBList [ Atom (_, "do"); body ] -> body
+  | RBList [ Atom (_, "do*"); body ] -> body
   | node -> node
 
 let invoke (global_ctx : context) (node : cljexp) : cljexp =
@@ -26,18 +26,19 @@ let invoke (global_ctx : context) (node : cljexp) : cljexp =
         RBList [ b; n; invoke ctx value ]
     | RBList [ (Atom (_, "bind-update*") as b); n; value ] ->
         RBList [ b; n; invoke ctx value ]
-    | RBList [ (Atom (_, "def") as def); Atom (m, name) ] ->
+    | RBList [ (Atom (_, "def*") as def); Atom (m, name) ] ->
         RBList [ def; Atom (m, ctx.ns ^ "/" ^ name) ]
-    | RBList [ (Atom (_, "def") as def); Atom (m, name); value ] ->
+    | RBList [ (Atom (_, "def*") as def); Atom (m, name); value ] ->
         RBList [ def; Atom (m, ctx.ns ^ "/" ^ name); invoke ctx value ]
     | RBList
-        ((Atom (_, "do") as do_)
-        :: RBList (Atom (_, "ns") :: Atom (_, ns_name) :: _)
+        ((Atom (_, "do*") as do_)
+        :: RBList
+             [ Atom (_, "ns"); RBList [ _; RBList (Atom (_, ns_name) :: _) ] ]
         :: body) ->
         let ctx = { ns = ns_name } in
         let body = List.map (invoke ctx) body in
         RBList (do_ :: body) |> try_unwrap_do
-    | RBList ((Atom (_, "do") as do_) :: body) ->
+    | RBList ((Atom (_, "do*") as do_) :: body) ->
         let body = List.map (invoke ctx) body in
         RBList (do_ :: body) |> try_unwrap_do
     | RBList (Atom (m, fn_name) :: args) ->

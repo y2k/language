@@ -97,10 +97,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
          || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
   (* Version 2.0 *)
-  | RBList [ Atom (_, "bind*"); Atom (m, name) ] ->
+  | RBList [ Atom (_, "let*"); Atom (m, name) ] ->
       let js_code = Printf.sprintf "%s %s;" (get_type m) name in
       with_context js_code
-  | RBList [ Atom (_, "bind*"); Atom (m, name); value ] ->
+  | RBList [ Atom (_, "let*"); Atom (m, name); value ] ->
       let js_code =
         Printf.sprintf "%s %s = %s;" (get_type_or_var m) name (compile value)
       in
@@ -117,9 +117,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* /Version 2.0 *)
   | RBList [ Atom (_, "not"); x ] ->
       compile x |> Printf.sprintf "!%s" |> with_context
-  | RBList [ Atom (_, "is*"); a; b ] ->
+  | RBList [ Atom (_, "is"); a; b ] ->
       make_operator a b (Printf.sprintf "(%s instanceof %s)")
-  | RBList [ Atom (_, "as*"); instance; Atom (type_meta, type_) ] ->
+  | RBList [ Atom (_, "as"); instance; Atom (type_meta, type_) ] ->
       let unescp_type =
         if String.starts_with ~prefix:"\"" type_ then unpack_string type_
         else type_
@@ -129,13 +129,24 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         instance
         (Printf.sprintf "((%s)%s)")
   | RBList [ Atom (_, "quote"); arg ] -> compile arg |> with_context
-  | CBList xs ->
-      compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
+  | RBList [ Atom (_, "class-inner"); RBList [ _; Atom (_, cls_name) ] ] ->
+      cls_name |> with_context
+  (* Hahs-map *)
+  | RBList (Atom (_, "hash-map") :: xs) ->
+      compile (RBList (Atom (unknown_location, "y2k.RT.hash_map") :: xs))
       |> with_context
-  | SBList xs ->
+  | CBList xs -> failnode __LOC__ xs
+  (* compile (RBList (Atom (unknown_location, "y2k.RT.hash_map") :: xs))
+      |> with_context *)
+  (* Vector *)
+  | RBList (Atom (_, "vector") :: xs) ->
       compile
         (RBList (Atom (unknown_location, "java.util.Arrays/asList") :: xs))
       |> with_context
+  | SBList xs -> failnode __LOC__ xs
+  (* compile
+        (RBList (Atom (unknown_location, "java.util.Arrays/asList") :: xs))
+      |> with_context *)
   (* | SBList xs ->
          xs |> List.map compile
          |> List.reduce_opt (Printf.sprintf "%s, %s")
@@ -144,7 +155,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
          compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
          |> with_context *)
   (* Namespaces *)
-  | RBList (Atom (_, "do") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
+  | RBList (Atom (_, "do*") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos =
         (String.rindex_opt context.filename '/' |> Option.value ~default:(-1))
         + 1
@@ -165,7 +176,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Option.value ~default:""
       |> Printf.sprintf "%spublic class %s{\n%s}" ns_ cls_name
       |> with_context
-  | RBList (Atom (_, "ns") :: Atom (_, name) :: ns_params) ->
+  | RBList
+      [
+        Atom (_, "ns");
+        RBList [ Atom (_, "quote*"); RBList (Atom (_, name) :: ns_params) ];
+      ] ->
       let imports =
         ns_params
         |> List.map (function
@@ -183,7 +198,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Printf.sprintf "package %s;\n%s" name imports |> with_context
-  | RBList (Atom (_, "do") :: _body) ->
+  | RBList (Atom (_, "do*") :: _body) ->
       let js_body =
         _body |> List.map compile
         |> List.reduce_opt (Printf.sprintf "%s;\n%s")
@@ -191,7 +206,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       with_context js_body
   (* Lambda *)
-  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
+  | RBList (Atom (_, "fn*") :: RBList args :: body) ->
       let sargs =
         args
         |> List.map (function
@@ -224,9 +239,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions *)
   | RBList
       [
-        Atom (_, "def");
+        Atom (_, "def*");
         Atom (fname_meta, fname);
-        RBList (Atom (_, "fn*") :: SBList args :: body);
+        RBList (Atom (_, "fn*") :: RBList args :: body);
       ] ->
       let modifier =
         match fname_meta.symbol with ":private" -> "private" | _ -> "public"
@@ -257,7 +272,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         (get_type fname_meta) fname sargs sbody return_ last_exp
       |> with_context
   (* Static field *)
-  | RBList [ Atom (_, "def"); Atom (fname_meta, fname); body ] ->
+  | RBList [ Atom (_, "def*"); Atom (fname_meta, fname); body ] ->
       let vis =
         if fname_meta.symbol = ":private" then "private" else "public"
       in
@@ -288,10 +303,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | RBList
       [
-        Atom (_, "gen-class*");
+        Atom (_, "gen-class-inner");
         RBList
           [
-            Atom (_, "quote");
+            _;
             RBList
               [
                 Atom (_, ":name");
@@ -309,6 +324,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       ] ->
       generate_class compile prefix params clsName methods superCls
       |> with_context
+  (* Call runtime function *)
+  | RBList (Atom (m, "call-runtime") :: RBList [ _; Atom (_, name) ] :: args) ->
+      compile (RBList (Atom (m, "y2k.RT/" ^ name) :: args)) |> with_context
   (* Function call *)
   | RBList (head :: args) ->
       let sargs =
@@ -327,13 +345,22 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | n -> failnode __LOC__ [ n ]
 
 let main (log : bool) (filename : string) prelude_macros code =
-  let macros_ctx =
+  let macros_ctx, _macro_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
          { empty_context with interpreter = Backend_interpreter.interpret }
          "prelude"
-    |> fst
   in
-  code |> Frontend.parse_and_simplify { macros_ctx with log } filename
-  (* |> run_linter prelude_macros filename *)
-  |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim
+  let ctx, node =
+    code |> Frontend.parse_and_simplify { macros_ctx with log } filename
+  in
+  node
+  |> try_log "parse_and_simplify      ->" log
+  |> Stage_simplify_let.invoke
+  |> try_log "Stage_simplify_let      ->" log
+  |> Stage_normalize_bracket.invoke
+  |> try_log "Stage_normalize_bracket ->" log
+  |> Stage_linter.invoke _macro_sexp
+  |> Stage_a_normal_form.convert
+  |> try_log "Stage_a_normal_form     ->" log
+  |> compile_ ctx |> snd |> String.trim

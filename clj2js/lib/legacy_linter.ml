@@ -25,9 +25,9 @@ let read_exports_from_file interpreter prelude_code name : exports =
   in
 
   let rec resolve_loop (exports : string list) = function
-    | RBList (Atom (_, "do") :: children) ->
+    | RBList (Atom (_, "do*") :: children) ->
         children |> List.fold_left resolve_loop exports
-    | RBList (Atom (_, "def") :: Atom (_, name) :: _) -> name :: exports
+    | RBList (Atom (_, "def*") :: Atom (_, name) :: _) -> name :: exports
     | RBList (Atom (_, "ns") :: _) -> exports
     | RBList (Atom (_, "comment") :: _) -> exports
     | RBList
@@ -237,7 +237,7 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
   (* Function declaration *)
   | RBList
       [
-        Atom (_, "def");
+        Atom (_, "def*");
         Atom (_, name);
         (RBList (Atom (_, "fn*") :: SBList args :: _) as fn);
       ] ->
@@ -258,14 +258,14 @@ let rec lint' (ctx : lint_ctx) (node : cljexp) : cljexp * lint_ctx =
       |> ignore;
       (node, local_ctx)
   (* Variable declaration *)
-  | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
+  | RBList [ Atom (_, "def*"); Atom (_, name); body ] ->
       let local_ctx =
         { ctx with local_defs = StringMap.add name (-1, ()) ctx.local_defs }
       in
       lint' local_ctx body |> ignore;
       (* print_endline @@ "VAR DEC: " ^ name ^ "\n" ^ show_lint_ctx local_ctx; *)
       (node, local_ctx)
-  | RBList (Atom (_, "do") :: body) ->
+  | RBList (Atom (_, "do*") :: body) ->
       let local_ctx, _ =
         body
         |> List.fold_left_map

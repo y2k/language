@@ -13,7 +13,7 @@ let combile_file () =
       let compiler =
         match target with
         | "js" ->
-            let prelude_macros = read_code_file Sys.argv.(3) in
+            (* let prelude_macros = read_code_file Sys.argv.(3) in
             fun code ->
               Lib__Linter.run_resolve
                 (fun name ->
@@ -23,7 +23,9 @@ let combile_file () =
                   (* prerr_endline @@ Sys.getenv "PWD" ^ " | " ^ filename; *)
                   In_channel.(with_open_bin path input_all))
                 (fun _ ->
-                  Clj2js.main_js_with_strict false filename prelude_macros code)
+                  Clj2js.main_js_with_strict false filename prelude_macros code) *)
+            let prelude = read_code_file Sys.argv.(3) in
+            Clj2js.main_js_with_strict false filename prelude
         | "java" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_java false filename prelude

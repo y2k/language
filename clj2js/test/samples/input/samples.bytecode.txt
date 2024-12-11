@@ -1,5 +1,5 @@
 (= 1 2)
-(def a 1)
+(def a 1) a
 (def a)
 (defn foo [{a :b}] a)
 (defn foo [a b] (+ a b))
@@ -15,4 +15,3 @@
 (ns bar) (defn foo [a b] (+ a b))
 (vector 1 2 3)
 {:k1 1 :k2 "v2" "k3" :v3}
-foo

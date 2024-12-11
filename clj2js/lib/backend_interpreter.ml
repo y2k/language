@@ -25,7 +25,7 @@ let rec sexp_to_string = function
   | CBList xs -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}"
 
 let rec interpret (context : context) (node : cljexp) : context * cljexp =
-  (* log_sexp "interpret: " node |> ignore; *)
+  (* log_sexp "INTERPRET: " node |> ignore; *)
   let interpret_ x = interpret context x |> snd in
   let with_context x = (context, x) in
   match node with
@@ -41,13 +41,14 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
          let ch = String.get v 0 in
          ch >= '0' && ch <= '9' ->
       (context, x)
-  | RBList [ Atom (_, "transform_nodes"); CBList opt; xs ] ->
+  (* | RBList [ Atom (_, "transform_nodes"); CBList opt; xs ] -> *)
+  | RBList [ Atom (_, "transform_nodes"); RBList (_ :: opt); xs ] ->
       let xs =
         match interpret_ xs with RBList xs -> xs | n -> failnode __LOC__ [ n ]
       in
       let sep =
         unpack_to_map opt |> List.assoc_opt ":sep"
-        |> (function Some x -> x | None -> failnode __LOC__ opt)
+        |> ( function Some x -> x | None -> failnode __LOC__ opt )
         |> interpret_
       in
       let len = List.length xs in
@@ -97,10 +98,10 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
               String.sub x 1 (String.length x - 2)
           | n -> failnode __LOC__ [ n ] )
       |> with_context
-  | RBList [ Atom (l, "quote"); arg ] -> (
+  | RBList [ Atom (l, "quote*"); arg ] -> (
       match arg with
       | Atom (l, x) -> (context, Atom (l, x))
-      | n -> (context, RBList [ Atom (l, "quote"); n ]))
+      | n -> (context, RBList [ Atom (l, "quote*"); n ]))
   (* | RBList [ Atom (l, "quote"); arg ] -> (
       match arg with
       | Atom (l, x) -> (context, Atom (l, "'" ^ x))
@@ -138,13 +139,13 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           (ctx, Atom ({ m with pos = m2.pos; line = m2.line }, arg_val))
       | x, ctx -> (ctx, x))
   (* /Resolve scope value *)
-  | RBList (Atom (_, "do") :: body) ->
+  | RBList (Atom (_, "do*") :: body) ->
       let context2, results =
         body |> List.fold_left_map (fun ctx x -> interpret ctx x) context
       in
       let last_node = results |> List.rev |> List.hd in
       (context2, last_node)
-  | RBList [ Atom (_, "def"); Atom (_, name); body ] ->
+  | RBList [ Atom (_, "def*"); Atom (_, name); body ] ->
       let context =
         {
           context with
@@ -168,7 +169,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           context with
           scope = StringMap.add name (interpret_ v, context) context.scope;
         },
-        RBList [ Atom (m, "do") ] )
+        RBList [ Atom (m, "do*") ] )
   | RBList (Atom (_, "let*") :: SBList bindings :: body) ->
       let scope =
         bindings |> List.split_into_pairs
@@ -236,8 +237,8 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       results |> List.rev |> List.hd |> with_context
   | node -> failnode __LOC__ [ node ]
 
-let run_linter prelude_macros filename (ctx, exp) =
-  (ctx, Linter.lint interpret prelude_macros filename exp)
+(* let run_linter prelude_macros filename (ctx, exp) =
+  (ctx, Linter.lint interpret prelude_macros filename exp) *)
 
 let main (filename : string) prelude_macros code =
   let macros_ctx =

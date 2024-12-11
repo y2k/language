@@ -11,6 +11,7 @@ depends: [
   "angstrom"
   "ppx_deriving"
   "yojson"
+  "ppx_deriving_yojson"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]

@@ -5,6 +5,7 @@ let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
+  (* log_sexp "js: " node |> ignore; *)
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
   match node with
@@ -14,7 +15,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Version 2.0 *)
-  | RBList (Atom (_, "do") :: _body) ->
+  | RBList (Atom (_, "do*") :: _body) ->
       (* failwith __LOC__ *)
       let js_body =
         _body |> List.map compile
@@ -22,10 +23,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> Option.value ~default:""
       in
       with_context js_body
-  | RBList [ Atom (_, "bind*"); Atom (_, name) ] ->
+  | RBList [ Atom (_, "let*"); Atom (_, name) ] ->
       let js_code = Printf.sprintf "let %s;" name in
       with_context js_code
-  | RBList [ Atom (_, "bind*"); Atom (_, name); value ] ->
+  | RBList [ Atom (_, "let*"); Atom (_, name); value ] ->
       let js_code = Printf.sprintf "const %s = %s;" name (compile value) in
       with_context js_code
   | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
@@ -39,16 +40,35 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "...%s" value |> with_context
   (* Version 2.0 *)
   (* Expressions *)
-  (* | RBList (Atom (_, "do") :: body) ->
+  (* | RBList (Atom (_, "do*") :: body) ->
       body |> List.map compile
       |> List.reduce (Printf.sprintf "%s\n%s")
       |> with_context *)
+  | RBList [ Atom (l, "quote*"); x ] ->
+      RBList
+        [
+          Atom (l, "hash-map");
+          Atom (l, ":__y2k_type");
+          Atom (l, ":quote");
+          Atom (l, ":value");
+          Atom (l, "\"" ^ show_sexp x ^ "\"");
+        ]
+      |> compile |> with_context
+  (* Vector *)
+  | RBList (Atom (_, "vector") :: xs) ->
+      xs |> List.map compile
+      |> List.reduce_opt (Printf.sprintf "%s, %s")
+      |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
   | SBList xs ->
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
-  (*  *)
-  | RBList (Atom (_, "ns") :: _ :: depencencies) ->
+  (* *)
+  | RBList
+      [
+        Atom (_, "ns");
+        RBList [ Atom (_, "quote*"); RBList (_ :: depencencies) ];
+      ] ->
       depencencies
       |> List.map (function
            | RBList (Atom (_, ":require") :: requiries) ->
@@ -112,16 +132,16 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions *)
   | RBList
       [
-        Atom (l, "def");
+        Atom (l, "def*");
         Atom (mn, fname);
-        RBList (Atom (_, "fn*") :: SBList args :: body);
+        RBList (Atom (_, "fn*") :: RBList args :: body);
       ] ->
       let modifier = match mn.symbol with ":private" -> "" | _ -> "export " in
-      let fn = RBList (Atom (l, "fn*") :: SBList args :: body) in
+      let fn = RBList (Atom (l, "fn*") :: RBList args :: body) in
       Printf.sprintf "%sconst %s = %s;" modifier fname (compile fn)
       |> with_context
   (* Constants *)
-  | RBList [ Atom (dm, "def"); Atom (sm, name); body ] ->
+  | RBList [ Atom (dm, "def*"); Atom (sm, name); body ] ->
       (match (dm.symbol, sm.symbol) with
       | _, ":private" -> Printf.sprintf "const %s = %s;" name (compile body)
       | "export", _ ->
@@ -130,6 +150,22 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | RBList (Atom (_, "comment") :: _) -> "" |> with_context
   (* Object literal *)
+  | RBList (Atom (_, "hash-map") :: xs) ->
+      let rec to_pairs = function
+        | k :: v :: xs ->
+            let a = compile k in
+            let kn =
+              if String.starts_with a ~prefix:":" then
+                String.sub a 1 (String.length a - 1)
+              else a
+            in
+            let b = "[" ^ kn ^ "]: " ^ compile v in
+            let tail = to_pairs xs in
+            if tail == "" then b else b ^ ", " ^ tail
+        | [] -> ""
+        | _ -> failwith __LOC__
+      in
+      to_pairs xs |> Printf.sprintf "{%s}" |> with_context
   | CBList xs ->
       let rec to_pairs = function
         | k :: v :: xs ->
@@ -152,7 +188,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce __LOC__ (Printf.sprintf "%s;%s"))
       |> with_context
   (* Lambda *)
-  | RBList (Atom (_, "fn*") :: SBList args :: body) ->
+  | RBList (Atom (_, "fn*") :: RBList args :: body) ->
       let rec loop_args = function
         | Atom (_, "&") :: Atom (_, x) :: _ -> Printf.sprintf "...%s" x
         | Atom (_, x) :: [] -> x
@@ -211,17 +247,23 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> with_context
   | x -> failnode __LOC__ [ x ]
 
-let run_linter prelude_macros filename (ctx, exp) =
-  (ctx, Linter.lint Backend_interpreter.interpret prelude_macros filename exp)
-
 let main (log : bool) (filename : string) prelude_macros code =
-  let macros_ctx =
+  let macros_ctx, _macro_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
          { empty_context with interpreter = Backend_interpreter.interpret }
          "prelude"
-    |> fst
   in
-  code |> Frontend.parse_and_simplify { macros_ctx with log } filename
-  (* |> run_linter prelude_macros filename *)
-  |> fun (ctx, exp) -> compile_ ctx exp |> snd |> String.trim
+  let ctx, node =
+    code |> Frontend.parse_and_simplify { macros_ctx with log } filename
+  in
+  node
+  |> try_log "Parse_and_simplify      ->" log
+  |> Stage_simplify_let.invoke
+  |> try_log "Stage_simplify_let      ->" log
+  |> Stage_normalize_bracket.invoke
+  |> try_log "Stage_normalize_bracket ->" log
+  |> Stage_linter.invoke _macro_sexp
+  |> Stage_a_normal_form.convert
+  |> try_log "Stage_a_normal_form     ->" log
+  |> compile_ ctx |> snd |> String.trim

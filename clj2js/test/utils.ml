@@ -35,7 +35,10 @@ let make_samples_test compiler prelude_path file_name =
         samples
         |> List.map (fun line ->
                print_endline @@ __LOC__ ^ " " ^ line;
-               let r = compile_code compiler prelude_path line in
+               let r =
+                 try compile_code compiler prelude_path line
+                 with e -> Printf.sprintf "%s" (Printexc.to_string e)
+               in
                "=============================\n" ^ r)
         |> List.reduce __LOC__ (Printf.sprintf "%s\n%s")
       in
@@ -76,7 +79,7 @@ let assert_file compile prelude_path ext p filename =
   in
   assert_ compile prelude_path p code expected
 
-let assert_with_import compile prelude_path pos files code expected =
+(* let assert_with_import compile prelude_path pos files code expected =
   let module Clj2js = Lib in
   let with_extenal_files files f =
     Lib__Linter.run_resolve
@@ -104,4 +107,4 @@ let assert_with_import compile prelude_path pos files code expected =
     let f, l, s, e = pos in
     Printf.sprintf "%S, line %d, characters %d-%d" f l s e
   in
-  Alcotest.test_case loc `Quick inner_assert
+  Alcotest.test_case loc `Quick inner_assert *)

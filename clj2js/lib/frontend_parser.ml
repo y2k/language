@@ -3,8 +3,13 @@ open Common
 module A = Angstrom
 
 let pnode find_line_and_pos =
-  let pcomment = A.string ";;" *> A.take_while (( <> ) '\n') *> A.char '\n' in
-  let pspace = A.many (A.char ' ' <|> A.char '\n' <|> pcomment) in
+  let pcomment =
+    (A.string ";" <|> A.string "#!") *> A.take_while (( <> ) '\n')
+    <* A.many (A.char '\n')
+  in
+  let pspace =
+    A.many (A.char ' ' <|> A.char '\n' <|> (pcomment >>| fun _ -> ' '))
+  in
   let patom =
     A.both A.pos
       (A.take_while1 (function

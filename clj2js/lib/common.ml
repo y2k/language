@@ -11,10 +11,6 @@ type cljexp =
   | CBList of cljexp list
 [@@deriving show]
 
-let log_sexp prefix node =
-  print_endline @@ prefix ^ " " ^ show_cljexp node;
-  node
-
 module StringMap = struct
   include Map.Make (String)
 
@@ -95,28 +91,17 @@ module List = struct
 end
 
 let debug_show_cljexp nodes =
-  let rec debug_show_cljexp_ = function
-    | Atom (_, x) -> `String x
-    | RBList xs -> `List (List.map debug_show_cljexp_ xs)
-    | SBList xs -> `List (List.map debug_show_cljexp_ xs)
-    | CBList xs -> (
-        let rec loop xs =
-          match xs with
-          | [] -> Some []
-          | Atom (_, k) :: v :: tail -> (
-              match loop tail with
-              | Some xs -> Some ((k, debug_show_cljexp_ v) :: xs)
-              | None -> None)
-          | _ -> None
-        in
-        loop xs |> Option.map (fun xs -> `Assoc xs) |> function
-        | None -> `List (List.map debug_show_cljexp_ xs)
-        | Some x -> x)
+  let rec show_rec = function
+    | Atom (_, x) -> x
+    | RBList xs -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SBList xs -> "[" ^ String.concat " " (List.map show_rec xs) ^ "]"
+    | CBList xs -> "{" ^ String.concat " " (List.map show_rec xs) ^ "}"
   in
-  (match nodes with
-  | [ n ] -> debug_show_cljexp_ n
-  | xs -> `List (List.map debug_show_cljexp_ xs))
-  |> Yojson.Safe.pretty_to_string
+  nodes |> List.map show_rec |> String.concat "\n"
+
+let log_sexp prefix node =
+  print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
+  node
 
 let failnode prefix es =
   es
@@ -138,3 +123,7 @@ let rec show_sexp sexp =
   | RBList xs -> format "(%s)" xs
   | SBList xs -> format "[%s]" xs
   | CBList xs -> format "{%s}" xs
+
+let try_log prefix (log : bool) (node : cljexp) =
+  if log then print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
+  node
