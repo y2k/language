@@ -3,6 +3,7 @@ open Common
 
 let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
+let unwrap_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   (* log_sexp "js: " node |> ignore; *)
@@ -32,12 +33,24 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
+  | RBList [ Atom (_, "set!"); Atom (_, name); value ] ->
+      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
+      with_context js_code
+  | RBList [ Atom (_, "set!"); name; value ] ->
+      let js_code = Printf.sprintf "%s = %s;" (compile name) (compile value) in
+      with_context js_code
   | RBList [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ] ->
+      Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
+        (compile then_) (compile else_)
+      |> with_context
+  | RBList [ Atom (_, "if*"); cond; then_; else_ ] ->
       Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
         (compile then_) (compile else_)
       |> with_context
   | RBList [ Atom (_, "spread"); Atom (_, value) ] ->
       Printf.sprintf "...%s" value |> with_context
+  | RBList [ Atom (_, "spread"); value ] ->
+      Printf.sprintf "...%s" (compile value) |> with_context
   (* Version 2.0 *)
   (* Expressions *)
   (* | RBList (Atom (_, "do*") :: body) ->
@@ -198,6 +211,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       let sargs = loop_args args in
       let sbody =
+        let body = body |> List.concat_map unwrap_do in
         body |> List.map compile |> List.rev
         |> List.mapi (fun i x -> if i = 0 then "return " ^ x else x)
         |> List.rev
@@ -264,6 +278,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke _macro_sexp
-  |> Stage_a_normal_form.convert
-  |> try_log "Stage_a_normal_form     ->" log
+  (* |> Stage_a_normal_form_2.invoke *)
+  |> Stage_convert_if_to_statment.invoke
+  |> try_log "Stage_normalize_if      ->" log
   |> compile_ ctx |> snd |> String.trim

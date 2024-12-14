@@ -1,3 +1,5 @@
+let last xs = List.nth xs (List.length xs - 1)
+let butlast xs = List.rev (List.tl (List.rev xs))
 let loc (a, b, c, _) = Printf.sprintf "%s:%i:%i" a b c
 
 type meta = { line : int; pos : int; symbol : string } [@@deriving show]

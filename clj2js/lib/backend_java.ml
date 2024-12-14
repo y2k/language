@@ -76,6 +76,8 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
      %s%s}"
     clsName superCls state ms
 
+let unwrap_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
@@ -108,7 +110,17 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList [ Atom (_, "bind-update*"); Atom (_, name); value ] ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
+  | RBList [ Atom (_, "set!"); Atom (_, name); value ] ->
+      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
+      with_context js_code
+  | RBList [ Atom (_, "set!"); name; value ] ->
+      let js_code = Printf.sprintf "%s = %s;" (compile name) (compile value) in
+      with_context js_code
   | RBList [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ] ->
+      Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
+        (compile then_) (compile else_)
+      |> with_context
+  | RBList [ Atom (_, "if*"); cond; then_; else_ ] ->
       Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond)
         (compile then_) (compile else_)
       |> with_context
@@ -215,7 +227,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
+      let body = body |> List.concat_map unwrap_do in
       let sbody =
+        let body = body |> List.concat_map unwrap_do in
         let length = List.length body in
         body
         |> List.filteri (fun i _ -> i < length - 1)
@@ -255,6 +269,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
+      let body = body |> List.concat_map unwrap_do in
       let sbody =
         let length = List.length body in
         body
@@ -361,6 +376,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke _macro_sexp
-  |> Stage_a_normal_form.convert
+  (* |> Stage_a_normal_form.convert *)
+  |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log
   |> compile_ ctx |> snd |> String.trim

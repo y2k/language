@@ -32,28 +32,27 @@ y2k.RT.equals("a", "b")
 ("a">="b")
 =============================
 var p__1 = null.foo();;
-Object p__3;;
+Object p__2;;
 if (p__1) {
-p__3 = null.bar();
+p__2 = null.bar();
 } else {
-p__3 = p__1;
+p__2 = p__1;
 };
-p__3
+p__2
 =============================
 null.foo()
 =============================
 var p__1 = !1;;
 Object p__4;;
 if (p__1) {
-var p__5 = y2k.RT.str(2);;
-var p__2 = !p__5;;
-Object p__7;;
+var p__2 = !y2k.RT.str(2);;
+Object p__3;;
 if (p__2) {
-p__7 = !3;
+p__3 = !3;
 } else {
-p__7 = p__2;
+p__3 = p__2;
 };
-p__4 = p__7;
+p__4 = p__3;
 } else {
 p__4 = p__1;
 };
@@ -63,13 +62,13 @@ var p__1 = !1;;
 Object p__4;;
 if (p__1) {
 var p__2 = !2;;
-Object p__6;;
+Object p__3;;
 if (p__2) {
-p__6 = !3;
+p__3 = !3;
 } else {
-p__6 = p__2;
+p__3 = p__2;
 };
-p__4 = p__6;
+p__4 = p__3;
 } else {
 p__4 = p__1;
 };
@@ -79,13 +78,13 @@ var p__1 = 1;;
 Object p__4;;
 if (p__1) {
 var p__2 = 2;;
-Object p__6;;
+Object p__3;;
 if (p__2) {
-p__6 = 3;
+p__3 = 3;
 } else {
-p__6 = p__2;
+p__3 = p__2;
 };
-p__4 = p__6;
+p__4 = p__3;
 } else {
 p__4 = p__1;
 };
@@ -93,7 +92,18 @@ p__4
 =============================
 1
 =============================
+((String)1)
+=============================
 y2k.RT.assoc(y2k.RT.hash_map(), "k", "v")
+=============================
+var p__1 = 1;;
+Object p__2;;
+if (y2k.RT.equals(p__1, "a")) {
+p__2 = y2k.RT.count(2);
+} else {
+p__2 = y2k.RT.count(3);
+};
+p__2
 =============================
 y2k.RT.try_(()->{
 return y2k.RT.str();
@@ -111,14 +121,18 @@ y2k.RT.concat(java.util.Arrays.asList(1, 2), java.util.Arrays.asList(3, 4))
 =============================
 y2k.RT.conj(java.util.Arrays.asList(1, 2), 3)
 =============================
+y2k.RT.count(y2k.RT.hash_map("f", ()->{
+var a = 1;;
+return 2;
+}))
+=============================
 public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map());
 =============================
-var p__1 = oof(1);;
-public static Object foo=bar(p__1);
+public static Object foo=bar(oof(1));
 =============================
 public static Object foo=bar(1);
 =============================
@@ -128,10 +142,10 @@ public static Object LIMIT_CHARGE=80;
 =============================
 public static Object state=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map("field", 1));
 =============================
-private static Object LIMIT_CHARGE=80;
+private static Object a=2;;
+a.bar = 1;
 =============================
-var p__1 = y2k.RT.assoc(xs, "k", "v");;
-def*(a, java.util.Arrays.asList(xs), p__1)
+private static Object LIMIT_CHARGE=80;
 =============================
 public static String foo (final int a,final int b) {
 return a;
@@ -153,6 +167,10 @@ return 1;
 ;
 public static Object b () {
 return 2;
+}
+=============================
+public static Object a (final Object xs) {
+return y2k.RT.assoc(xs, "k", "v");
 }
 =============================
 public static Object b () {
@@ -212,52 +230,52 @@ return foo();
 }
 =============================
 public static Object foo () {
-Object p__2;;
+Object p__1;;
 if (true) {
-p__2 = 1;
+p__1 = 1;
 } else {
-p__2 = 2;
+p__1 = 2;
 };
-p__2;
+p__1;
 return foo();
 }
 =============================
 public static Object foo () {
-Object p__2;;
+Object p__1;;
 if (true) {
-p__2 = 2;
+p__1 = 2;
 } else {
-p__2 = 3;
+p__1 = 3;
 };
-p__2;
+p__1;
 return foo();
 }
 =============================
 public static Object foo () {
-Object p__2;;
+Object p__1;;
 if (true) {
-p__2 = 2;
+p__1 = 2;
 } else {
-p__2 = 3;
+p__1 = 3;
 };
-p__2;
-Object p__4;;
+p__1;
+Object p__2;;
 if (false) {
-p__4 = 4;
+p__2 = 4;
 } else {
-p__4 = 5;
-};
-return p__4;
-}
-=============================
-public static Object foo () {
-Object p__2;;
-if (true) {
-p__2 = 2;
-} else {
-p__2 = 3;
+p__2 = 5;
 };
 return p__2;
+}
+=============================
+public static Object foo () {
+Object p__1;;
+if (true) {
+p__1 = 2;
+} else {
+p__1 = 3;
+};
+return p__1;
 }
 =============================
 public static Object foo () {
@@ -281,42 +299,36 @@ return a(b);
 }
 =============================
 public static Object foo (final Object a,final Object b) {
-var p__1 = foo(a, b);;
-var p__2 = foo(a, b);;
-return foo(p__1, p__2);
+return foo(foo(a, b), foo(a, b));
 }
 =============================
 public static Object foo (final Object a,final Object b) {
+Object p__1;;
+if (true) {
+p__1 = 2;
+} else {
+p__1 = 3;
+};
+Object p__2;;
+if (true) {
+p__2 = 6;
+} else {
+p__2 = 7;
+};
+foo(p__1, p__2);
 Object p__3;;
-if (true) {
-p__3 = 2;
-} else {
-p__3 = 3;
-};
-var p__1 = p__3;;
-Object p__6;;
-if (true) {
-p__6 = 6;
-} else {
-p__6 = 7;
-};
-var p__4 = p__6;;
-foo(p__1, p__4);
-Object p__9;;
 if (false) {
-p__9 = 4;
+p__3 = 4;
 } else {
-p__9 = 5;
+p__3 = 5;
 };
-var p__7 = p__9;;
-Object p__12;;
+Object p__4;;
 if (true) {
-p__12 = 8;
+p__4 = 8;
 } else {
-p__12 = 9;
+p__4 = 9;
 };
-var p__10 = p__12;;
-return foo(p__7, p__10);
+return foo(p__3, p__4);
 }
 =============================
 public static Object foo (final Object a,final Object b) {
@@ -351,8 +363,7 @@ return a;
 }
 =============================
 private static Object foo (final Object context) {
-var p__1 = context.getSySe(Ctx.AU_SE);;
-return ((AuMa)p__1);
+return ((AuMa)context.getSySe(Ctx.AU_SE));
 }
 =============================
 y2k.RT.str();
@@ -391,59 +402,59 @@ return (String)a_foo(this, p0, p1); }
 =============================
 y2k.RT.get("xs", 1)
 =============================
-Object p__2;;
+Object p__1;;
 if ("a") {
-p__2 = "b";
+p__1 = "b";
 } else {
-p__2 = "c";
+p__1 = "c";
 };
-p__2
+p__1
 =============================
-Object p__2;;
+Object p__1;;
 if ("a") {
-p__2 = "b";
+p__1 = "b";
 } else {
-p__2 = y2k.RT.println("c");
+p__1 = y2k.RT.println("c");
 };
-p__2
+p__1
 =============================
 Object p__4;;
-Object p__2;;
+Object p__1;;
 if ("a1") {
-p__2 = "a2";
+p__1 = "a2";
 } else {
-p__2 = "a3";
+p__1 = "a3";
 };
-var p__3 = p__2;;
-if (p__3) {
-Object p__8;;
+if (p__1) {
+Object p__2;;
 if ("b1") {
-p__8 = "b2";
+p__2 = "b2";
 } else {
-p__8 = "b3";
+p__2 = "b3";
 };
-p__4 = p__8;
+p__4 = p__2;
 } else {
-Object p__6;;
+Object p__3;;
 if ("c1") {
-p__6 = "c2";
+p__3 = "c2";
 } else {
-p__6 = "c3";
+p__3 = "c3";
 };
-p__4 = p__6;
+p__4 = p__3;
 };
 p__4
 =============================
-Object p__2;;
+Object p__1;;
 if (false) {
-p__2 = null;
+p__1 = null;
 } else {
-var p__3 = new Exception("foo");;
-p__2 = y2k.RT.throw_(p__3);
+p__1 = y2k.RT.throw_(new Exception("foo"));
 };
-p__2
+p__1
 =============================
 y2k.RT.into_array(java.util.Arrays.asList(1, 2, 3))
+=============================
+(1 instanceof String)
 =============================
 
 =============================
@@ -475,17 +486,19 @@ var p__1 = "b";;
 var a = y2k.RT.get(p__1, 0);;
 a
 =============================
-Object p__2;;
+Object p__1;;
 if (true) {
-p__2 = 1;
+p__1 = 1;
 } else {
-p__2 = 2;
+p__1 = 2;
 };
-p__2;
 y2k.RT.str()
 =============================
 y2k.RT.str();
 y2k.RT.println()
+=============================
+A a = foo(1);;
+2
 =============================
 String a = "b";;
 a
@@ -506,8 +519,7 @@ y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
 =============================
 !true
 =============================
-var p__1 = y2k.RT.equals("a", "b");;
-!p__1
+!y2k.RT.equals("a", "b")
 =============================
 package _;
 import a.b.List;
@@ -548,13 +560,13 @@ return x;
 }
 =============================
 var p__1 = null.foo();;
-Object p__3;;
+Object p__2;;
 if (p__1) {
-p__3 = p__1;
+p__2 = p__1;
 } else {
-p__3 = null.bar();
+p__2 = null.bar();
 };
-p__3
+p__2
 =============================
 null.foo()
 =============================
@@ -563,15 +575,14 @@ Object p__4;;
 if (p__1) {
 p__4 = p__1;
 } else {
-var p__5 = fetch(2);;
-var p__2 = !p__5;;
-Object p__7;;
+var p__2 = !fetch(2);;
+Object p__3;;
 if (p__2) {
-p__7 = p__2;
+p__3 = p__2;
 } else {
-p__7 = !3;
+p__3 = !3;
 };
-p__4 = p__7;
+p__4 = p__3;
 };
 p__4
 =============================
@@ -581,13 +592,13 @@ if (p__1) {
 p__4 = p__1;
 } else {
 var p__2 = !2;;
-Object p__6;;
+Object p__3;;
 if (p__2) {
-p__6 = p__2;
+p__3 = p__2;
 } else {
-p__6 = !3;
+p__3 = !3;
 };
-p__4 = p__6;
+p__4 = p__3;
 };
 p__4
 =============================
@@ -597,13 +608,13 @@ if (p__1) {
 p__4 = p__1;
 } else {
 var p__2 = 2;;
-Object p__6;;
+Object p__3;;
 if (p__2) {
-p__6 = p__2;
+p__3 = p__2;
 } else {
-p__6 = 3;
+p__3 = 3;
 };
-p__4 = p__6;
+p__4 = p__3;
 };
 p__4
 =============================
@@ -611,8 +622,7 @@ p__4
 =============================
 y2k.RT.println("a", 1, "b")
 =============================
-var p__1 = "".length;;
-y2k.RT.println(p__1)
+y2k.RT.println("".length)
 =============================
 y2k.RT.println((p__1)->{
 var a = y2k.RT.get(p__1, 0);;
@@ -622,6 +632,10 @@ return a;
 y2k.RT.rest(java.util.Arrays.asList(1, 2, 3))
 =============================
 "".length = 1;
+=============================
+y2k.RT.count(1) = 2;
+=============================
+1 = 2;
 =============================
 y2k.RT.str("a", "b", 3)
 =============================
@@ -633,28 +647,25 @@ var b = y2k.RT.get(p__1, 1);;
 return y2k.RT.equals(a, b);
 })
 =============================
-Object p__3;;
+Object p__1;;
 if ("a") {
-p__3 = "b";
+p__1 = "b";
 } else {
-p__3 = "c";
+p__1 = "c";
 };
-var p__1 = p__3;;
 y2k.RT.str(p__1)
 =============================
 String.valueOf("level")
 =============================
-Object p__3;;
+Object p__1;;
 if (true) {
-p__3 = 1;
+p__1 = 1;
 } else {
-p__3 = 2;
+p__1 = 2;
 };
-var p__1 = p__3;;
 java.util.Arrays.asList(p__1)
 =============================
-var p__1 = y2k.RT.str(1);;
-java.util.Arrays.asList(p__1)
+java.util.Arrays.asList(y2k.RT.str(1))
 =============================
 java.util.Arrays.asList()
 =============================
