@@ -68,26 +68,6 @@ let rec invoke_up_do (node : cljexp) : cljexp =
   | RBList ((Atom (_, "fn*") as fn_) :: args :: body) ->
       let body = List.map invoke_up_do body in
       RBList (fn_ :: args :: body)
-  (* | RBList
-      [
-        (Atom (_, "if*") as if_);
-        RBList
-          (Atom (_, "do*")
-          :: (RBList [ Atom (_, "let*"); var_nave ] as let_)
-          :: tail);
-        then_;
-        else_;
-      ] ->
-      let then_ = invoke_up_do then_ in
-      let else_ = invoke_up_do else_ in
-      RBList
-        (List.concat
-           [
-             [ Atom (unknown_location, "do*") ];
-             [ let_ ];
-             tail;
-             [ RBList [ if_; var_nave; then_; else_ ] ];
-           ]) *)
   | RBList
       [
         (Atom (_, "if*") as if_);

@@ -29,11 +29,12 @@ let main (log : bool) (filename : string) prelude_macros code =
     code |> Frontend.parse_and_simplify { macros_ctx with log } filename
   in
   node
+  |> try_log "Parse_and_simplify      ->" log
   |> Stage_simplify_let.invoke
-  |> try_log "Stage_simplify_let ->" log
+  |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke (snd macro_sexp)
   |> Stage_unwrap_ns.invoke ctx
-  |> try_log "Stage_unwrap_ns ->" log
+  |> try_log "Stage_unwrap_ns         ->" log
   |> compile |> String.trim

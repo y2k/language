@@ -30,6 +30,8 @@ let invoke (global_ctx : context) (node : cljexp) : cljexp =
         RBList [ def; Atom (m, ctx.ns ^ "/" ^ name) ]
     | RBList [ (Atom (_, "def*") as def); Atom (m, name); value ] ->
         RBList [ def; Atom (m, ctx.ns ^ "/" ^ name); invoke ctx value ]
+    | RBList ((Atom (_, "fn*") as fn_) :: args :: body) ->
+        RBList (fn_ :: args :: List.map (invoke ctx) body)
     | RBList
         ((Atom (_, "do*") as do_)
         :: RBList
@@ -49,11 +51,6 @@ let invoke (global_ctx : context) (node : cljexp) : cljexp =
             || String.ends_with ~suffix:"*" fn_name
           then ""
           else ctx.ns ^ "/"
-          (* match fn_name with
-             | "fn*" | "+" | "list" | "vector" | "atom" | "deref" | "reset!"
-             | "swap!" | "str" ->
-                 ""
-             | _ -> ctx.ns ^ "/" *)
         in
         RBList (Atom (m, prefix ^ fn_name) :: args)
     | node -> node
