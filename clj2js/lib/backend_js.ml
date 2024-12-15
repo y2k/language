@@ -277,7 +277,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke _macro_sexp
+  |> Stage_linter.invoke ctx _macro_sexp
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_normalize_if      ->" log
   |> compile_ ctx |> snd |> String.trim

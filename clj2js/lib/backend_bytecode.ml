@@ -34,7 +34,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke (snd macro_sexp)
+  |> Stage_linter.invoke ctx (snd macro_sexp)
   |> Stage_unwrap_ns.invoke ctx
   |> try_log "Stage_unwrap_ns         ->" log
   |> compile |> String.trim

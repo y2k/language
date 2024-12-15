@@ -13,6 +13,8 @@ type cljexp =
   | CBList of cljexp list
 [@@deriving show]
 
+let unwrap_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
+
 module StringMap = struct
   include Map.Make (String)
 

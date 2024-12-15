@@ -76,8 +76,6 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
      %s%s}"
     clsName superCls state ms
 
-let unwrap_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
-
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
@@ -129,8 +127,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* /Version 2.0 *)
   | RBList [ Atom (_, "not"); x ] ->
       compile x |> Printf.sprintf "!%s" |> with_context
-  | RBList [ Atom (_, "is"); a; b ] ->
-      make_operator a b (Printf.sprintf "(%s instanceof %s)")
+  | RBList [ Atom (_, "is"); instance; Atom (tm, type_) ] ->
+      let unescp_type =
+        if String.starts_with ~prefix:"\"" type_ then unpack_string type_
+        else type_
+      in
+      make_operator instance
+        (Atom (tm, unescp_type))
+        (Printf.sprintf "(%s instanceof %s)")
   | RBList [ Atom (_, "as"); instance; Atom (type_meta, type_) ] ->
       let unescp_type =
         if String.starts_with ~prefix:"\"" type_ then unpack_string type_
@@ -148,24 +152,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       compile (RBList (Atom (unknown_location, "y2k.RT.hash_map") :: xs))
       |> with_context
   | CBList xs -> failnode __LOC__ xs
-  (* compile (RBList (Atom (unknown_location, "y2k.RT.hash_map") :: xs))
-      |> with_context *)
   (* Vector *)
   | RBList (Atom (_, "vector") :: xs) ->
       compile
         (RBList (Atom (unknown_location, "java.util.Arrays/asList") :: xs))
       |> with_context
   | SBList xs -> failnode __LOC__ xs
-  (* compile
-        (RBList (Atom (unknown_location, "java.util.Arrays/asList") :: xs))
-      |> with_context *)
-  (* | SBList xs ->
-         xs |> List.map compile
-         |> List.reduce_opt (Printf.sprintf "%s, %s")
-         |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
-     | CBList xs ->
-         compile (RBList (Atom (unknown_location, "java.util.Map/of") :: xs))
-         |> with_context *)
   (* Namespaces *)
   | RBList (Atom (_, "do*") :: (RBList (Atom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos =
@@ -210,9 +202,10 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       Printf.sprintf "package %s;\n%s" name imports |> with_context
-  | RBList (Atom (_, "do*") :: _body) ->
+  | RBList (Atom (_, "do*") :: body) ->
       let js_body =
-        _body |> List.map compile
+        body |> List.map compile
+        |> List.filter (( <> ) "")
         |> List.reduce_opt (Printf.sprintf "%s;\n%s")
         |> Option.value ~default:""
       in
@@ -299,6 +292,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
           (compile body)
       in
       result |> with_context
+  (* Empty declaration *)
+  | RBList [ Atom (_, "def*"); _ ] -> "" |> with_context
   (* Interop field *)
   | RBList [ Atom (_, "."); target; Atom (_, field) ]
     when String.starts_with ~prefix:":-" field ->
@@ -375,7 +370,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke _macro_sexp
+  |> Stage_linter.invoke ctx _macro_sexp
   (* |> Stage_a_normal_form.convert *)
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log

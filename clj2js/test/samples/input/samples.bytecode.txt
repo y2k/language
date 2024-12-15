@@ -1,4 +1,6 @@
 (= 1 2)
+(def a [1 2])
+(def a {1 2})
 (def a 1) a
 (def a)
 (defn foo [{a :b}] a)

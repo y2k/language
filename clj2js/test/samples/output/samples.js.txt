@@ -28,6 +28,8 @@ export const foo = (1 + 2);
 (3 <= 1)
 (4 >= 2)
 =============================
+alert(-1)
+=============================
 alert({["__y2k_type"]: "quote", ["value"]: "a"})
 =============================
 alert("a\"b")
@@ -435,6 +437,9 @@ return fx(2) });
 export const f = ((x, y) => {
 return y });
 f(1, 2)
+=============================
+export const f = ((x) => {
+return x?.foo?.bar });
 =============================
 export const f = ((x) => {
 return x });

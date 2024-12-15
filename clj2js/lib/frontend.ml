@@ -391,7 +391,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | RBList ((RBList _ as h) :: args) ->
       RBList (expand_core_macro2 h :: List.map expand_core_macro2 args)
       |> with_context
-  (* Desugar interop function call *)
+      (* Desugar interop function call *)
   | RBList (Atom (l, fname) :: target :: args)
     when String.starts_with ~prefix:"." fname && String.length fname > 1 ->
       let mname = ":" ^ String.sub fname 1 (String.length fname - 1) in

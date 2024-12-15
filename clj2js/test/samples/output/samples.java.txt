@@ -126,6 +126,14 @@ var a = 1;;
 return 2;
 }))
 =============================
+public static Object f () {
+return g();
+}
+;
+public static Object g () {
+return 0;
+}
+=============================
 public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
@@ -363,7 +371,7 @@ return a;
 }
 =============================
 private static Object foo (final Object context) {
-return ((AuMa)context.getSySe(Ctx.AU_SE));
+return ((String)context.getSySe(Ctx.AU_SE));
 }
 =============================
 y2k.RT.str();
@@ -535,6 +543,20 @@ package _;
 import b.Ctx;
 public class Main{
 public static Object a=y2k.RT.str(Ctx.A_S);}
+=============================
+package b;
+import c.An;
+import c.Cn;
+import c.Gn;
+import d.En;
+import d.Dn;
+import d.Fn;
+public class Main{
+public static Object a () {
+((Cn)1);
+return ((Dn)2);
+}
+}
 =============================
 package gg.h7.i8;
 import a.b.C1;
