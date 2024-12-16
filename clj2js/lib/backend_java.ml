@@ -371,7 +371,8 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke ctx _macro_sexp
-  (* |> Stage_a_normal_form.convert *)
+  |> Stage_java_require.main
+  |> try_log "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log
   |> compile_ ctx |> snd |> String.trim
