@@ -37,38 +37,28 @@ let convert_clj_filename_to_java path =
       Filename.basename path |> String.capitalize_ascii |> Filename.concat dir
 
 let make_build_script path target_path =
-  (* print_endline @@ "target_path: " ^ target_path; *)
   let result =
     reduce_files path [] (fun acc file ->
         if filter_source_file file then file :: acc else acc)
   in
-  (* print_endline path; *)
-  let prelude_path = Sys.getcwd () ^ "/vendor/prelude/java/src/prelude.clj" in
-  (* let java_runtime_src =
-       Filename.concat path "vendor/prelude/java/src/RT.java"
-     in
-     let java_runtime_dst = Filename.concat path ".github/bin/y2k/RT.java" in *)
-  (* let java_runtime_cm =
-       Printf.sprintf "mkdir -p %s\ncp %s %s"
-         (Filename.dirname java_runtime_dst)
-         java_runtime_src java_runtime_dst
-     in *)
   result
   |> List.map (fun file ->
          let target_file =
            Filename.concat target_path
              (change_extension (convert_clj_filename_to_java file) ".java")
          in
-         (*  *)
-         (* print_endline @@ "# [LOG] " ^ __LOC__ ^ ": " ^ file ^ " | "
-         ^ convert_clj_filename_to_java file; *)
-         (*  *)
+         (* *)
          let create_dir =
            Printf.sprintf "mkdir -p %s" (Filename.dirname target_file)
          in
-         Printf.sprintf "%s\nclj2js java %s %s > %s" create_dir
+         Printf.sprintf "%s\nclj2js java %s $FULL_PRELUDE_JAVA > %s" create_dir
            (Filename.concat path file)
-           prelude_path target_file)
+           target_file)
   |> List.fold_left (Printf.sprintf "%s\n%s")
-       (Printf.sprintf "#!/bin/bash\nset -e\nset -u\nset -o pipefail\n")
+       (Printf.sprintf
+          "#!/bin/bash\n\
+           set -e\n\
+           set -u\n\
+           set -o pipefail\n\n\
+           export FULL_PRELUDE_JAVA=$(realpath $PRELUDE_JAVA)\n")
   |> print_endline
