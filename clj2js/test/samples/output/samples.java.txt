@@ -523,6 +523,12 @@ y2k.RT.str();
 y2k.RT.str();
 y2k.RT.str()
 =============================
+new java.util.LinkedList(java.util.Arrays.asList(1))
+=============================
+(1 instanceof java.util.LinkedList)
+=============================
+(1 instanceof java.util.Map)
+=============================
 y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
 =============================
 !true
@@ -678,6 +684,8 @@ p__1 = "c";
 y2k.RT.str(p__1)
 =============================
 String.valueOf("level")
+=============================
+(1 instanceof java.util.ArrayList)
 =============================
 Object p__1;;
 if (true) {

@@ -101,6 +101,9 @@
 (let [a (:b :c)] a)
 (let [a (.b :c 123)] (println "a") (str))
 (let [a 1] (str) (str) (str))
+(list 1)
+(list? 1)
+(map? 1)
 (merge {:a 1} {:b 2})
 (not true)
 (not= :a :b)
@@ -130,6 +133,7 @@
 (str (fn [[a b]] (= a b)))
 (str (if :a :b :c))
 (String/valueOf :level)
+(vector? 1)
 [(if true 1 2)]
 [(str 1)]
 []

@@ -6,14 +6,7 @@ let _assert_java = Utils.assert_ (Lib.main_java true) "java/src/prelude.clj"
 let () =
   Alcotest.run "Tests"
     [
-      ( "Local",
-        [
-          _assert_java __POS__ {|(map? 1)|} "(1 instanceof java.util.Map)";
-          _assert_java __POS__ {|(list? 1)|} "(1 instanceof java.util.LinkedList)";
-          _assert_java __POS__ {|(vector? 1)|} "(1 instanceof java.util.ArrayList)";
-          _assert_java __POS__ {|(list 1)|}
-            "new java.util.LinkedList(java.util.Arrays.asList(1))";
-        ] );
+      ("Local", []);
       ( "Bytecode",
         U.make_samples_test (Lib.main_bytecode true) "bytecode/prelude.clj"
           "samples.bytecode" );
