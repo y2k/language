@@ -12,7 +12,7 @@ deploy: test_e2e
 
 .PHONY: restore
 restore:
-	opam install . --deps-only --with-test -y
+	@ opam install . --deps-only --with-test -y
 
 .PHONY: test_e2e
 test_e2e: test
