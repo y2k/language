@@ -76,6 +76,14 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
      %s%s}"
     clsName superCls state ms
 
+let pkg_name_from_file_name (context : context) =
+  prerr_endline @@ context.filename;
+  let start = String.index context.filename '/' + 1 in
+  context.filename
+  |> StringLabels.sub ~pos:start ~len:(String.length context.filename - start)
+  |> String.map (function '/' -> '.' | x -> x)
+  |> fun s -> StringLabels.sub ~pos:0 ~len:(String.length s - 4) s
+
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
@@ -183,7 +191,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | RBList
       [
         Atom (_, "ns");
-        RBList [ Atom (_, "quote*"); RBList (Atom (_, name) :: ns_params) ];
+        RBList [ Atom (_, "quote*"); RBList (Atom _ :: ns_params) ];
       ] ->
       let imports =
         ns_params
@@ -201,6 +209,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              | n -> failnode __LOC__ [ n ])
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
+      let name = pkg_name_from_file_name context in
       Printf.sprintf "package %s;\n%s" name imports |> with_context
   | RBList (Atom (_, "do*") :: body) ->
       let js_body =
