@@ -40,6 +40,7 @@ type context = {
   scope : (cljexp * context) StringMap.t;
   prelude_scope : unit StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
+  base_ns : string;
 }
 [@@deriving show]
 
@@ -56,6 +57,7 @@ let empty_context =
     scope = StringMap.empty;
     prelude_scope = StringMap.empty;
     interpreter = (fun _ _ -> failwith __LOC__);
+    base_ns = "";
   }
 
 module NameGenerator = struct

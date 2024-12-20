@@ -1,16 +1,39 @@
 open Common
 
-type inner_context = { requires : string StringMap.t } [@@deriving show]
+type inner_context = { requires : string StringMap.t; context : context }
+[@@deriving show]
 
-let fix_name { requires } name =
+let merge_packages (context : context) (rel_ns : string) =
+  let rec loop xs ps =
+    (* prerr_endline @@ "LOG3: " ^ String.concat "," (xs @ ps); *)
+    match (xs, ps) with
+    | _ :: xs, ".." :: ps -> loop xs ps
+    | xs, "." :: ps -> loop xs ps
+    | xs, ps -> List.rev xs @ ps
+  in
+  loop
+    (String.split_on_char '.' context.base_ns |> List.rev)
+    (String.split_on_char '/' rel_ns)
+  |> String.concat "."
+
+let fix_name { requires; context } name =
+  (* prerr_endline @@ "LOG: " ^ name ^ " " ^ show_inner_context { requires }; *)
   match String.index_opt name '/' with
   | None -> name
   | Some i -> (
       let alias = String.sub name 0 i in
       match StringMap.find_opt alias requires with
       | None -> name
-      | Some full_name -> full_name ^ String.sub name i (String.length name - i)
-      )
+      | Some full_name ->
+          let f_name = String.sub name (i + 1) (String.length name - i - 1) in
+          let a = String.sub full_name 1 (String.length full_name - 2) in
+          (* print_endline @@ "LOG1: " ^ a ^ " | " ^ name; *)
+          let b = merge_packages context a in
+          let c = b |> String.map (function '/' -> '.' | x -> x) in
+          (* print_endline @@ "LOG2: " ^ a ^ " | " ^ b ^ " | " ^ c; *)
+          (* *)
+          (* full_name ^ String.sub name i (String.length name - i)) *)
+          c ^ "." ^ f_name)
 
 let rec invoke (ctx : inner_context) (node : cljexp) : inner_context * cljexp =
   match node with
@@ -34,6 +57,7 @@ let rec invoke (ctx : inner_context) (node : cljexp) : inner_context * cljexp =
                       match x with
                       | SBList [ Atom (_, full_name); _; Atom (_, alias) ] ->
                           {
+                            ctx with
                             requires =
                               StringMap.add alias full_name ctx.requires;
                           }
@@ -76,6 +100,6 @@ let rec invoke (ctx : inner_context) (node : cljexp) : inner_context * cljexp =
       print_endline @@ show_inner_context ctx;
       failnode __LOC__ [ n ]
 
-let main (node : cljexp) : cljexp =
-  let _, node = invoke { requires = StringMap.empty } node in
+let main (context : context) (node : cljexp) : cljexp =
+  let _, node = invoke { requires = StringMap.empty; context } node in
   node

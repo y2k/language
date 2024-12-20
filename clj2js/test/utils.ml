@@ -5,7 +5,7 @@ let compile_code compile prelude_path code =
     In_channel.(
       with_open_bin ("../../../test/samples/prelude/" ^ prelude_path) input_all)
   in
-  NameGenerator.with_scope (fun _ -> compile "main.clj" prelude code)
+  NameGenerator.with_scope (fun _ -> compile "app/main.clj" prelude code)
 
 let split_string str sep =
   let regexp_sep = Str.regexp_string sep in

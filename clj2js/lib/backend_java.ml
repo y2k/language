@@ -76,13 +76,7 @@ let generate_class (compile_exp : cljexp -> string) prefix params clsName
      %s%s}"
     clsName superCls state ms
 
-let pkg_name_from_file_name (context : context) =
-  prerr_endline @@ context.filename;
-  let start = String.index context.filename '/' + 1 in
-  context.filename
-  |> StringLabels.sub ~pos:start ~len:(String.length context.filename - start)
-  |> String.map (function '/' -> '.' | x -> x)
-  |> fun s -> StringLabels.sub ~pos:0 ~len:(String.length s - 4) s
+let pkg_name_from_file_name (context : context) = context.base_ns
 
 let rec compile_ (context : context) (node : cljexp) : context * string =
   let compile node = compile_ context node |> snd in
@@ -177,7 +171,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
           (String.length context.filename - name_start_pos)
       in
       let cls_name =
-        String.capitalize_ascii (String.sub filename 0 1)
+        String.sub filename 0 1
         ^ String.sub filename 1 (String.length filename - 5)
         |> String.map (function '.' -> '_' | x -> x)
       in
@@ -209,8 +203,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
              | n -> failnode __LOC__ [ n ])
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
-      let name = pkg_name_from_file_name context in
-      Printf.sprintf "package %s;\n%s" name imports |> with_context
+      let pkg_name = pkg_name_from_file_name context in
+      Printf.sprintf "package %s;\n%s" pkg_name imports |> with_context
   | RBList (Atom (_, "do*") :: body) ->
       let js_body =
         body |> List.map compile
@@ -363,7 +357,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       fname ^ "(" ^ sargs ^ ")" |> with_context
   | n -> failnode __LOC__ [ n ]
 
-let main (log : bool) (filename : string) prelude_macros code =
+let main base_ns (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
@@ -371,7 +365,8 @@ let main (log : bool) (filename : string) prelude_macros code =
          "prelude"
   in
   let ctx, node =
-    code |> Frontend.parse_and_simplify { macros_ctx with log } filename
+    code
+    |> Frontend.parse_and_simplify { macros_ctx with log; base_ns } filename
   in
   node
   |> try_log "parse_and_simplify      ->" log
@@ -380,7 +375,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke ctx _macro_sexp
-  |> Stage_java_require.main
+  |> Stage_java_require.main ctx
   |> try_log "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log

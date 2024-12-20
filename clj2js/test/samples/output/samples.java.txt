@@ -478,16 +478,16 @@ private static Object show_notification (final Object env) {
 return env;
 }
 =============================
-package im.y2k.c3;
+package app;
 import a1.b2.Foo;
 import a1.b2.Bar;
-public class Main{
+public class main{
 public static Object foo (final Object a) {
 return a;
 }
 }
 =============================
-package im.y2k.chargetimer;
+package app;
 import a.b.Ab;
 =============================
 var p__1 = "b";;
@@ -535,36 +535,36 @@ y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
 =============================
 !y2k.RT.equals("a", "b")
 =============================
-package _;
+package app;
 import a.b.List;
-public class Main{
+public class main{
 public static Object b=("a" instanceof List);}
 =============================
-package _;
+package app;
 import b.Context;
-public class Main{
+public class main{
 public static Object a=Context.AUDIO_SERVICE;}
 =============================
-package _;
+package app;
 import b.Ctx;
-public class Main{
+public class main{
 public static Object a=y2k.RT.str(Ctx.A_S);}
 =============================
-package b;
+package app;
 import c.An;
 import c.Cn;
 import c.Gn;
 import d.En;
 import d.Dn;
 import d.Fn;
-public class Main{
+public class main{
 public static Object a () {
 ((Cn)1);
 return ((Dn)2);
 }
 }
 =============================
-package gg.h7.i8;
+package app;
 import a.b.C1;
 import a.b.C2;
 import a.b.C3;
@@ -572,16 +572,16 @@ import d.e.F4;
 import d.e.F5;
 import d.e.F6;
 =============================
-package html;
+package app;
 =============================
-package im.y2k.ch;
+package app;
 import an.co.Ctx;
 import an.co.AuMa;
 =============================
-package im.y2k.chargetimer;
+package app;
 import android.app.Activity;
 import android.app.NotificationChannel;
-public class Main{
+public class main{
 public static Object foo (final Object x) {
 return x;
 }
