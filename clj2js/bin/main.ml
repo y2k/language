@@ -2,9 +2,7 @@ open Lib__.Common
 module Clj2js = Lib
 module Bs = Build_script
 
-let read_code_file filename =
-  if filename = "prelude" then ""
-  else In_channel.(with_open_bin filename input_all)
+let read_code_file filename = if filename = "prelude" then "" else In_channel.(with_open_bin filename input_all)
 
 let combile_file () =
   let target = Sys.argv.(1) in
@@ -29,9 +27,7 @@ let combile_file () =
         | "java" ->
             let prelude = read_code_file Sys.argv.(3) in
             (* Clj2js.main_java Sys.argv.(4) false filename prelude *)
-            Clj2js.main_java
-              (match Sys.argv with [| _; _; _; _; x |] -> x | _ -> "")
-              false filename prelude
+            Clj2js.main_java (match Sys.argv with [| _; _; _; _; x |] -> x | _ -> "") false filename prelude
         | "bytecode" ->
             let prelude = read_code_file Sys.argv.(3) in
             Clj2js.main_bytecode false filename prelude
@@ -42,7 +38,4 @@ let combile_file () =
       in
       filename |> read_code_file |> compiler |> print_endline)
 
-let () =
-  match Sys.argv.(1) with
-  | "make_build_script" -> Bs.make_build_script ()
-  | _ -> combile_file ()
+let () = match Sys.argv.(1) with "make_build_script" -> Bs.make_build_script () | _ -> combile_file ()

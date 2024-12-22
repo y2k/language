@@ -11,6 +11,10 @@ y2k.RT.get("env", "webview")
 =============================
 String.join("", java.util.Arrays.asList(1, 2, 3))
 =============================
+m.foo().run()
+=============================
+((Runnable)m.foo()).run()
+=============================
 ("a"*"b")
 =============================
 ("a"/"b")
@@ -137,6 +141,8 @@ return 0;
 public static int LIMIT_CHARGE=80;
 =============================
 public static Object a=ClassLoader.getSystemClassLoader();
+=============================
+public static Object a=null;
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map());
 =============================
@@ -366,6 +372,10 @@ var a = y2k.RT.get(p__1, 0);;
 return a;
 }
 =============================
+public static Object m (final Object a) {
+return ((Runnable)((java.util.concurrent.atomic.AtomicReference<Object>)a).get()).run();
+}
+=============================
 private static Object foo (final Object a) {
 return a;
 }
@@ -404,8 +414,17 @@ public java.util.List<Object> state;
 @Override public void onCreate(Bundle p0, int p1) {
 super.onCreate(p0, p1);
 a_onCreate(this, p0, p1); }
-public String foo(int p0, double p1) {
-return (String)a_foo(this, p0, p1); }
+@Override public String foo() {
+super.foo();
+return (String)a_foo(this); }
+}
+=============================
+public static class MainActivity extends Activity {
+public java.util.List<Object> state;
+public void onCreate(Bundle p0, int p1) {
+a_onCreate(this, p0, p1); }
+public String foo() {
+return (String)a_foo(this); }
 }
 =============================
 y2k.RT.get("xs", 1)
@@ -481,6 +500,8 @@ return env;
 package app;
 import a1.b2.Foo;
 import a1.b2.Bar;
+
+/** @noinspection ALL*/
 public class main{
 public static Object foo (final Object a) {
 return a;
@@ -537,16 +558,22 @@ y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
 =============================
 package app;
 import a.b.List;
+
+/** @noinspection ALL*/
 public class main{
 public static Object b=("a" instanceof List);}
 =============================
 package app;
 import b.Context;
+
+/** @noinspection ALL*/
 public class main{
 public static Object a=Context.AUDIO_SERVICE;}
 =============================
 package app;
 import b.Ctx;
+
+/** @noinspection ALL*/
 public class main{
 public static Object a=y2k.RT.str(Ctx.A_S);}
 =============================
@@ -557,6 +584,8 @@ import c.Gn;
 import d.En;
 import d.Dn;
 import d.Fn;
+
+/** @noinspection ALL*/
 public class main{
 public static Object a () {
 ((Cn)1);
@@ -581,6 +610,8 @@ import an.co.AuMa;
 package app;
 import android.app.Activity;
 import android.app.NotificationChannel;
+
+/** @noinspection ALL*/
 public class main{
 public static Object foo (final Object x) {
 return x;
@@ -709,5 +740,7 @@ y2k.RT.hash_map("fetch", ()->{
 var world = 0;;
 return 1;
 })
+=============================
+null
 =============================
 (Object)null

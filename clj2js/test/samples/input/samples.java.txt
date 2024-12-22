@@ -4,6 +4,8 @@
 (.-length "")
 (.foo :a :b 1)
 (.join String "" [1 2 3])
+(.run (m/foo))
+(.run ^Runnable (m/foo))
 (* :a :b)
 (/ :a :b)
 (^void fn [] (str :b :c))
@@ -33,6 +35,7 @@
 (declare g) (defn f [] (g)) (defn g [] 0)
 (def ^int LIMIT_CHARGE 80)
 (def a (ClassLoader/getSystemClassLoader))
+(def a nil)
 (def foo (atom {}))
 (def foo (bar (oof 1)))
 (def foo (bar 1))
@@ -71,6 +74,7 @@
 (defn foo [x] (let [] (foo 1)(foo 2)))
 (defn foo [x] (let [a (foo 1) b (foo 2)] (foo 3)(foo 4)))
 (defn foo [xs] (let [[a] (rest xs)]) a)
+(defn m [a] (.run ^Runnable (deref a)))
 (defn- foo [a] a)
 (defn- foo [context] (as (.getSySe context Ctx/AU_SE) String))
 (do (str) (println))
@@ -80,7 +84,8 @@
 (fn [x] x)
 (fn! [] (str :b :c))
 (Foo. :a :b 1)
-(gen-class :name MainActivity :extends Activity :constructors {[] []} :prefix "a_" :methods [[^Override onCreate [Bundle int] void][foo [int double] String]])
+(gen-class :name MainActivity :extends Activity :constructors {[] []} :prefix "a_" :methods [[^Override onCreate [Bundle int] void][^Override foo [] String]])
+(gen-class :name MainActivity :extends Activity :constructors {[] []} :prefix "a_" :methods [[onCreate [Bundle int] void][foo [] String]])
 (get :xs 1)
 (if :a :b :c)
 (if :a :b (println :c))
@@ -141,4 +146,5 @@
 [1]
 {:a :b :c :d}
 {:fetch (fn [] (let [world 0] 1))}
+nil
 unit

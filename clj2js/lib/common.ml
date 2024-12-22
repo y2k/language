@@ -8,12 +8,25 @@ let unknown_location = { line = 0; pos = 0; symbol = "" }
 
 type cljexp =
   | Atom of meta * string
-  | RBList of cljexp list
-  | SBList of cljexp list
-  | CBList of cljexp list
+  | RBList of meta * cljexp list
+  | SBList of meta * cljexp list
+  | CBList of meta * cljexp list
 [@@deriving show]
 
-let unwrap_do = function RBList (Atom (_, "do*") :: xs) -> xs | x -> [ x ]
+let change_meta m node =
+  match node with
+  | Atom (_, x) -> Atom (m, x)
+  | RBList (_, xs) -> RBList (m, xs)
+  | CBList (_, xs) -> CBList (m, xs)
+  | SBList (_, xs) -> SBList (m, xs)
+
+let get_symbol = function
+  | Atom (m, _) -> m.symbol
+  | RBList (m, _) -> m.symbol
+  | SBList (m, _) -> m.symbol
+  | CBList (m, _) -> m.symbol
+
+let unwrap_do = function RBList (_, Atom (_, "do*") :: xs) -> xs | x -> [ x ]
 
 module StringMap = struct
   include Map.Make (String)
@@ -22,14 +35,11 @@ module StringMap = struct
     let bindings = bindings map in
     Format.fprintf fmt "@[<v>{";
     bindings
-    |> List.iter (fun (key, value) ->
-           Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
-             value);
+    |> List.iter (fun (key, value) -> Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value value);
     Format.fprintf fmt "@,}@]"
 end
 
-type function_decl = { params : cljexp list; body : cljexp list }
-[@@deriving show]
+type function_decl = { params : cljexp list; body : cljexp list } [@@deriving show]
 
 type context = {
   log : bool;
@@ -44,8 +54,7 @@ type context = {
 }
 [@@deriving show]
 
-let show_error_location filename m =
-  Printf.sprintf "%s:%d:%d" filename m.line m.pos
+let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
 
 let empty_context =
   {
@@ -84,24 +93,19 @@ end
 module List = struct
   include List
 
-  let rec split_into_pairs = function
-    | a :: b :: rest -> (a, b) :: split_into_pairs rest
-    | _ -> []
-
-  let reduce loc f xs =
-    match xs with
-    | [] -> failwith loc
-    | xs -> List.fold_left f (List.hd xs) (List.tl xs)
-
+  let rec split_into_pairs = function a :: b :: rest -> (a, b) :: split_into_pairs rest | _ -> []
+  let reduce loc f xs = match xs with [] -> failwith loc | xs -> List.fold_left f (List.hd xs) (List.tl xs)
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
 
 let debug_show_cljexp nodes =
   let rec show_rec = function
-    | Atom (_, x) -> x
-    | RBList xs -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
-    | SBList xs -> "[" ^ String.concat " " (List.map show_rec xs) ^ "]"
-    | CBList xs -> "{" ^ String.concat " " (List.map show_rec xs) ^ "}"
+    | Atom (m, x) when m.symbol = "" -> x
+    | Atom (m, x) -> "^" ^ m.symbol ^ " " ^ x
+    | RBList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | RBList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SBList (_, xs) -> "[" ^ String.concat " " (List.map show_rec xs) ^ "]"
+    | CBList (_, xs) -> "{" ^ String.concat " " (List.map show_rec xs) ^ "}"
   in
   nodes |> List.map show_rec |> String.concat "\n"
 
@@ -126,9 +130,9 @@ let rec show_sexp sexp =
   in
   match sexp with
   | Atom (_, x) -> x
-  | RBList xs -> format "(%s)" xs
-  | SBList xs -> format "[%s]" xs
-  | CBList xs -> format "{%s}" xs
+  | RBList (_, xs) -> format "(%s)" xs
+  | SBList (_, xs) -> format "[%s]" xs
+  | CBList (_, xs) -> format "{%s}" xs
 
 let try_log prefix (log : bool) (node : cljexp) =
   if log then print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];

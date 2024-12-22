@@ -1,10 +1,7 @@
 open Lib__.Common
 
 let compile_code compile prelude_path code =
-  let prelude =
-    In_channel.(
-      with_open_bin ("../../../test/samples/prelude/" ^ prelude_path) input_all)
-  in
+  let prelude = In_channel.(with_open_bin ("../../../test/samples/prelude/" ^ prelude_path) input_all) in
   NameGenerator.with_scope (fun _ -> compile "app/main.clj" prelude code)
 
 let split_string str sep =
@@ -13,37 +10,25 @@ let split_string str sep =
 
 let fold_samples xs (line : string) =
   if line = "=============================" then "" :: xs
-  else
-    match List.hd xs with
-    | "" -> line :: List.tl xs
-    | x -> (x ^ "\n" ^ line) :: List.tl xs
+  else match List.hd xs with "" -> line :: List.tl xs | x -> (x ^ "\n" ^ line) :: List.tl xs
 
 let make_samples_test compiler prelude_path file_name =
   let output_file_name = "../../../test/samples/output/" ^ file_name ^ ".txt" in
-  let samples =
-    In_channel.with_open_bin
-      ("../../../test/samples/input/" ^ file_name ^ ".txt")
-      In_channel.input_lines
-  in
+  let samples = In_channel.with_open_bin ("../../../test/samples/input/" ^ file_name ^ ".txt") In_channel.input_lines in
   let expected =
-    try
-      In_channel.with_open_bin output_file_name
-        (In_channel.fold_lines fold_samples [])
-      |> List.rev
+    try In_channel.with_open_bin output_file_name (In_channel.fold_lines fold_samples []) |> List.rev
     with _ ->
       let compiled =
         samples
         |> List.map (fun line ->
                print_endline @@ __LOC__ ^ " " ^ line;
                let r =
-                 try compile_code compiler prelude_path line
-                 with e -> Printf.sprintf "%s" (Printexc.to_string e)
+                 try compile_code compiler prelude_path line with e -> Printf.sprintf "%s" (Printexc.to_string e)
                in
                "=============================\n" ^ r)
         |> List.reduce __LOC__ (Printf.sprintf "%s\n%s")
       in
-      Out_channel.with_open_bin output_file_name
-        (Fun.flip Out_channel.output_string compiled);
+      Out_channel.with_open_bin output_file_name (Fun.flip Out_channel.output_string compiled);
       []
   in
   if expected = [] then []
