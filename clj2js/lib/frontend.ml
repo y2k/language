@@ -224,13 +224,13 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       in
       loop bindings |> expand_core_macro1
   | RBList (m, Atom (l, "comment") :: _) -> RBList (m, [ Atom (l, "do*") ]) |> with_context
-  | RBList (_, Atom (l, "fn") :: SBList (_, args) :: body) ->
+  | RBList (mfn, Atom (l, "fn") :: SBList (_, args) :: body) ->
       let result =
         match desugar_fn_arguments expand_core_macro2 args with
-        | new_args, [] -> RBList (unknown_location, [ Atom (l, "fn*"); SBList (unknown_location, new_args) ])
+        | new_args, [] -> RBList (mfn, [ Atom (l, "fn*"); SBList (unknown_location, new_args) ])
         | new_args, let_args ->
             RBList
-              ( unknown_location,
+              ( mfn,
                 [
                   Atom (l, "fn*");
                   SBList (unknown_location, new_args);
@@ -361,8 +361,4 @@ let parse_and_simplify (prelude_context : context) filename code =
   let sexp = RBList (unknown_location, Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code) in
   if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]);
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
-  let x = remove_comments_from_module x in
-  (* *)
-  (* if prelude_context.log && filename <> "prelude" then
-    print_endline (debug_show_cljexp [ x ]); *)
-  (ctx, x)
+  (ctx, remove_comments_from_module x)

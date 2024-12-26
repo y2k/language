@@ -132,8 +132,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> String.map (function '.' -> '_' | x -> x)
       in
       let ns_ = compile ns in
-      body
-      |> List.map (fun x -> compile x)
+      body |> List.fold_left_map compile_ context |> snd
       |> List.reduce_opt (Printf.sprintf "%s\n%s")
       |> Option.value ~default:""
       |> Printf.sprintf "%s\n/** @noinspection ALL*/\npublic class %s{\n%s}" ns_ cls_name
@@ -158,14 +157,14 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       Printf.sprintf "package %s;\n%s" pkg_name imports |> with_context
   | RBList (_, Atom (_, "do*") :: body) ->
       let js_body =
-        body |> List.map compile
+        body |> List.fold_left_map compile_ context |> snd
         |> List.filter (( <> ) "")
         |> List.reduce_opt (Printf.sprintf "%s;\n%s")
         |> Option.value ~default:""
       in
       with_context js_body
   (* Lambda *)
-  | RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ->
+  | RBList (m, Atom (_, "fn*") :: RBList (_, args) :: body) ->
       let sargs =
         args
         |> List.map (function Atom (_, aname) -> Printf.sprintf "%s" aname | x -> failnode __LOC__ [ x ])
@@ -183,8 +182,12 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> Option.map (Printf.sprintf "%s;\n")
         |> Option.value ~default:""
       in
+      (* print_endline @@ "LOG[fn*]: " ^ m.symbol; *)
       let last_exp = body |> List.rev |> List.hd |> compile in
-      Printf.sprintf "(%s)->{\n%sreturn %s;\n}" sargs sbody last_exp |> with_context
+      (match m.symbol with
+      | "" -> Printf.sprintf "y2k.RT.fn((%s)->{\n%sreturn %s;\n})" sargs sbody last_exp
+      | type_ -> Printf.sprintf "(%s)(%s)->{\n%sreturn %s;\n}" type_ sargs sbody last_exp)
+      |> with_context
   (* Constructor *)
   | RBList (_, Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
       let cnst_name = unpack_string cnst_name in
@@ -193,6 +196,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ])
     ->
+      let context = { context with scope = StringMap.add fname (node, context) context.scope } in
       let modifier = match fname_meta.symbol with ":private" -> "private" | _ -> "public" in
       let sargs =
         args
@@ -207,24 +211,30 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         let length = List.length body in
         body
         |> List.filteri (fun i _ -> i < length - 1)
-        |> List.map (fun node -> compile node)
+        |> List.fold_left_map compile_ context |> snd
         |> List.reduce_opt (Printf.sprintf "%s;\n%s")
         |> Option.map (Printf.sprintf "%s;\n")
         |> Option.value ~default:""
       in
       let return_ = match fname_meta.symbol with "void" -> "" | _ -> "return " in
       let last_exp = body |> List.rev |> List.hd |> compile in
-      Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}\n" modifier (get_type fname_meta) fname sargs sbody return_
-        last_exp
-      |> with_context
+      let code =
+        Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}\n" modifier (get_type fname_meta) fname sargs sbody return_
+          last_exp
+      in
+      (context, code)
   (* Static field *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); body ]) ->
+      let context = { context with scope = StringMap.add fname (node, context) context.scope } in
       let vis = if fname_meta.symbol = ":private" then "private" else "public" in
       let get_type am = if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol in
-      let result = Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname (compile body) in
-      result |> with_context
+      let result =
+        Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname (compile_ context body |> snd)
+      in
+      (context, result)
   (* Empty declaration *)
-  | RBList (_, [ Atom (_, "def*"); _ ]) -> "" |> with_context
+  | RBList (_, [ Atom (_, "def*"); Atom (_, name) ]) ->
+      ({ context with scope = StringMap.add name (node, context) context.scope }, "")
   (* Interop field *)
   | RBList (_, [ Atom (_, "."); target; Atom (_, field) ]) when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target) (String.sub field 2 (String.length field - 2)) |> with_context
@@ -274,12 +284,26 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       let fname =
         match head with
-        | RBList (_, Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")"
-        | Atom (_, fname) -> String.map (function '/' -> '.' | x -> x) fname
-        | _ -> compile head
+        | RBList (_, Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")("
+        | Atom (_, fname) when String.contains fname '/' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
+        | Atom (_, fname) when String.contains fname '.' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
+        | Atom (_, fname) when not (StringMap.mem fname context.scope) ->
+            print_endline @@ "LOG: " ^ fname ^ " ["
+            ^ (context.scope |> StringMap.bindings |> List.map fst |> String.concat ", ")
+            ^ "]";
+            Printf.sprintf "y2k.RT.invoke(%s%s" fname (if List.is_empty args then "" else ", ")
+        | _ -> compile head ^ "("
       in
-      fname ^ "(" ^ sargs ^ ")" |> with_context
+      fname ^ sargs ^ ")" |> with_context
   | n -> failnode __LOC__ [ n ]
+
+let rec make_scope_for_prelude (context : context) node =
+  match node with
+  | RBList (_, Atom (_, "do*") :: body) ->
+      body |> List.fold_left_map (fun context n -> (make_scope_for_prelude context n, n)) context |> fst
+  | RBList (_, Atom (_, "def*") :: Atom (_, name) :: _) ->
+      { context with scope = StringMap.add name (node, context) context.scope }
+  | x -> failnode __LOC__ [ x ]
 
 let main base_ns (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
@@ -293,8 +317,11 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke ctx _macro_sexp |> Stage_java_require.main ctx
+  |> Stage_linter.invoke ctx _macro_sexp
+  (* *)
+  |> Stage_java_require.main ctx
   |> try_log "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log
-  |> compile_ ctx |> snd |> String.trim
+  |> compile_ (make_scope_for_prelude ctx _macro_sexp)
+  |> snd |> String.trim

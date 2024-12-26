@@ -11,7 +11,7 @@
 (defonce foo 3)
 (let [[a] 1] a)
 (let [a 1] a)
-(let [x (foo)] x)
+(let [x (atom 0)] x)
 (list 1 2 3)
 (not= 1 2)
 (ns _ (:require ["./b/c" :as b]) (:require ["../a/b" :as f])) (defn foo [] (b/mb 1 2) (f/mf 3 4))

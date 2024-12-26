@@ -228,7 +228,8 @@ do*
 let*
 x
 (
-user/foo
+atom
+0
 )
 )
 x

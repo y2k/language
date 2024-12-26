@@ -48,8 +48,15 @@ let invoke (code_ctx : context) prelude_node node =
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let ctx, _ = invoke ctx fn_ in
         (ctx, x)
-    | RBList (_, Atom (_, "def*") :: Atom (_, k) :: _) as x -> ({ scope = StringMap.add k () ctx.scope }, x)
-    | RBList (_, Atom (_, "let*") :: Atom (_, k) :: _) as x -> ({ scope = StringMap.add k () ctx.scope }, x)
+    | RBList (_, [ Atom (_, "def*"); Atom (_, k) ]) as x -> ({ scope = StringMap.add k () ctx.scope }, x)
+    | RBList (_, [ Atom (_, "def*"); Atom (_, k); value ]) as x ->
+        let ctx = { scope = StringMap.add k () ctx.scope } in
+        let _ = invoke ctx value in
+        (ctx, x)
+    | RBList (_, [ Atom (_, "let*"); Atom (_, k); value ]) as x ->
+        let ctx = { scope = StringMap.add k () ctx.scope } in
+        let _ = invoke ctx value in
+        (ctx, x)
     (* TODO: delete this form *)
     | RBList (_, Atom (_, "let*") :: SBList (_, bindings) :: tail) as x ->
         let rec loop ctx = function
