@@ -13,6 +13,11 @@ type cljexp =
   | CBList of meta * cljexp list
 [@@deriving show]
 
+let unpack_string x = String.sub x 1 (String.length x - 2)
+let unpack_symbol x = String.sub x 1 (String.length x - 1)
+let get_type meta = if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
+let get_type_or_var meta = if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol
+
 let change_meta m node =
   match node with
   | Atom (_, x) -> Atom (m, x)
