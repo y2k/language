@@ -1,0 +1,27 @@
+__FILENAME__
+__LINE__
+__POSITION__
+(- 3 2)
+(:b {:a 1 :b 2 :c 3})
+(* 3 2)
+(/ 3 2)
+(+ 3 2)
+(= 1 2)
+(= 2 2)
+(def a 1) (defn f [] a) (f)
+(defn f [a] a) (f 1)
+(get [10 20] 1)
+(if false 1 2)
+(if true 1 2)
+(list 1 2)
+(not false)
+(not true)
+(not= 1 2)
+(reduce (fn [acc x] (+ acc x)) 0 (list 1 2 3))
+(reduce (fn [acc x] (+ acc x)) 0 (vector 1 2 3))
+(reduce (fn [acc x] (+ acc x)) 0 [1 2 3])
+(str 1 2)
+(vector 1 2)
+[1 2]
+false
+true

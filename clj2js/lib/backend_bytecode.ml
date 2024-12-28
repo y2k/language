@@ -17,9 +17,6 @@ let main (log : bool) (filename : string) prelude_macros code =
     |> Frontend.parse_and_simplify { empty_context with interpreter = Backend_interpreter.interpret } "prelude"
   in
   let macros_ctx = macro_sexp |> uncurry Stage_add_def_to_scope.invoke |> fst in
-  (* macros_ctx.scope
-     |> Fun.flip (StringMap.fold (fun k _v a -> a ^ ", " ^ k)) ""
-     |> print_endline; *)
   let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log } filename in
   node
   |> try_log "Parse_and_simplify      ->" log

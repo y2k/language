@@ -10,7 +10,7 @@ let get_var_name name =
   match (String.index_opt name '.', String.index_opt name '?') with
   | None, None -> name
   | Some i, None -> String.sub name 0 i
-  | None, Some n -> String.sub name 0 n
+  | None, Some _ -> name
   | Some i, Some n -> String.sub name 0 (min i n)
 
 let invoke (code_ctx : context) prelude_node node =

@@ -56,10 +56,13 @@ type context = {
   prelude_scope : unit StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
   base_ns : string;
+  imports : context StringMap.t;
 }
 [@@deriving show]
 
 let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
+let debug_show_scope ctx = StringMap.bindings ctx.scope |> List.map (fun (k, _) -> k) |> String.concat ", "
+let debug_show_macro ctx = StringMap.bindings ctx.macros |> List.map (fun (k, _) -> k) |> String.concat ", "
 
 let empty_context =
   {
@@ -72,6 +75,7 @@ let empty_context =
     prelude_scope = StringMap.empty;
     interpreter = (fun _ _ -> failwith __LOC__);
     base_ns = "";
+    imports = StringMap.empty;
   }
 
 module NameGenerator = struct

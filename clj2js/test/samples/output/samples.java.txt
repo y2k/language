@@ -130,6 +130,20 @@ var a = 1;;
 return 2;
 })))
 =============================
+public static Object f=g(1);
+=============================
+public static Object f () {
+return g(y2k.RT.fn(()->{
+return 1;
+}));
+}
+=============================
+public static Object f () {
+return g((Runnable)()->{
+return 1;
+});
+}
+=============================
 public static Object f () {
 return g();
 }
@@ -143,6 +157,8 @@ public static int LIMIT_CHARGE=80;
 public static Object a=ClassLoader.getSystemClassLoader();
 =============================
 public static Object a=null;
+=============================
+public static Object f=m.g(1);
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map());
 =============================
@@ -397,6 +413,10 @@ return y2k.RT.invoke(a, b);
 =============================
 y2k.RT.fn(()->{
 return y2k.RT.str("b", "c");
+})
+=============================
+y2k.RT.fn((x)->{
+return y2k.RT.invoke(x, 1);
 })
 =============================
 y2k.RT.fn((x)->{
