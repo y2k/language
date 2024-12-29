@@ -101,7 +101,7 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
           |> List.fold_left
                (fun scope a ->
                  match a with
-                 | Atom (_, name) as a -> StringMap.add name (a, context) scope
+                 | Atom (_, name) as a -> StringMap.add name (a, ref context) scope
                  | n -> failnode __LOC__ [ n ])
                context.scope
         in
@@ -110,7 +110,7 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
           |> List.fold_left
                (fun scope (a, _) ->
                  match a with
-                 | Atom (_, name) as a -> StringMap.add name (a, context) scope
+                 | Atom (_, name) as a -> StringMap.add name (a, ref context) scope
                  | n -> failnode __LOC__ [ n ])
                scope
         in

@@ -21,7 +21,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | RBList (m, Atom (l, "defn") :: (Atom (_, fname) as name) :: SBList (ma, args) :: body) ->
       let fbody = expand_core_macro2 (RBList (m, Atom (l, "fn") :: SBList (ma, args) :: body)) in
       let new_body = RBList (unknown_location, [ Atom (l, "def*"); name; fbody ]) in
-      let context = { context with scope = context.scope |> StringMap.add fname (fbody, context) } in
+      let context = { context with scope = context.scope |> StringMap.add fname (fbody, ref context) } in
       (context, new_body)
   | RBList (m, Atom (l, "defn-") :: Atom (ln, name) :: rest) ->
       desugar_and_register context

@@ -8,12 +8,18 @@ __POSITION__
 (+ 3 2)
 (= 1 2)
 (= 2 2)
+(count (vector 1 2 3))
+(count [1 2 3])
 (def a 1) (defn f [] a) (f)
 (defn f [a] a) (f 1)
+(drop 2 [1 2 3 4 5])
 (get [10 20] 1)
 (if false 1 2)
+(if true 1 (FIXME))
 (if true 1 2)
 (list 1 2)
+(map? [])
+(map? {:foo 1})
 (not false)
 (not true)
 (not= 1 2)
@@ -22,6 +28,9 @@ __POSITION__
 (reduce (fn [acc x] (+ acc x)) 0 [1 2 3])
 (str 1 2)
 (vector 1 2)
+(vector? [1 2])
+(vector? 3)
 [1 2]
 false
+nil
 true

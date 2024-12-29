@@ -13,7 +13,7 @@ type cljexp =
   | CBList of meta * cljexp list
 [@@deriving show]
 
-let unpack_string x = String.sub x 1 (String.length x - 2)
+let unpack_string x = if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2) else x
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 let get_type meta = if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
 let get_type_or_var meta = if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol
@@ -52,7 +52,7 @@ type context = {
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  scope : (cljexp * context) StringMap.t;
+  scope : (cljexp * context ref) StringMap.t;
   prelude_scope : unit StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
   base_ns : string;
@@ -63,6 +63,7 @@ type context = {
 let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
 let debug_show_scope ctx = StringMap.bindings ctx.scope |> List.map (fun (k, _) -> k) |> String.concat ", "
 let debug_show_macro ctx = StringMap.bindings ctx.macros |> List.map (fun (k, _) -> k) |> String.concat ", "
+let debug_show_imports ctx = StringMap.bindings ctx.imports |> List.map (fun (k, _) -> k) |> String.concat ", "
 
 let empty_context =
   {
@@ -119,7 +120,7 @@ let debug_show_cljexp nodes =
   nodes |> List.map show_rec |> String.concat "\n"
 
 let log_sexp prefix node =
-  print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
+  prerr_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
   node
 
 let failnode prefix es =

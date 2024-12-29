@@ -16,7 +16,7 @@ module Loader = struct
 end
 
 let merge_path base_path rel_path =
-  prerr_endline @@ "LOG1: " ^ base_path ^ " | " ^ rel_path;
+  (* prerr_endline @@ "LOG1: " ^ base_path ^ " | " ^ rel_path; *)
   let rec loop xs ps =
     match (xs, ps) with _ :: xs, ".." :: ps -> loop xs ps | xs, "." :: ps -> loop xs ps | xs, ps -> List.rev xs @ ps
   in
@@ -51,7 +51,8 @@ let rec invoke (execute_code : string -> string -> context * cljexp) (context : 
       in
       (context, RBList (unknown_location, [ Atom (unknown_location, "do*") ]))
   | RBList (m, (Atom (_, "do*") as do_) :: body) ->
-      let body = List.concat_map (Fun.compose unwrap_do (Fun.compose snd (invoke execute_code context))) body in
+      let context, body = body |> List.fold_left_map (fun ctx node -> invoke execute_code ctx node) context in
+      let body = List.concat_map unwrap_do body in
       (context, RBList (m, do_ :: body))
   | RBList (_, _) as x -> (context, x)
   | n -> failnode __LOC__ [ n ]

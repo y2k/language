@@ -40,7 +40,7 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
         | RBList (m3, l :: SBList (m4, args) :: let_body) ->
             let let_scope =
               args |> List.split_into_pairs
-              |> List.map (function Atom (_, k), v -> (k, (v, context)) | k, v -> failnode __LOC__ [ k; v ])
+              |> List.map (function Atom (_, k), v -> (k, (v, ref context)) | k, v -> failnode __LOC__ [ k; v ])
               |> List.to_seq
               |> Fun.flip StringMap.add_seq context.scope
             in

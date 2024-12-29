@@ -1,26 +1,42 @@
 open Common
 
 module Functions = struct
+  let rec sexp_to_string = function
+    (* | Atom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s *)
+    | Atom (_, s) -> s
+    | RBList (_, xs) -> "(" ^ String.concat " " (List.map sexp_to_string xs) ^ ")"
+    | SBList (_, xs) -> "[" ^ String.concat " " (List.map sexp_to_string xs) ^ "]"
+    | CBList (_, xs) -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}"
+
+  let rec sexp_to_string2 = function
+    | Atom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s
+    | Atom (_, s) when String.starts_with ~prefix:"\"" s -> unpack_string s
+    | Atom (_, s) -> s
+    | RBList (_, xs) -> "(" ^ String.concat " " (List.map sexp_to_string2 xs) ^ ")"
+    | SBList (_, xs) -> "[" ^ String.concat " " (List.map sexp_to_string2 xs) ^ "]"
+    | CBList (_, xs) -> "{" ^ String.concat " " (List.map sexp_to_string2 xs) ^ "}"
+
   let functions : ((cljexp -> cljexp list -> cljexp) -> cljexp list -> cljexp) StringMap.t =
     StringMap.empty
     |> StringMap.add "vector" (fun _ args -> SBList (unknown_location, args))
     |> StringMap.add "list" (fun _ args -> RBList (unknown_location, args))
     |> StringMap.add "hash-map" (fun _ args -> CBList (unknown_location, args))
     |> StringMap.add "str" (fun _ args ->
-           let rec sexp_to_string = function
-             | Atom (_, s) -> s
-             | RBList (_, xs) -> "(" ^ String.concat " " (List.map sexp_to_string xs) ^ ")"
-             | SBList (_, xs) -> "[" ^ String.concat " " (List.map sexp_to_string xs) ^ "]"
-             | CBList (_, xs) -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}"
-           in
            args
            |> List.map (function
+                | Atom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s
                 | Atom (_, x) when String.starts_with ~prefix:"\"" x && String.ends_with ~suffix:"\"" x ->
                     String.sub x 1 (String.length x - 2)
                 | Atom (_, x) -> x
                 | n -> sexp_to_string n)
            |> String.concat ""
            |> fun xs -> Atom (unknown_location, "\"" ^ xs ^ "\""))
+    |> StringMap.add "println" (fun _ args ->
+           args |> List.map sexp_to_string2 |> String.concat " " |> print_endline;
+           Atom (unknown_location, "nil"))
+    |> StringMap.add "FIXME" (fun _ args ->
+           let msg = args |> List.map sexp_to_string2 |> String.concat " " in
+           failwith msg)
     |> StringMap.add "concat" (fun _ args ->
            args
            |> List.concat_map (function RBList (_, xs) -> xs | SBList (_, xs) -> xs | n -> failnode __LOC__ [ n ])
@@ -59,6 +75,7 @@ module Functions = struct
                Atom (unknown_location, string_of_bool (List.for_all (function Atom (_, y) -> x = y | _ -> false) xs))
            | n -> failnode __LOC__ n)
     |> StringMap.add "get" (fun _ args ->
+           (* TODO: merge matches *)
            match args with
            | [ map; key ] -> (
                match (map, key) with
@@ -71,11 +88,31 @@ module Functions = struct
            | n -> failnode __LOC__ n)
     |> StringMap.add "reduce" (fun interpret -> function
          | [ f; def_; xs ] -> (
+             (* print_endline @@ "LOG2: " ^ debug_show_cljexp [ xs ]; *)
              match xs with
              | SBList (_, xs) -> List.fold_left (fun acc x -> interpret f [ acc; x ]) def_ xs
              | RBList (_, xs) -> List.fold_left (fun acc x -> interpret f [ acc; x ]) def_ xs
+             | CBList (_, xs) ->
+                 let rec loop = function [] -> [] | k :: v :: tail -> (k, v) :: loop tail | _ -> failwith __LOC__ in
+                 let xs = loop xs in
+                 List.fold_left (fun acc (k, v) -> interpret f [ acc; SBList (unknown_location, [ k; v ]) ]) def_ xs
              | n -> failnode __LOC__ [ n ])
          | n -> failnode __LOC__ n)
+    |> StringMap.add "map?" (fun _ args ->
+           match args with [ CBList _ ] -> Atom (unknown_location, "true") | _ -> Atom (unknown_location, "false"))
+    |> StringMap.add "vector?" (fun _ args ->
+           match args with [ SBList _ ] -> Atom (unknown_location, "true") | _ -> Atom (unknown_location, "false"))
+    |> StringMap.add "count" (fun _ args ->
+           match args with
+           | [ SBList (_, xs) ] -> Atom (unknown_location, string_of_int (List.length xs))
+           | n -> failnode __LOC__ n)
+    |> StringMap.add "drop" (fun _ args ->
+           match args with
+           | [ Atom (_, str_count); SBList (_, xs) ] ->
+               let count = int_of_string str_count in
+               let xs = xs |> List.filteri (fun i _ -> i >= count) in
+               SBList (unknown_location, xs)
+           | n -> failnode __LOC__ n)
 
   let is_registered fname = StringMap.mem fname functions
 
@@ -87,6 +124,7 @@ end
 
 let rec interpret (context : context) (node : cljexp) : context * cljexp =
   (* log_sexp "INTERPRET: " node |> ignore; *)
+  (* prerr_endline @@ "SCOPE: " ^ debug_show_scope context ^ "\n"; *)
   let interpret_ x = interpret context x |> snd in
   let with_context x = (context, x) in
   match node with
@@ -98,6 +136,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
          let ch = String.get v 0 in
          ch >= '0' && ch <= '9' ->
       (context, x)
+  | CBList (m, vec_args) -> (context, CBList (m, List.map interpret_ vec_args))
   | SBList (m, vec_args) -> (context, SBList (m, List.map interpret_ vec_args))
   | RBList (m, [ Atom (_, "transform_nodes"); RBList (_, _ :: opt); xs ]) ->
       let rec unpack_to_map = function
@@ -124,6 +163,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
           | n -> failnode __LOC__ [ n ] )
       |> with_context
   (* Constants *)
+  | Atom (_, "nil") as x -> (context, x)
   | Atom (_, "__FILENAME__") -> (context, Atom (unknown_location, context.filename))
   | Atom (_, "__LINE__") ->
       Atom (unknown_location, string_of_int (context.loc.line - context.start_line)) |> with_context
@@ -132,8 +172,14 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   (* Resolve scope value *)
   | Atom (m, x) when StringMap.exists (fun k _ -> k = x) context.scope -> (
       match StringMap.find x context.scope with
-      | Atom (m2, arg_val), ctx -> (ctx, Atom ({ m with pos = m2.pos; line = m2.line }, arg_val))
-      | x, ctx -> (ctx, x))
+      | Atom (m2, arg_val), ctx -> (!ctx, Atom ({ m with pos = m2.pos; line = m2.line }, arg_val))
+      | x, ctx -> (!ctx, x))
+  | Atom (_, name) when String.contains name '/' ->
+      let parts = String.split_on_char '/' name in
+      (* prerr_endline @@ "SCOPE: [" ^ debug_show_imports context ^ "] " ^ List.hd parts; *)
+      let context = StringMap.find (List.hd parts) context.imports in
+      let fn, fn_ctx = StringMap.find (List.nth parts 1) context.scope in
+      (!fn_ctx, fn)
   (* /Resolve scope value *)
   (* SPECIAL FORMS *)
   | RBList (m, [ Atom (l, "quote*"); arg ]) -> (
@@ -142,14 +188,21 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       let context2, results = body |> List.fold_left_map (fun ctx x -> interpret ctx x) context in
       let last_node = results |> List.rev |> List.hd in
       (context2, last_node)
-  | RBList (m, [ Atom (_, "def*"); Atom (_, name); body ]) ->
-      let context = { context with scope = context.scope |> StringMap.add name (body, context) } in
-      (context, RBList (m, [ Atom (unknown_location, "comment") ]))
   | RBList (_, [ Atom (_, "if*"); c; a; b ]) -> (
       match interpret_ c with
       | Atom (_, "true") -> (context, interpret_ a)
       | Atom (_, "false") -> (context, interpret_ b)
       | n -> failnode __LOC__ [ n ])
+  | RBList (m, [ Atom (_, "def*"); Atom (_, name); body ]) ->
+      let body = interpret context body |> snd in
+      let ctx_ref = ref context in
+      let context = { context with scope = context.scope |> StringMap.add name (body, ctx_ref) } in
+      ctx_ref := context;
+      (context, RBList (m, [ Atom (unknown_location, "comment") ]))
+  | RBList (m, [ Atom (_, "let*"); Atom (_, name); body ]) ->
+      let body = interpret context body |> snd in
+      let context = { context with scope = context.scope |> StringMap.add name (body, ref context) } in
+      (context, RBList (m, [ Atom (unknown_location, "comment") ]))
   | RBList (_, Atom (_, "let*") :: SBList (_, bindings) :: body) ->
       let scope =
         bindings |> List.split_into_pairs
@@ -157,7 +210,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
              (fun ctx (k, v) ->
                let name = match k with Atom (_, s) -> s | n -> failnode __LOC__ [ n ] in
                let v = interpret { context with scope = ctx } v |> snd in
-               StringMap.add name (v, context) ctx)
+               StringMap.add name (v, ref context) ctx)
              context.scope
       in
       let _, results = body |> List.fold_left_map (fun ctx x -> interpret ctx x) { context with scope } in
@@ -182,13 +235,16 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       in
 
       (* Add function arguments to function scope *)
-      let scope = List.fold_left2 (fun ctx k v -> StringMap.add k (v, context) ctx) f_ctx.scope arg_names arg_values in
+      let scope =
+        List.fold_left2 (fun ctx k v -> StringMap.add k (v, ref context) ctx) f_ctx.scope arg_names arg_values
+      in
 
       let _, results = f_body |> List.fold_left_map (fun ctx x -> interpret ctx x) { f_ctx with scope } in
       results |> List.rev |> List.hd |> with_context
   | node ->
       prerr_endline @@ "SCOPE: [" ^ debug_show_scope context ^ "]";
       prerr_endline @@ "MACROS: [" ^ debug_show_macro context ^ "]";
+      prerr_endline @@ "IMPORTS: [" ^ debug_show_imports context ^ "]";
       failnode __LOC__ [ node ]
 
 let main (log : bool) (filename : string) prelude_macros code =
@@ -199,6 +255,8 @@ let main (log : bool) (filename : string) prelude_macros code =
     let ctx, node = code |> Frontend.parse_and_simplify prelude_ctx filename in
     node
     |> try_log "Parse_and_simplify      ->" log
+    |> Stage_simplify_let.invoke
+    |> try_log "Stage_simplify_let      ->" log
     |> Stage_normalize_bracket.invoke
     |> try_log "Stage_normalize_bracket ->" log
     |> Stage_ns_inline.invoke invoke ctx
@@ -209,4 +267,4 @@ let main (log : bool) (filename : string) prelude_macros code =
     |> try_log "Stage_linter            ->" log
     |> interpret ctx
   in
-  invoke filename code |> snd |> show_sexp |> String.trim
+  invoke filename code |> snd |> show_sexp |> unpack_string |> String.trim

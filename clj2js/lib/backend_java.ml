@@ -134,7 +134,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ])
     ->
-      let context = { context with scope = StringMap.add fname (node, context) context.scope } in
+      let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in
       let modifier = match fname_meta.symbol with ":private" -> "private" | _ -> "public" in
       let sargs =
         args
@@ -163,7 +163,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       (context, code)
   (* Static field *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); body ]) ->
-      let context = { context with scope = StringMap.add fname (node, context) context.scope } in
+      let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in
       let vis = if fname_meta.symbol = ":private" then "private" else "public" in
       let get_type am = if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol in
       let result =
@@ -172,7 +172,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       (context, result)
   (* Empty declaration *)
   | RBList (_, [ Atom (_, "def*"); Atom (_, name) ]) ->
-      ({ context with scope = StringMap.add name (node, context) context.scope }, "")
+      ({ context with scope = StringMap.add name (node, ref context) context.scope }, "")
   (* Interop field *)
   | RBList (_, [ Atom (_, "."); target; Atom (_, field) ]) when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target) (String.sub field 2 (String.length field - 2)) |> with_context
@@ -216,7 +216,7 @@ let rec make_scope_for_prelude (context : context) node =
   | RBList (_, Atom (_, "do*") :: body) ->
       body |> List.fold_left_map (fun context n -> (make_scope_for_prelude context n, n)) context |> fst
   | RBList (_, Atom (_, "def*") :: Atom (_, name) :: _) ->
-      { context with scope = StringMap.add name (node, context) context.scope }
+      { context with scope = StringMap.add name (node, ref context) context.scope }
   | x -> failnode __LOC__ [ x ]
 
 let main base_ns (log : bool) (filename : string) prelude_macros code =

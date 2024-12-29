@@ -7,12 +7,7 @@ let _assert_repl = Utils.assert_ (Lib.main_interpreter true) "interpreter/prelud
 let () =
   Alcotest.run "Tests"
     [
-      ( "Local",
-        [
-          (* _assert_repl __POS__ {|(map? {:foo 1})|} "true";
-          _assert_repl __POS__ {|(count [1 2 3])|} "3"; *)
-          (* _assert_repl __POS__ {|(ns test (:require ["../src/main" :as m]))|} ""  *)
-        ] );
+      ("Local", []);
       ("Repl", U.make_samples_test (Lib.main_interpreter true) "interpreter/prelude.clj" "samples.repl");
       ("Bytecode", U.make_samples_test (Lib.main_bytecode true) "bytecode/prelude.clj" "samples.bytecode");
       ("JS", U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js");
