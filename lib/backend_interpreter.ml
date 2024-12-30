@@ -267,4 +267,6 @@ let main (log : bool) (filename : string) prelude_macros code =
     |> try_log "Stage_linter            ->" log
     |> interpret ctx
   in
-  invoke filename code |> snd |> show_sexp |> unpack_string |> String.trim
+  invoke filename code |> snd |> show_sexp
+  |> ( function x when String.starts_with ~prefix:"\"" x -> unpack_string x |> Scanf.unescaped | x -> x )
+  |> String.trim

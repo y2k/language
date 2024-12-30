@@ -1,6 +1,7 @@
 __FILENAME__
 __LINE__
 __POSITION__
+"he\nwo"
 (- 3 2)
 (:b {:a 1 :b 2 :c 3})
 (* 3 2)

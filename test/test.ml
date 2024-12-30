@@ -7,7 +7,10 @@ let _assert_repl = Utils.assert_ (Lib.main_interpreter true) "interpreter/prelud
 let () =
   Alcotest.run "Tests"
     [
-      ("Local", []);
+      ("Local", [
+        _assert_repl __POS__ {|"he\nwo"|} "he\nwo";
+        _assert_js __POS__ {|"he\nwo"|} {|"he\nwo"|};
+      ]);
       ("Repl", U.make_samples_test (Lib.main_interpreter true) "interpreter/prelude.clj" "samples.repl");
       ("Bytecode", U.make_samples_test (Lib.main_bytecode true) "bytecode/prelude.clj" "samples.bytecode");
       ("JS", U.make_samples_test (Lib.main_js true) "js/src/prelude.clj" "samples.js");
