@@ -4,11 +4,11 @@ WORKDIR /app
 
 RUN opam update
 
-COPY clj2js/clj2js.opam .
-COPY clj2js/dune-project .
-COPY clj2js/bin bin
-COPY clj2js/lib lib
-COPY clj2js/test test
+COPY clj2js.opam .
+COPY dune-project .
+COPY bin bin
+COPY lib lib
+COPY test test
 
 RUN opam install --deps-only --with-test . && \
     eval $(opam env) && \
