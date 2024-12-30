@@ -1,5 +1,5 @@
-PRELUDE_PATH := $(shell realpath test/samples/prelude/js/src/prelude.clj)
-PRELUDE_JAVA_PATH := $(shell realpath test/samples/prelude/java/src/prelude.clj)
+PRELUDE_PATH := $(shell realpath prelude/js/src/prelude.clj)
+PRELUDE_JAVA_PATH := $(shell realpath prelude/java/src/prelude.clj)
 PRELUDE_JAVA_DIR:= $(shell dirname $(PRELUDE_JAVA_PATH))
 
 .PHONY: test

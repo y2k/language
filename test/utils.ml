@@ -1,7 +1,7 @@
 open Lib__.Common
 
 let compile_code compile prelude_path code =
-  let prelude = In_channel.(with_open_bin ("../../../test/samples/prelude/" ^ prelude_path) input_all) in
+  let prelude = In_channel.(with_open_bin ("../../../prelude/" ^ prelude_path) input_all) in
   NameGenerator.with_scope (fun _ -> compile "app/main.clj" prelude code)
 
 let split_string str sep =
