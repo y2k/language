@@ -1,4 +1,0 @@
-(library
- (name language)
- (preprocess (pps ppx_deriving.show))
- (libraries angstrom yojson))
