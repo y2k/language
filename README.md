@@ -1,19 +1,20 @@
-# Статически типизированный встраиваемый LISP с интеропом
+# Embedded LISP with Interop
 
-### Примеры использования
+### Usage Examples
 
 - https://github.com/y2k/relax_cats_bot
 - https://github.com/y2k/declarative_ban_bot
-- https://github.com/y2k/charge_timer (с компиляцией в Java для Android)
+- https://github.com/y2k/charge_timer (compiled to Java for Android)
 - https://github.com/y2k/declarative_notify
 
-### Платформы компиляции
+### Compilation Platforms
 
 - JS
 - Java
-- Интерпретатор
+- Interpreter
+- "Bytecode" for JVM Interpreter
 
-### Пример кода
+### Code Example
 
 ```clojure
 (ns app
