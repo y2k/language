@@ -202,9 +202,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | Atom (_, fname) when String.contains fname '/' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
         | Atom (_, fname) when String.contains fname '.' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
         | Atom (_, fname) when not (StringMap.mem fname context.scope) ->
-            print_endline @@ "LOG: " ^ fname ^ " ["
+            (* prerr_endline @@ "LOG: " ^ fname ^ " ["
             ^ (context.scope |> StringMap.bindings |> List.map fst |> String.concat ", ")
-            ^ "]";
+            ^ "]"; *)
             Printf.sprintf "y2k.RT.invoke(%s%s" fname (if List.is_empty args then "" else ", ")
         | _ -> compile head ^ "("
       in

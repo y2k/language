@@ -81,8 +81,9 @@ module Functions = struct
                match (map, key) with
                | CBList (_, xs), Atom (_, key) ->
                    List.split_into_pairs xs
-                   |> List.find (fun (k, _) -> match k with Atom (_, k) -> k = key | n -> failnode __LOC__ [ n ])
-                   |> snd
+                   |> List.find_opt (fun (k, _) -> match k with Atom (_, k) -> k = key | n -> failnode __LOC__ [ n ])
+                   |> Option.map snd
+                   |> Option.value ~default:(Atom (unknown_location, "nil"))
                | SBList (_, xs), Atom (_, i) when int_of_string_opt i |> Option.is_some -> List.nth xs (int_of_string i)
                | m, k -> failnode __LOC__ [ m; k ])
            | n -> failnode __LOC__ n)
@@ -119,6 +120,10 @@ module Functions = struct
                let xs = xs |> List.filteri (fun i _ -> i >= count) in
                SBList (unknown_location, xs)
            | n -> failnode __LOC__ n)
+    |> StringMap.add "some?" (fun _ args ->
+           match args with
+           | [ Atom (_, "nil") ] -> Atom (unknown_location, "false")
+           | _ -> Atom (unknown_location, "true"))
 
   let is_registered fname = StringMap.mem fname functions
 

@@ -120,6 +120,7 @@ let make_build_script () =
   let target_path = ref "" in
   let libs = ref [] in
   let lang = ref "java" in
+  Arg.current := 1;
   Arg.parse
     [
       ("-path", Arg.String (fun x -> Atomic.swap pathes (fun l -> x :: l)), "Path to clj files root");
