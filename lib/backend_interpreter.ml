@@ -98,6 +98,12 @@ module Functions = struct
                  List.fold_left (fun acc (k, v) -> interpret f [ acc; SBList (unknown_location, [ k; v ]) ]) def_ xs
              | n -> failnode __LOC__ [ n ])
          | n -> failnode __LOC__ n)
+    |> StringMap.add "map" (fun interpret -> function
+         | [ f; xs ] -> (
+             match xs with
+             | SBList (m, xs) -> SBList (m, List.map (fun x -> interpret f [ x ]) xs)
+             | n -> failnode __LOC__ [ n ])
+         | n -> failnode __LOC__ n)
     |> StringMap.add "map?" (fun _ args ->
            match args with [ CBList _ ] -> Atom (unknown_location, "true") | _ -> Atom (unknown_location, "false"))
     |> StringMap.add "vector?" (fun _ args ->
