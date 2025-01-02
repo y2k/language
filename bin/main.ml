@@ -15,7 +15,7 @@ let compile_file filename target root_ns =
         | "repl" -> Clj2js.main_interpreter false filename
         | t -> failwith @@ "Invalid target " ^ t
       in
-      filename |> read_code_file |> compiler |> print_endline)
+      filename |> read_code_file |> FileReader.with_scope compiler |> print_endline)
 
 let compile_file_old () =
   let target = Sys.argv.(1) in

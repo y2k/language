@@ -9,22 +9,22 @@ let rec compile (node : cljexp) : string =
   | SBList (_, xs) -> xs |> List.map compile |> String.concat "" |> Printf.sprintf "[\n%s]\n"
   | CBList (_, xs) -> xs |> List.map compile |> String.concat "" |> Printf.sprintf "{\n%s}\n"
 
-let uncurry f (x, y) = f x y
-
 let main (log : bool) (filename : string) prelude_macros code =
-  let macro_sexp =
+  let prelude_ctx, prelude_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify { empty_context with interpreter = Backend_interpreter.interpret } "prelude"
   in
-  let macros_ctx = macro_sexp |> uncurry Stage_add_def_to_scope.invoke |> fst in
-  let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log } filename in
-  node
-  |> try_log "Parse_and_simplify      ->" log
-  |> Stage_simplify_let.invoke
-  |> try_log "Stage_simplify_let      ->" log
-  |> Stage_normalize_bracket.invoke
-  |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke ctx (snd macro_sexp)
-  |> Stage_unwrap_ns.invoke ctx
-  |> try_log "Stage_unwrap_ns         ->" log
-  |> compile |> String.trim
+  let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
+  let rec invoke code =
+    let ctx, node = code |> Frontend.parse_and_simplify { prelude_ctx with log } filename in
+    node
+    |> try_log "Parse_and_simplify      ->" log
+    |> Stage_simplify_let.invoke
+    |> try_log "Stage_simplify_let      ->" log
+    |> Stage_normalize_bracket.invoke
+    |> try_log "Stage_normalize_bracket ->" log
+    |> Stage_linter.invoke ctx prelude_sexp
+    |> Stage_unwrap_ns.invoke (fun cfg -> invoke cfg.code) ctx
+    |> try_log "Stage_unwrap_ns         ->" log
+  in
+  invoke code |> compile |> String.trim

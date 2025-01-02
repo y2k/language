@@ -3,6 +3,7 @@
 (def a {1 2})
 (def a 1) a
 (def a)
+(defn f [] (ui/a 1))
 (defn foo [{a :b}] a)
 (defn foo [a b] (+ a b))
 (defn foo [a b] (+ a b)) (defn main [] (foo 1 2))
@@ -14,7 +15,7 @@
 (let [x (atom 0)] x)
 (list 1 2 3)
 (not= 1 2)
-(ns _ (:require ["./b/c" :as b]) (:require ["../a/b" :as f])) (defn foo [] (b/mb 1 2) (f/mf 3 4))
+(ns bar (:require ["./b/c" :as b]) (:require ["../a/b" :as f])) (defn foo [] (b/mb 1 2) (f/mf 3 4))
 (ns bar) (defn foo [a b] (+ a b))
 (vector 1 2 3)
 {:k1 1 :k2 "v2" "k3" :v3}

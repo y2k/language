@@ -1,3 +1,29 @@
+module FileReader = struct
+  type _ Effect.t += Load : string -> string Effect.t
+
+  let read filename = Effect.perform (Load filename)
+
+  let with_stub_scope (content : string) f arg =
+    let open Effect.Deep in
+    Effect.Deep.try_with f arg
+      {
+        effc =
+          (fun (type a) (eff : a Effect.t) ->
+            match eff with Load _ -> Some (fun (k : (a, _) continuation) -> continue k content) | _ -> None);
+      }
+
+  let with_scope f arg =
+    let open Effect.Deep in
+    Effect.Deep.try_with f arg
+      {
+        effc =
+          (fun (type a) (eff : a Effect.t) ->
+            match eff with
+            | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
+            | _ -> None);
+      }
+end
+
 let last xs = List.nth xs (List.length xs - 1)
 let butlast xs = List.rev (List.tl (List.rev xs))
 let loc (a, b, c, _) = Printf.sprintf "%s:%i:%i" a b c

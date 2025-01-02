@@ -1,6 +1,6 @@
 open Common
 
-module Loader = struct
+(* module Loader = struct
   type _ Effect.t += Load : string -> string Effect.t
 
   let with_scope f =
@@ -13,17 +13,19 @@ module Loader = struct
             | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
             | _ -> None);
       }
-end
+end *)
 
-let merge_path base_path rel_path =
-  (* prerr_endline @@ "LOG1: " ^ base_path ^ " | " ^ rel_path; *)
-  let rec loop xs ps =
-    match (xs, ps) with _ :: xs, ".." :: ps -> loop xs ps | xs, "." :: ps -> loop xs ps | xs, ps -> List.rev xs @ ps
+let load_file base_path mod_path =
+  let mod_path = unpack_string mod_path ^ ".clj" in
+  let merge_path () =
+    let rec loop xs ps =
+      match (xs, ps) with _ :: xs, ".." :: ps -> loop xs ps | xs, "." :: ps -> loop xs ps | xs, ps -> List.rev xs @ ps
+    in
+    loop (String.split_on_char '/' base_path |> List.rev |> List.tl) (String.split_on_char '/' mod_path)
+    |> String.concat "/"
   in
-  loop (String.split_on_char '/' base_path |> List.rev |> List.tl) (String.split_on_char '/' rel_path)
-  |> String.concat "/"
-
-let load_file path = In_channel.(with_open_bin path input_all)
+  let path = merge_path () in
+  (path, In_channel.(with_open_bin path input_all))
 
 let rec invoke (execute_code : string -> string -> context * cljexp) (context : context) = function
   | Atom _ as x -> (context, x)
@@ -39,9 +41,7 @@ let rec invoke (execute_code : string -> string -> context * cljexp) (context : 
                         (fun context req ->
                           match req with
                           | SBList (_, [ Atom (_, mod_path); _; Atom (_, alias) ]) ->
-                              let mod_path = unpack_string mod_path ^ ".clj" in
-                              let full_mod_path = merge_path context.filename mod_path in
-                              let code = load_file full_mod_path in
+                              let full_mod_path, code = load_file context.filename mod_path in
                               let ch_ctx, _ = execute_code full_mod_path code in
                               { context with imports = StringMap.add alias ch_ctx context.imports }
                           | n -> failnode __LOC__ [ n ])
