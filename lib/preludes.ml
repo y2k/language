@@ -179,10 +179,19 @@ let java =
 
 ;; Collections
 
+(defmacro assoc [xs k v] (list 'call-runtime ''assoc xs k v))
+(defmacro concat [as bs] (list 'call-runtime ''concat as bs))
+(defmacro conj [xs x] (list 'call-runtime ''conj xs x))
+(defmacro count [xs] (list 'call-runtime ''count xs))
+(defmacro empty? [xs] (list 'call-runtime ''empty xs))
 (defmacro first [xs] (list 'get xs 0))
 (defmacro list [& xs] (list 'java.util.LinkedList. (concat (list 'java.util.Arrays/asList) xs)))
 (defmacro list? [x] (list 'is x "java.util.LinkedList"))
+(defmacro map [f xs] (list 'call-runtime ''map f xs))
 (defmacro map? [x] (list 'is x "java.util.Map"))
+(defmacro merge [as bs] (list 'call-runtime ''merge as bs))
+(defmacro reduce [f def xs] (list 'call-runtime ''reduce f def xs))
+(defmacro rest [xs] (list 'call-runtime ''rest xs))
 (defmacro run! [f xs] (list 'call-runtime ''run_ f xs))
 (defmacro second [xs] (list 'get xs 1))
 (defmacro vec [xs] (list 'java.util.Arrays/asList xs))
@@ -213,22 +222,15 @@ let java =
 
 ;; Java interop
 
-(defmacro assoc [xs k v] (list 'call-runtime ''assoc xs k v))
 (defmacro checked! [f] (list 'call-runtime ''try_ (list 'fn (vector) f)))
 (defmacro class [cls] (list 'class-inner (list 'quote (symbol (str cls ".class")))))
-(defmacro concat [as bs] (list 'call-runtime ''concat as bs))
-(defmacro conj [xs x] (list 'call-runtime ''conj xs x))
-(defmacro count [xs] (list 'call-runtime ''count xs))
 (defmacro declare [name] (list 'def name))
-(defmacro empty? [xs] (list 'call-runtime ''empty xs))
 (defmacro fn! [& body] (concat (list ^void 'fn) body))
 (defmacro function [f] (list 'call-runtime ''function f))
 (defmacro gen-class [& body] (list 'gen-class-inner (list 'quote body)))
-(defmacro merge [as bs] (list 'call-runtime ''merge as bs))
 (defmacro nil? [x] (list '= 'null x))
-(defmacro some? [x] (list 'not (list '= 'null x)))
-(defmacro rest [xs] (list 'call-runtime ''rest xs))
 (defmacro runnable [f] (list 'call-runtime ''runnable f))
+(defmacro some? [x] (list 'not (list '= 'null x)))
 
 ;; Declarations
 

@@ -568,6 +568,10 @@ new java.util.LinkedList(java.util.Arrays.asList(1))
 =============================
 (1 instanceof java.util.LinkedList)
 =============================
+y2k.RT.map(y2k.RT.fn((x)->{
+return x;
+}), java.util.Arrays.asList(1, 2, 3))
+=============================
 (1 instanceof java.util.Map)
 =============================
 y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
@@ -707,6 +711,18 @@ y2k.RT.println(y2k.RT.fn((p__1)->{
 var a = y2k.RT.get(p__1, 0);;
 return a;
 }))
+=============================
+y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+return (acc+x);
+}), 0, new java.util.LinkedList(java.util.Arrays.asList(1, 2, 3)))
+=============================
+y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+return (acc+x);
+}), 0, java.util.Arrays.asList(1, 2, 3))
+=============================
+y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+return (acc+x);
+}), 0, java.util.Arrays.asList(1, 2, 3))
 =============================
 y2k.RT.rest(java.util.Arrays.asList(1, 2, 3))
 =============================
