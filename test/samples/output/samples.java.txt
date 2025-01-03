@@ -1,15 +1,22 @@
 =============================
 (1-2)
 =============================
-y2k.RT.get("b", "a")
+y2k.RT.get(
+"b",
+"a")
 =============================
-y2k.RT.get("env", "webview")
+y2k.RT.get(
+"env",
+"webview")
 =============================
 "".length
 =============================
 "a".foo("b", 1)
 =============================
-String.join("", java.util.Arrays.asList(1, 2, 3))
+String.join("", java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
 m.foo().run()
 =============================
@@ -20,7 +27,9 @@ m.foo().run()
 ("a"/"b")
 =============================
 y2k.RT.fn(()->{
-return y2k.RT.str("b", "c");
+return y2k.RT.str(
+"b",
+"c");
 })
 =============================
 ("a"+"b")
@@ -29,7 +38,9 @@ return y2k.RT.str("b", "c");
 =============================
 ("a"<="b")
 =============================
-y2k.RT.equals("a", "b")
+y2k.RT.equals(
+"a",
+"b")
 =============================
 ("a">"b")
 =============================
@@ -49,7 +60,8 @@ null.foo()
 var p__1 = !1;;
 Object p__4;;
 if (p__1) {
-var p__2 = !y2k.RT.str(2);;
+var p__2 = !y2k.RT.str(
+2);;
 Object p__3;;
 if (p__2) {
 p__3 = !3;
@@ -98,18 +110,26 @@ p__4
 =============================
 ((String)1)
 =============================
-y2k.RT.assoc(y2k.RT.hash_map(), "k", "v")
+y2k.RT.assoc(
+y2k.RT.hash_map(),
+"k",
+"v")
 =============================
 var p__1 = 1;;
 Object p__2;;
-if (y2k.RT.equals(p__1, "a")) {
-p__2 = y2k.RT.count(2);
+if (y2k.RT.equals(
+p__1,
+"a")) {
+p__2 = y2k.RT.count(
+2);
 } else {
-p__2 = y2k.RT.count(3);
+p__2 = y2k.RT.count(
+3);
 };
 p__2
 =============================
-y2k.RT.try_(y2k.RT.fn(()->{
+y2k.RT.try_(
+y2k.RT.fn(()->{
 return y2k.RT.str();
 }))
 =============================
@@ -119,27 +139,45 @@ JobScheduler.class
 =============================
 
 =============================
-y2k.RT.concat(java.util.Arrays.asList(), java.util.Arrays.asList())
+y2k.RT.concat(
+java.util.Arrays.asList(),
+java.util.Arrays.asList())
 =============================
-y2k.RT.concat(java.util.Arrays.asList(1, 2), java.util.Arrays.asList(3, 4))
+y2k.RT.concat(
+java.util.Arrays.asList(
+1,
+2),
+java.util.Arrays.asList(
+3,
+4))
 =============================
-y2k.RT.conj(java.util.Arrays.asList(1, 2), 3)
+y2k.RT.conj(
+java.util.Arrays.asList(
+1,
+2),
+3)
 =============================
-y2k.RT.count(y2k.RT.hash_map("f", y2k.RT.fn(()->{
+y2k.RT.count(
+y2k.RT.hash_map(
+"f",
+y2k.RT.fn(()->{
 var a = 1;;
 return 2;
 })))
 =============================
-public static Object f=g(1);
+public static Object f=g(
+1);
 =============================
 public static Object f () {
-return g(y2k.RT.fn(()->{
+return g(
+y2k.RT.fn(()->{
 return 1;
 }));
 }
 =============================
 public static Object f () {
-return g((Runnable)()->{
+return g(
+(Runnable)()->{
 return 1;
 });
 }
@@ -158,19 +196,25 @@ public static Object a=ClassLoader.getSystemClassLoader();
 =============================
 public static Object a=null;
 =============================
-public static Object f=m.g(1);
+public static Object f=m.g(
+1);
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map());
 =============================
-public static Object foo=foo(foo(1));
+public static Object foo=foo(
+foo(
+1));
 =============================
-public static Object foo=foo(1);
+public static Object foo=foo(
+1);
 =============================
 public static Object foo=1;
 =============================
 public static Object LIMIT_CHARGE=80;
 =============================
-public static Object state=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map("field", 1));
+public static Object state=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map(
+"field",
+1));
 =============================
 private static Object a=2;;
 a.bar = 1;
@@ -182,7 +226,8 @@ return a;
 }
 =============================
 public static void f () {
-y2k.RT.println("a");
+y2k.RT.println(
+"a");
 }
 =============================
 public static Object a () {
@@ -200,13 +245,20 @@ return 2;
 }
 =============================
 public static Object a (final Object xs) {
-return y2k.RT.assoc(xs, "k", "v");
+return y2k.RT.assoc(
+xs,
+"k",
+"v");
 }
 =============================
 public static Object b () {
 var p__1 = "c";;
-Aa a = y2k.RT.get(p__1, 0);;
-Bb b = y2k.RT.get(p__1, 1);;
+Aa a = y2k.RT.get(
+p__1,
+0);;
+Bb b = y2k.RT.get(
+p__1,
+1);;
 return a;
 }
 =============================
@@ -237,7 +289,8 @@ return 4;
 }
 =============================
 public static Object f () {
-return y2k.RT.println("a");
+return y2k.RT.println(
+"a");
 }
 =============================
 public static Object f (final Object a) {
@@ -249,9 +302,14 @@ return ((String)a);
 }
 =============================
 public static Object foo (final Object p__1) {
-var a = y2k.RT.get(p__1, 0);;
-var b = y2k.RT.get(p__1, 1);;
-return y2k.RT.invoke(a, b);
+var a = y2k.RT.get(
+p__1,
+0);;
+var b = y2k.RT.get(
+p__1,
+1);;
+return y2k.RT.invoke(a, 
+b);
 }
 =============================
 public static Object foo () {
@@ -322,14 +380,24 @@ public static Object foo (final Object a,final Object b,final Object c) {
 return a;
 }
 ;
-foo("a", "b", 1)
+foo(
+"a",
+"b",
+1)
 =============================
 public static Object foo (final Object a,final Object b) {
-return y2k.RT.invoke(a, b);
+return y2k.RT.invoke(a, 
+b);
 }
 =============================
 public static Object foo (final Object a,final Object b) {
-return foo(foo(a, b), foo(a, b));
+return foo(
+foo(
+a,
+b),
+foo(
+a,
+b));
 }
 =============================
 public static Object foo (final Object a,final Object b) {
@@ -345,7 +413,9 @@ p__2 = 6;
 } else {
 p__2 = 7;
 };
-foo(p__1, p__2);
+foo(
+p__1,
+p__2);
 Object p__3;;
 if (false) {
 p__3 = 4;
@@ -358,11 +428,15 @@ p__4 = 8;
 } else {
 p__4 = 9;
 };
-return foo(p__3, p__4);
+return foo(
+p__3,
+p__4);
 }
 =============================
 public static Object foo (final Object a,final Object b) {
-foo(a, b);
+foo(
+a,
+b);
 return (a+b);
 }
 =============================
@@ -371,20 +445,29 @@ return a;
 }
 =============================
 public static Object foo (final Object x) {
-foo(1);
-return foo(2);
+foo(
+1);
+return foo(
+2);
 }
 =============================
 public static Object foo (final Object x) {
-var a = foo(1);;
-var b = foo(2);;
-foo(3);
-return foo(4);
+var a = foo(
+1);;
+var b = foo(
+2);;
+foo(
+3);
+return foo(
+4);
 }
 =============================
 public static Object foo (final Object xs) {
-var p__1 = y2k.RT.rest(xs);;
-var a = y2k.RT.get(p__1, 0);;
+var p__1 = y2k.RT.rest(
+xs);;
+var a = y2k.RT.get(
+p__1,
+0);;
 return a;
 }
 =============================
@@ -403,20 +486,31 @@ return ((String)context.getSySe(Ctx.AU_SE));
 y2k.RT.str();
 y2k.RT.println()
 =============================
-y2k.RT.empty(java.util.Arrays.asList(1, 2))
+y2k.RT.empty(
+java.util.Arrays.asList(
+1,
+2))
 =============================
 y2k.RT.fn((p__1)->{
-var a = y2k.RT.get(p__1, 0);;
-var b = y2k.RT.get(p__1, 1);;
-return y2k.RT.invoke(a, b);
+var a = y2k.RT.get(
+p__1,
+0);;
+var b = y2k.RT.get(
+p__1,
+1);;
+return y2k.RT.invoke(a, 
+b);
 })
 =============================
 y2k.RT.fn(()->{
-return y2k.RT.str("b", "c");
+return y2k.RT.str(
+"b",
+"c");
 })
 =============================
 y2k.RT.fn((x)->{
-return y2k.RT.invoke(x, 1);
+return y2k.RT.invoke(x, 
+1);
 })
 =============================
 y2k.RT.fn((x)->{
@@ -424,7 +518,9 @@ return x;
 })
 =============================
 y2k.RT.fn(()->{
-return y2k.RT.str("b", "c");
+return y2k.RT.str(
+"b",
+"c");
 })
 =============================
 new Foo("a","b",1)
@@ -447,7 +543,9 @@ public String foo() {
 return (String)a_foo(this); }
 }
 =============================
-y2k.RT.get("xs", 1)
+y2k.RT.get(
+"xs",
+1)
 =============================
 Object p__1;;
 if ("a") {
@@ -461,7 +559,8 @@ Object p__1;;
 if ("a") {
 p__1 = "b";
 } else {
-p__1 = y2k.RT.println("c");
+p__1 = y2k.RT.println(
+"c");
 };
 p__1
 =============================
@@ -495,11 +594,16 @@ Object p__1;;
 if (false) {
 p__1 = null;
 } else {
-p__1 = y2k.RT.throw_(new Exception("foo"));
+p__1 = y2k.RT.throw_(
+new Exception("foo"));
 };
 p__1
 =============================
-y2k.RT.into_array(java.util.Arrays.asList(1, 2, 3))
+y2k.RT.into_array(
+java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
 (1 instanceof String)
 =============================
@@ -532,7 +636,9 @@ package app;
 import a.b.Ab;
 =============================
 var p__1 = "b";;
-var a = y2k.RT.get(p__1, 0);;
+var a = y2k.RT.get(
+p__1,
+0);;
 a
 =============================
 Object p__1;;
@@ -546,17 +652,21 @@ y2k.RT.str()
 y2k.RT.str();
 y2k.RT.println()
 =============================
-A a = y2k.RT.str(1);;
+A a = y2k.RT.str(
+1);;
 2
 =============================
 String a = "b";;
 a
 =============================
-var a = y2k.RT.get("c", "b");;
+var a = y2k.RT.get(
+"c",
+"b");;
 a
 =============================
 var a = "c".b(123);;
-y2k.RT.println("a");
+y2k.RT.println(
+"a");
 y2k.RT.str()
 =============================
 var a = 1;;
@@ -564,21 +674,35 @@ y2k.RT.str();
 y2k.RT.str();
 y2k.RT.str()
 =============================
-new java.util.LinkedList(java.util.Arrays.asList(1))
+new java.util.LinkedList(java.util.Arrays.asList(
+1))
 =============================
 (1 instanceof java.util.LinkedList)
 =============================
-y2k.RT.map(y2k.RT.fn((x)->{
+y2k.RT.map(
+y2k.RT.fn((x)->{
 return x;
-}), java.util.Arrays.asList(1, 2, 3))
+}),
+java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
 (1 instanceof java.util.Map)
 =============================
-y2k.RT.merge(y2k.RT.hash_map("a", 1), y2k.RT.hash_map("b", 2))
+y2k.RT.merge(
+y2k.RT.hash_map(
+"a",
+1),
+y2k.RT.hash_map(
+"b",
+2))
 =============================
 !true
 =============================
-!y2k.RT.equals("a", "b")
+!y2k.RT.equals(
+"a",
+"b")
 =============================
 package app;
 import a.b.List;
@@ -599,7 +723,8 @@ import b.Ctx;
 
 /** @noinspection ALL*/
 public class main{
-public static Object a=y2k.RT.str(Ctx.A_S);}
+public static Object a=y2k.RT.str(
+Ctx.A_S);}
 =============================
 package app;
 import c.An;
@@ -658,7 +783,8 @@ Object p__4;;
 if (p__1) {
 p__4 = p__1;
 } else {
-var p__2 = !y2k.RT.println(2);;
+var p__2 = !y2k.RT.println(
+2);;
 Object p__3;;
 if (p__2) {
 p__3 = p__2;
@@ -703,43 +829,84 @@ p__4
 =============================
 1
 =============================
-y2k.RT.println("a", 1, "b")
+y2k.RT.println(
+"a",
+1,
+"b")
 =============================
-y2k.RT.println("".length)
+y2k.RT.println(
+"".length)
 =============================
-y2k.RT.println(y2k.RT.fn((p__1)->{
-var a = y2k.RT.get(p__1, 0);;
+y2k.RT.println(
+y2k.RT.fn((p__1)->{
+var a = y2k.RT.get(
+p__1,
+0);;
 return a;
 }))
 =============================
-y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+y2k.RT.reduce(
+y2k.RT.fn((acc,x)->{
 return (acc+x);
-}), 0, new java.util.LinkedList(java.util.Arrays.asList(1, 2, 3)))
+}),
+0,
+new java.util.LinkedList(java.util.Arrays.asList(
+1,
+2,
+3)))
 =============================
-y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+y2k.RT.reduce(
+y2k.RT.fn((acc,x)->{
 return (acc+x);
-}), 0, java.util.Arrays.asList(1, 2, 3))
+}),
+0,
+java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
-y2k.RT.reduce(y2k.RT.fn((acc,x)->{
+y2k.RT.reduce(
+y2k.RT.fn((acc,x)->{
 return (acc+x);
-}), 0, java.util.Arrays.asList(1, 2, 3))
+}),
+0,
+java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
-y2k.RT.rest(java.util.Arrays.asList(1, 2, 3))
+y2k.RT.rest(
+java.util.Arrays.asList(
+1,
+2,
+3))
 =============================
 "".length = 1;
 =============================
-y2k.RT.count(1) = 2;
+y2k.RT.count(
+1) = 2;
 =============================
 1 = 2;
 =============================
-y2k.RT.str("a", "b", 3)
+y2k.RT.str(
+"a",
+"b",
+3)
 =============================
-y2k.RT.str("Context/AUDIO_SERVICE")
+y2k.RT.str(
+"Context/AUDIO_SERVICE")
 =============================
-y2k.RT.str(y2k.RT.fn((p__1)->{
-var a = y2k.RT.get(p__1, 0);;
-var b = y2k.RT.get(p__1, 1);;
-return y2k.RT.equals(a, b);
+y2k.RT.str(
+y2k.RT.fn((p__1)->{
+var a = y2k.RT.get(
+p__1,
+0);;
+var b = y2k.RT.get(
+p__1,
+1);;
+return y2k.RT.equals(
+a,
+b);
 }))
 =============================
 Object p__1;;
@@ -748,9 +915,14 @@ p__1 = "b";
 } else {
 p__1 = "c";
 };
-y2k.RT.str(p__1)
+y2k.RT.str(
+p__1)
 =============================
-String.valueOf("level")
+String.valueOf(
+"level")
+=============================
+y2k.RT.unescape(
+"a\"b")
 =============================
 (1 instanceof java.util.ArrayList)
 =============================
@@ -760,19 +932,32 @@ p__1 = 1;
 } else {
 p__1 = 2;
 };
-java.util.Arrays.asList(p__1)
+java.util.Arrays.asList(
+p__1)
 =============================
-java.util.Arrays.asList(y2k.RT.str(1))
+java.util.Arrays.asList(
+y2k.RT.str(
+1))
 =============================
 java.util.Arrays.asList()
 =============================
-java.util.Arrays.asList(1, 2, 3)
+java.util.Arrays.asList(
+1,
+2,
+3)
 =============================
-java.util.Arrays.asList(1)
+java.util.Arrays.asList(
+1)
 =============================
-y2k.RT.hash_map("a", "b", "c", "d")
+y2k.RT.hash_map(
+"a",
+"b",
+"c",
+"d")
 =============================
-y2k.RT.hash_map("fetch", y2k.RT.fn(()->{
+y2k.RT.hash_map(
+"fetch",
+y2k.RT.fn(()->{
 var world = 0;;
 return 1;
 }))

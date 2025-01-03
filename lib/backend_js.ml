@@ -11,6 +11,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   let with_context node = (context, node) in
   match node with
   (* Atoms *)
+  | Atom (_, "nil") -> with_context "null"
   | Atom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
   | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context

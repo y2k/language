@@ -193,9 +193,8 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       compile (RBList (m2, Atom (m, "y2k.RT/" ^ name) :: args)) |> with_context
   (* Function call *)
   | RBList (_, head :: args) ->
-      let sargs =
-        if List.length args = 0 then "" else args |> List.map compile |> List.reduce __LOC__ (Printf.sprintf "%s, %s")
-      in
+      let sargs = args |> List.map compile |> String.concat ",\n" in
+      let sargs = if sargs = "" then ")" else "\n" ^ sargs ^ ")" in
       let fname =
         match head with
         | RBList (_, Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")("
@@ -208,7 +207,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
             Printf.sprintf "y2k.RT.invoke(%s%s" fname (if List.is_empty args then "" else ", ")
         | _ -> compile head ^ "("
       in
-      fname ^ sargs ^ ")" |> with_context
+      fname ^ sargs |> with_context
   | n -> failnode __LOC__ [ n ]
 
 let rec make_scope_for_prelude (context : context) node =

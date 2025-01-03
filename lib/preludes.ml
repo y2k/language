@@ -215,6 +215,7 @@ let java =
 (defmacro println [& xs] (concat (list 'call-runtime ''println) xs))
 (defmacro str [& xs] (concat (list 'call-runtime ''str) xs))
 (defmacro throw [e] (list 'call-runtime ''throw_ e))
+(defmacro unescape [x] (list 'call-runtime ''unescape x))
 
 (defmacro atom [x] (list 'java.util.concurrent.atomic.AtomicReference. x))
 (defmacro deref [a] (list '.get (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>")))
