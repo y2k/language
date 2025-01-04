@@ -179,6 +179,7 @@ let java =
 
 ;; Collections
 
+(defmacro contains? [xs x] (list 'call-runtime ''contains xs x))
 (defmacro assoc [xs k v] (list 'call-runtime ''assoc xs k v))
 (defmacro concat [as bs] (list 'call-runtime ''concat as bs))
 (defmacro conj [xs x] (list 'call-runtime ''conj xs x))

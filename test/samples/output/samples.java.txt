@@ -157,6 +157,14 @@ java.util.Arrays.asList(
 2),
 3)
 =============================
+y2k.RT.contains(
+y2k.RT.hash_map(
+"a",
+1,
+"b",
+2),
+"b")
+=============================
 y2k.RT.count(
 y2k.RT.hash_map(
 "f",

@@ -31,6 +31,7 @@
 (concat [] [])
 (concat [1 2] [3 4])
 (conj [1 2] 3)
+(contains? {:a 1 :b 2} :b)
 (count {:f (fn [] (let [a 1] 2))})
 (declare g) (def f (g 1))
 (declare g) (defn f [] (g (fn [] 1)))
