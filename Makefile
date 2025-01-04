@@ -1,9 +1,5 @@
-PRELUDE_PATH := $(shell realpath prelude/js/src/prelude.clj)
-PRELUDE_JAVA_PATH := $(shell realpath prelude/java/src/prelude.clj)
-PRELUDE_JAVA_DIR:= $(shell dirname $(PRELUDE_JAVA_PATH))
-
 .PHONY: test
-test:
+test: prelude
 	@ clear && dune build && clear && export OCAMLRUNPARAM=b && dune test -f
 
 .PHONY: deploy
@@ -14,14 +10,18 @@ deploy: test_e2e
 restore:
 	@ opam install . --deps-only --with-test -y
 
+.PHONY: prelude
+prelude:
+	@ dune build && OCAMLRUNPARAM=b _build/default/prelude/main.exe
+
 .PHONY: test_e2e
 test_e2e: test
 	@ cp -f _build/default/bin/main.exe _build/default/bin/clj2js
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/charge_timer build PRELUDE_JS_PATH=$(PRELUDE_PATH) PRELUDE_JAVA_PATH=$(PRELUDE_JAVA_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/interpreter test PRELUDE_PATH=$(PRELUDE_JAVA_DIR)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/finance_tracker test PRELUDE_PATH=$(PRELUDE_PATH) ANDROID_PRELUDE_PATH=$(PRELUDE_JAVA_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_ban_bot/ test PRELUDE_PATH=$(PRELUDE_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/relax_cats_bot/.github/ test PRELUDE_PATH=$(PRELUDE_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify/.github test e2e_test PRELUDE_PATH=$(PRELUDE_PATH)
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/minesweeper/.github build PRELUDE_PATH=$(PRELUDE_PATH)
-# @ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/compose_news test PRELUDE_PATH=$(PRELUDE_PATH)
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/compose_news test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && cd ~/Projects/finance_tracker && $(MAKE) test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && cd ~/Projects/charge_timer && $(MAKE) test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/interpreter test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_ban_bot/ test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/relax_cats_bot/.github/ test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify/.github test e2e_test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/minesweeper/.github build

@@ -615,34 +615,6 @@ java.util.Arrays.asList(
 =============================
 (1 instanceof String)
 =============================
-
-=============================
-public static Object a () {
-return 1;
-}
-;
-public static Object b () {
-return 2;
-}
-=============================
-private static Object show_notification (final Object env) {
-return env;
-}
-=============================
-package app;
-import a1.b2.Foo;
-import a1.b2.Bar;
-
-/** @noinspection ALL*/
-public class main{
-public static Object foo (final Object a) {
-return a;
-}
-}
-=============================
-package app;
-import a.b.Ab;
-=============================
 var p__1 = "b";;
 var a = y2k.RT.get(
 p__1,

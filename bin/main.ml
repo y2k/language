@@ -5,7 +5,7 @@ module Bs = Build_script
 let read_code_file filename = if filename = "prelude" then "" else In_channel.(with_open_bin filename input_all)
 
 let compile_file filename target root_ns =
-  prerr_endline @@ "Compile: " ^ target ^ " | " ^ filename;
+  prerr_endline @@ "Compile: [" ^ Sys.getcwd () ^ "] " ^ target ^ " | " ^ filename;
   NameGenerator.with_scope (fun _ ->
       let compiler =
         match target with
@@ -39,6 +39,7 @@ let main () =
     ]
     (( := ) command) "clj2js";
   match !command with
+  | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns
   | "make_build_script" -> Bs.make_build_script ()
   | _ -> compile_file_old ()
