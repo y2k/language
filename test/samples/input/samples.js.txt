@@ -102,6 +102,7 @@ __POS__
 (defn- foo [r e w] 0)(export-default {:fetch foo})
 (defn- foo [x] x)
 (defn- foo[x]x)(export-default {:fetch foo})
+(eprintln 1 2 3)
 (export-default {:fetch :fetch_handler})
 (export-default {:fetch (fn [a] a)})
 (fetch (eval))

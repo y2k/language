@@ -16,6 +16,7 @@
                args))))
 
 (defmacro def- [k v] (list 'def ^:private k v))
+(defmacro eprintln [& args] (concat (list '.error 'console) args))
 (defmacro first [xs] (list 'get (list '.from 'Array xs) 0))
 (defmacro number? [x] (list '= :number (list 'type x)))
 (defmacro println [& args] (concat (list '.info 'console) args))

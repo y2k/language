@@ -492,6 +492,8 @@ const foo = ((x) => {
 return x });
 export default {["fetch"]: foo}
 =============================
+console.error(1, 2, 3)
+=============================
 export default {["fetch"]: "fetch_handler"}
 =============================
 export default {["fetch"]: ((a) => {
