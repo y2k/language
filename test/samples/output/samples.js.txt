@@ -361,6 +361,8 @@ p__2
 =============================
 [...[1, 2], 3]
 =============================
+"b" in {["a"]: 1, ["b"]: 2}
+=============================
 const LI_SP = 600;
 =============================
 export const foo = (1 + 2);
@@ -871,6 +873,14 @@ console.info(1, 2, 3)
 console.info()
 =============================
 {["__y2k_type"]: "quote", ["value"]: "(if* 1 2 3)"}
+=============================
+(function() {
+          const xs=[1, 2, 3];
+          const f=((a, x) => {
+return a });
+          const init="-";
+          if (Array.isArray(xs)){return xs.reduce(f,init)}
+          else{return Object.entries(xs).reduce(f,init)}})()
 =============================
 new Response("hello_world", 1, false)
 =============================
