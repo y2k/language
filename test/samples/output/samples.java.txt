@@ -139,7 +139,7 @@ foo.bar.Baz.class
 =============================
 JobScheduler.class
 =============================
-
+null
 =============================
 y2k.RT.concat(
 java.util.Arrays.asList(),
@@ -493,8 +493,10 @@ private static Object foo (final Object context) {
 return ((String)context.getSySe(Ctx.AU_SE));
 }
 =============================
-y2k.RT.str();
-y2k.RT.println()
+y2k.RT.str(
+1);
+y2k.RT.str(
+2)
 =============================
 y2k.RT.empty(
 java.util.Arrays.asList(
@@ -628,6 +630,14 @@ p__1 = null;
 } else {
 p__1 = y2k.RT.throw_(
 new Exception("foo"));
+};
+p__1
+=============================
+Object p__1;;
+if (true) {
+p__1 = 1;
+} else {
+p__1 = null;
 };
 p__1
 =============================
@@ -848,6 +858,11 @@ p__1,
 0);;
 return a;
 }))
+=============================
+y2k.RT.println(
+1,
+null,
+2)
 =============================
 y2k.RT.reduce(
 y2k.RT.fn((acc,x)->{

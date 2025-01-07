@@ -2,10 +2,13 @@
 
 ### Usage Examples
 
-- https://github.com/y2k/relax_cats_bot
+- https://github.com/y2k/compose_news
 - https://github.com/y2k/declarative_ban_bot
-- https://github.com/y2k/charge_timer (compiled to Java for Android)
 - https://github.com/y2k/declarative_notify
+- https://github.com/y2k/minesweeper
+- https://github.com/y2k/relax_cats_bot
+- https://github.com/y2k/charge_timer (compiled to Java for Android)
+- https://github.com/y2k/finance_tracker/ (compiled to Java for Android)
 
 ### Compilation Platforms
 

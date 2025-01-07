@@ -58,6 +58,7 @@ let get_symbol = function
   | CBList (m, _) -> m.symbol
 
 let unwrap_do = function RBList (_, Atom (_, "do*") :: xs) -> xs | x -> [ x ]
+let unwrap_single_do = function RBList (_, [ Atom (_, "do*"); xs ]) -> xs | x -> x
 
 module StringMap = struct
   include Map.Make (String)

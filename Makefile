@@ -25,6 +25,6 @@ test_e2e: test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && cd ~/Projects/finance_tracker && $(MAKE) test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && cd ~/Projects/charge_timer && $(MAKE) test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/interpreter test
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_ban_bot/ test
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/relax_cats_bot/.github/ test
-	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify/.github test e2e_test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_ban_bot test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/relax_cats_bot test
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify test e2e_test

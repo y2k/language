@@ -135,7 +135,6 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       | "export", _ -> Printf.sprintf "export const %s = %s;" name (compile body)
       | _ -> Printf.sprintf "export const %s = %s;" name (compile body))
       |> with_context
-  | RBList (_, Atom (_, "comment") :: _) -> "" |> with_context
   (* Object literal *)
   | RBList (_, Atom (_, "hash-map") :: xs) ->
       let rec to_pairs = function

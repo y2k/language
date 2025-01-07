@@ -12,7 +12,7 @@ let fold_samples xs (line : string) =
 
 let make_samples_test compiler file_name =
   let output_file_name = "../../../test/samples/output/" ^ file_name ^ ".txt" in
-  let samples = In_channel.with_open_bin ("../../../test/samples/input/" ^ file_name ^ ".txt") In_channel.input_lines in
+  let samples = In_channel.with_open_bin ("../../../test/samples/" ^ file_name ^ ".txt") In_channel.input_lines in
   let expected =
     try In_channel.with_open_bin output_file_name (In_channel.fold_lines fold_samples []) |> List.rev
     with _ ->

@@ -363,11 +363,11 @@ let js = {|
 
 (def false 0)
 (def hash-map 0)
-(def null 0)
 (def true 0)
 (def vector 0)
 
 (defmacro not= [a b] (list 'not (list '= a b)))
+(defmacro comment [& args] 'nil)
 
 ;; Specific target prelude
 
@@ -440,7 +440,7 @@ let js = {|
 (defmacro >= [a b] (list '__raw_template "(" a " >= " b ")"))
 
 (defmacro export-default [body] (list '__raw_template "export default " body))
-(defmacro nil? [x] (list 'or (list '= 'null x) (list '= 'undefined x)))
+(defmacro nil? [x] (list 'or (list '= 'nil x) (list '= 'undefined x)))
 (defmacro not [x] (list '__raw_template "!(" x ")"))
 (defmacro throw [ex] (list '__raw_template "(function(){throw " ex "})()"))
 (defmacro type [x] (list '__raw_template "typeof " x))
@@ -506,11 +506,11 @@ let java = {|
 
 (def false 0)
 (def hash-map 0)
-(def null 0)
 (def true 0)
 (def vector 0)
 
 (defmacro not= [a b] (list 'not (list '= a b)))
+(defmacro comment [& args] 'nil)
 
 ;; Specific target prelude
 
@@ -580,7 +580,7 @@ let java = {|
 (defmacro get [target key] (list 'call-runtime ''get target key))
 (defmacro get3 [target key default]
   (list 'let ['result (list 'get target key)]
-        (list 'if (list '= 'null 'result) default 'result)))
+        (list 'if (list '= 'nil 'result) default 'result)))
 
 (defmacro into-array [xs] (list 'call-runtime ''into_array xs))
 (defmacro into-array2 [type xs] (list 'call-runtime ''into_array type xs))
@@ -601,9 +601,9 @@ let java = {|
 (defmacro fn! [& body] (concat (list ^void 'fn) body))
 (defmacro function [f] (list 'call-runtime ''function f))
 (defmacro gen-class [& body] (list 'gen-class-inner (list 'quote body)))
-(defmacro nil? [x] (list '= 'null x))
+(defmacro nil? [x] (list '= 'nil x))
 (defmacro runnable [f] (list 'call-runtime ''runnable f))
-(defmacro some? [x] (list 'not (list '= 'null x)))
+(defmacro some? [x] (list 'not (list '= 'nil x)))
 
 |}
 
@@ -612,11 +612,11 @@ let bytecode = {|
 
 (def false 0)
 (def hash-map 0)
-(def null 0)
 (def true 0)
 (def vector 0)
 
 (defmacro not= [a b] (list 'not (list '= a b)))
+(defmacro comment [& args] 'nil)
 
 ;; Specific target prelude
 
@@ -652,11 +652,11 @@ let interpreter = {|
 
 (def false 0)
 (def hash-map 0)
-(def null 0)
 (def true 0)
 (def vector 0)
 
 (defmacro not= [a b] (list 'not (list '= a b)))
+(defmacro comment [& args] 'nil)
 
 ;; Specific target prelude
 

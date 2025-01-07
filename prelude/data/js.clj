@@ -67,7 +67,7 @@
 (defmacro >= [a b] (list '__raw_template "(" a " >= " b ")"))
 
 (defmacro export-default [body] (list '__raw_template "export default " body))
-(defmacro nil? [x] (list 'or (list '= 'null x) (list '= 'undefined x)))
+(defmacro nil? [x] (list 'or (list '= 'nil x) (list '= 'undefined x)))
 (defmacro not [x] (list '__raw_template "!(" x ")"))
 (defmacro throw [ex] (list '__raw_template "(function(){throw " ex "})()"))
 (defmacro type [x] (list '__raw_template "typeof " x))

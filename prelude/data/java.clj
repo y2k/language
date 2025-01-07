@@ -64,7 +64,7 @@
 (defmacro get [target key] (list 'call-runtime ''get target key))
 (defmacro get3 [target key default]
   (list 'let ['result (list 'get target key)]
-        (list 'if (list '= 'null 'result) default 'result)))
+        (list 'if (list '= 'nil 'result) default 'result)))
 
 (defmacro into-array [xs] (list 'call-runtime ''into_array xs))
 (defmacro into-array2 [type xs] (list 'call-runtime ''into_array type xs))
@@ -85,6 +85,6 @@
 (defmacro fn! [& body] (concat (list ^void 'fn) body))
 (defmacro function [f] (list 'call-runtime ''function f))
 (defmacro gen-class [& body] (list 'gen-class-inner (list 'quote body)))
-(defmacro nil? [x] (list '= 'null x))
+(defmacro nil? [x] (list '= 'nil x))
 (defmacro runnable [f] (list 'call-runtime ''runnable f))
-(defmacro some? [x] (list 'not (list '= 'null x)))
+(defmacro some? [x] (list 'not (list '= 'nil x)))

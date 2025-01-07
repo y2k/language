@@ -27,7 +27,9 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       desugar_and_register context
         (RBList (m, Atom (l, "defn") :: Atom ({ ln with symbol = ":private" }, name) :: rest))
   | RBList (_, [ Atom (_, "__inject_raw_sexp"); x ]) -> with_context x
-  | RBList (m2, Atom (m, "if") :: tail) -> RBList (m2, Atom (m, "if*") :: tail) |> expand_core_macro1
+  | RBList (m2, Atom (m, "if") :: tail) ->
+      let tail = match tail with [ c; t ] -> [ c; t; Atom (unknown_location, "nil") ] | _ -> tail in
+      RBList (m2, Atom (m, "if*") :: tail) |> expand_core_macro1
   | RBList (m, Atom (l, "case") :: target :: body) ->
       let var = NameGenerator.get_new_var () in
       let rec loop = function
@@ -95,7 +97,6 @@ let rec desugar_and_register (context : context) node : context * cljexp =
         | _ -> failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] " ^ __LOC__
       in
       loop bindings |> expand_core_macro1
-  | RBList (m, Atom (l, "comment") :: _) -> RBList (m, [ Atom (l, "do*") ]) |> with_context
   | RBList (_, Atom (_, "fn") :: _) as n -> Macro_fn.invoke desugar_and_register expand_core_macro2 context n
   | RBList (_, Atom (_, "->") :: body) ->
       body
@@ -115,7 +116,7 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       |> expand_core_macro1
   | RBList (m, Atom (l, "defmacro") :: Atom (_, name) :: _) as macro ->
       (* print_endline @@ "[LOG] defmacro: " ^ name; *)
-      ({ context with macros = StringMap.add name macro context.macros }, RBList (m, [ Atom (l, "comment") ]))
+      ({ context with macros = StringMap.add name macro context.macros }, RBList (m, [ Atom (l, "do*") ]))
   | RBList (m2, Atom (m, "do") :: body) ->
       let ctx2, exp2 = List.fold_left_map desugar_and_register context body in
       let xs =
@@ -182,16 +183,10 @@ let rec desugar_and_register (context : context) node : context * cljexp =
   | SBList (m, xs) -> RBList (m, Atom (m, "vector") :: xs) |> expand_core_macro1
   | x -> failnode __LOC__ [ x ]
 
-let remove_comments_from_module = function
-  | RBList (m, Atom (l, "do*") :: xs) -> (
-      let xs = xs |> List.filter (function RBList (_, [ Atom (_, "comment") ]) -> false | _ -> true) in
-      match xs with [ x ] -> x | xs -> RBList (m, Atom (l, "do*") :: xs))
-  | x -> x
-
 let parse_and_simplify (prelude_context : context) filename code =
   if prelude_context.log && filename <> "prelude" then
     print_endline "==| DEBUG |==============================================\n";
   let sexp = RBList (unknown_location, Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code) in
   (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
-  (ctx, remove_comments_from_module x)
+  (ctx, unwrap_single_do x)

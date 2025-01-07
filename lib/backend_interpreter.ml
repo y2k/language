@@ -143,7 +143,7 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
   match node with
   | Atom (m, x) when String.starts_with ~prefix:"'" x -> (context, Atom (m, String.sub x 1 (String.length x - 1)))
   | Atom (_, v) as x
-    when v = "true" || v = "false" || v = "null" || String.starts_with ~prefix:"\"" v
+    when v = "true" || v = "false" || v = "nil" || String.starts_with ~prefix:"\"" v
          || String.starts_with ~prefix:":" v || String.starts_with ~prefix:"'" v || String.starts_with ~prefix:"-" v
          ||
          let ch = String.get v 0 in
@@ -211,11 +211,11 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       let ctx_ref = ref context in
       let context = { context with scope = context.scope |> StringMap.add name (body, ctx_ref) } in
       ctx_ref := context;
-      (context, RBList (m, [ Atom (unknown_location, "comment") ]))
+      (context, RBList (m, [ Atom (unknown_location, "nil") ]))
   | RBList (m, [ Atom (_, "let*"); Atom (_, name); body ]) ->
       let body = interpret context body |> snd in
       let context = { context with scope = context.scope |> StringMap.add name (body, ref context) } in
-      (context, RBList (m, [ Atom (unknown_location, "comment") ]))
+      (context, RBList (m, [ Atom (unknown_location, "nil") ]))
   | RBList (_, Atom (_, "let*") :: SBList (_, bindings) :: body) ->
       let scope =
         bindings |> List.split_into_pairs
