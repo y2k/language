@@ -34,6 +34,8 @@ module Functions = struct
     |> StringMap.add "println" (fun _ args ->
            args |> List.map sexp_to_string2 |> String.concat " " |> print_endline;
            Atom (unknown_location, "nil"))
+    |> StringMap.add "vec" (fun _ args ->
+           match args with [ RBList (m, xs) ] -> SBList (m, xs) | n -> failnode __LOC__ n)
     |> StringMap.add "FIXME" (fun _ args ->
            let msg = args |> List.map sexp_to_string2 |> String.concat " " in
            failwith msg)
@@ -253,10 +255,19 @@ let rec interpret (context : context) (node : cljexp) : context * cljexp =
       let _, results = f_body |> List.fold_left_map (fun ctx x -> interpret ctx x) { f_ctx with scope } in
       results |> List.rev |> List.hd |> with_context
   | node ->
+      prerr_endline @@ "==========================================";
       prerr_endline @@ "SCOPE: [" ^ debug_show_scope context ^ "]";
       prerr_endline @@ "MACROS: [" ^ debug_show_macro context ^ "]";
       prerr_endline @@ "IMPORTS: [" ^ debug_show_imports context ^ "]";
       failnode __LOC__ [ node ]
+
+let mk_eval () =
+  let ctx, _ = Frontend.parse_and_simplify empty_context "prelude.clj" Preludes.interpreter in
+  fun _ node ->
+    (* prerr_endline @@ "LOG:EVAL:1: " ^ debug_show_cljexp [ node ]; *)
+    let ctx, node = Frontend.desugar_and_register ctx node in
+    (* prerr_endline @@ "LOG:EVAL:2: " ^ debug_show_cljexp [ node ]; *)
+    interpret ctx node |> snd
 
 let main (log : bool) (filename : string) prelude_macros code =
   let prelude_ctx, prelude_sexp =

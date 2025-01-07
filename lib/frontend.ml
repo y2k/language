@@ -142,6 +142,9 @@ let rec desugar_and_register (context : context) node : context * cljexp =
       |> with_context
   | RBList (m, (RBList _ as h) :: args) ->
       RBList (m, expand_core_macro2 h :: List.map expand_core_macro2 args) |> with_context
+  | RBList (_, [ Atom (_, "eval!"); exp ]) ->
+      (* prerr_endline @@ "NODE: [" ^ debug_show_cljexp [ exp ] ^ "]"; *)
+      context.eval context exp |> with_context
   (* Desugar interop function call *)
   | RBList (m, Atom (l, fname) :: target :: args) when String.starts_with ~prefix:"." fname && String.length fname > 1
     ->
@@ -189,6 +192,6 @@ let parse_and_simplify (prelude_context : context) filename code =
   if prelude_context.log && filename <> "prelude" then
     print_endline "==| DEBUG |==============================================\n";
   let sexp = RBList (unknown_location, Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code) in
-  if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]);
+  (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
   (ctx, remove_comments_from_module x)

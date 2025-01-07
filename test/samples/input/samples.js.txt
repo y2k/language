@@ -104,6 +104,13 @@ __POS__
 (defn- foo [x] x)
 (defn- foo[x]x)(export-default {:fetch foo})
 (eprintln 1 2 3)
+(eval! (:b {:a 1 :b 2}))
+(eval! (+ 1 2))
+(eval! (if false 1 0))
+(eval! (if true 1 0))
+(eval! (str "A-" (+ 2 2) "-B"))
+(eval! (vec (concat [1 2] [3 4])))
+(eval! {:a 1 :b 2})
 (export-default {:fetch :fetch_handler})
 (export-default {:fetch (fn [a] a)})
 (fetch (eval))
@@ -182,6 +189,7 @@ __POS__
 [(str "a")]
 []
 {:a (if 4 5 6)}
+{:a 1 :b 2}
 {:a 1}
 {:b (.join :r)}
 {:f (fn [] (let [a 1] 2))}

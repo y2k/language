@@ -83,6 +83,7 @@ type context = {
   interpreter : context -> cljexp -> context * cljexp;
   base_ns : string;
   imports : context StringMap.t;
+  eval : context -> cljexp -> cljexp;
 }
 [@@deriving show]
 
@@ -103,6 +104,7 @@ let empty_context =
     interpreter = (fun _ _ -> failwith __LOC__);
     base_ns = "";
     imports = StringMap.empty;
+    eval = (fun _ _ -> failwith __LOC__);
   }
 
 module NameGenerator = struct

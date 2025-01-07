@@ -12,7 +12,9 @@ let rec compile (node : cljexp) : string =
 let main (log : bool) (filename : string) prelude_macros code =
   let prelude_ctx, prelude_sexp =
     prelude_macros
-    |> Frontend.parse_and_simplify { empty_context with interpreter = Backend_interpreter.interpret } "prelude"
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = Backend_interpreter.interpret; eval = Backend_interpreter.mk_eval () }
+         "prelude"
   in
   let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
   let rec invoke code =

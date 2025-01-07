@@ -4,6 +4,7 @@ module U = Utils
 let _assert_js = Utils.assert_ (Lib.main_js true)
 let _assert_java = Utils.assert_ (Lib.main_java "app" true)
 let _assert_repl = Utils.assert_ (Lib.main_interpreter true)
+let _assert_bytecode = Utils.assert_ (Lib.main_bytecode true)
 
 let () =
   Alcotest.run "Tests"

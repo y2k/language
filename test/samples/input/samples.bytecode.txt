@@ -1,3 +1,4 @@
+(+ 1 2)
 (= 1 2)
 (def a [1 2])
 (def a {1 2})
@@ -10,6 +11,13 @@
 (defn foo [a b] (+ a b)) (defn main [x] (foo (foo 1 2) x))
 (defn foo [a b] (+ a b)) (foo 1 2)
 (defonce foo 3)
+(eval! (:b {:a 1 :b 2}))
+(eval! (+ 1 2))
+(eval! (if false 1 0))
+(eval! (if true 1 0))
+(eval! (str "A-" (+ 2 2) "-B"))
+(eval! (vec (concat [1 2] [3 4])))
+(eval! {:a 1 :b 2})
 (let [[a] 1] a)
 (let [a 1] a)
 (let [x (atom 0)] x)
@@ -18,4 +26,5 @@
 (ns bar (:require ["./b/c" :as b]) (:require ["../a/b" :as f])) (defn foo [] (b/mb 1 2) (f/mf 3 4))
 (ns bar) (defn foo [a b] (+ a b))
 (vector 1 2 3)
+{:a 1 :b 2}
 {:k1 1 :k2 "v2" "k3" :v3}

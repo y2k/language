@@ -221,7 +221,9 @@ let rec make_scope_for_prelude (context : context) node =
 let main base_ns (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
     prelude_macros
-    |> Frontend.parse_and_simplify { empty_context with interpreter = Backend_interpreter.interpret } "prelude"
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = Backend_interpreter.interpret; eval = Backend_interpreter.mk_eval () }
+         "prelude"
   in
   let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log; base_ns } filename in
   node

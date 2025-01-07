@@ -215,7 +215,9 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
 let main (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
     prelude_macros
-    |> Frontend.parse_and_simplify { empty_context with interpreter = Backend_interpreter.interpret } "prelude"
+    |> Frontend.parse_and_simplify
+         { empty_context with interpreter = Backend_interpreter.interpret; eval = Backend_interpreter.mk_eval () }
+         "prelude"
   in
   let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log } filename in
   node
@@ -224,6 +226,8 @@ let main (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke ctx _macro_sexp |> Stage_convert_if_to_statment.invoke
+  |> Stage_linter.invoke ctx _macro_sexp
+  (* *)
+  |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_normalize_if      ->" log
   |> compile_ ctx |> snd |> String.trim

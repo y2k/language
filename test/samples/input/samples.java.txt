@@ -10,6 +10,7 @@
 (/ :a :b)
 (^void fn [] (str :b :c))
 (+ :a :b)
+(+ 1 2)
 (< :a :b)
 (<= :a :b)
 (= :a :b)
@@ -84,6 +85,13 @@
 (defn- foo [context] (as (.getSySe context Ctx/AU_SE) String))
 (do (str) (println))
 (empty? [1 2])
+(eval! (:b {:a 1 :b 2}))
+(eval! (+ 1 2))
+(eval! (if false 1 0))
+(eval! (if true 1 0))
+(eval! (str "A-" (+ 2 2) "-B"))
+(eval! (vec (concat [1 2] [3 4])))
+(eval! {:a 1 :b 2})
 (fn [[a b]] (a b))
 (fn [] (str :b :c))
 (fn [x] (x 1))
@@ -151,6 +159,7 @@
 [1 2 3]
 [1]
 {:a :b :c :d}
+{:a 1 :b 2}
 {:fetch (fn [] (let [world 0] 1))}
 nil
 unit
