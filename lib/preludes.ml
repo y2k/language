@@ -14,6 +14,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 @SuppressWarnings("unchecked")
 public class RT {
@@ -245,7 +246,7 @@ public class RT {
     Object invoke(Object a1, Object a2, Object a3, Object a4) throws Exception;
   }
 
-  public static class Fn<TI, TR> implements Runnable, Callable<TR>, Consumer<TI>, Function<TI, TR>,
+  public static class Fn<TI, TR> implements Runnable, Callable<TR>, Consumer<TI>, UnaryOperator<Object>,
       Supplier<TR>, Fn0, Fn1, Fn2, Fn3, Fn4 {
     public Object invoke() {
       return invoke(null);
@@ -281,8 +282,8 @@ public class RT {
     }
 
     @Override
-    public final TR apply(TI t) {
-      return (TR) invoke(t);
+    public final Object apply(Object t) {
+      return invoke(t);
     }
 
     @Override
@@ -592,6 +593,7 @@ let java = {|
 (defmacro atom [x] (list 'java.util.concurrent.atomic.AtomicReference. x))
 (defmacro deref [a] (list '.get (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>")))
 (defmacro reset! [a x] (list '.set (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") x))
+(defmacro swap! [a f] (list '.getAndUpdate (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") f))
 
 ;; Java interop
 

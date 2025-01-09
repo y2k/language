@@ -940,6 +940,10 @@ p__1)
 String.valueOf(
 "level")
 =============================
+((java.util.concurrent.atomic.AtomicReference<Object>)null).getAndUpdate(y2k.RT.fn((x)->{
+return x;
+}))
+=============================
 y2k.RT.unescape(
 "a\"b")
 =============================

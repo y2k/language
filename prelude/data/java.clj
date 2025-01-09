@@ -76,6 +76,7 @@
 (defmacro atom [x] (list 'java.util.concurrent.atomic.AtomicReference. x))
 (defmacro deref [a] (list '.get (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>")))
 (defmacro reset! [a x] (list '.set (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") x))
+(defmacro swap! [a f] (list '.getAndUpdate (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") f))
 
 ;; Java interop
 
