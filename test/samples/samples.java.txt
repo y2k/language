@@ -141,6 +141,7 @@
 (println (.-length ""))
 (println (fn [[a]] a))
 (println 1 (comment 3) 2)
+(recover (fn [] 1) (fn [e] 2))
 (reduce (fn [acc x] (+ acc x)) 0 (list 1 2 3))
 (reduce (fn [acc x] (+ acc x)) 0 (vector 1 2 3))
 (reduce (fn [acc x] (+ acc x)) 0 [1 2 3])

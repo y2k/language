@@ -16,6 +16,14 @@ import java.util.function.UnaryOperator;
 @SuppressWarnings("unchecked")
 public class RT {
 
+  public static Object recover(Object f, Object fe) {
+    try {
+      return ((Fn)f).invoke();
+    } catch (Exception e) {
+      return ((Fn) fe).invoke(e);
+    }
+  }
+
   public static Object run_(Object farg, Object xs) {
     var f = (Function<Object, Object>) farg;
     var col = (List<Object>) xs;

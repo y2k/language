@@ -19,6 +19,14 @@ import java.util.function.UnaryOperator;
 @SuppressWarnings("unchecked")
 public class RT {
 
+  public static Object recover(Object f, Object fe) {
+    try {
+      return ((Fn)f).invoke();
+    } catch (Exception e) {
+      return ((Fn) fe).invoke(e);
+    }
+  }
+
   public static Object run_(Object farg, Object xs) {
     var f = (Function<Object, Object>) farg;
     var col = (List<Object>) xs;
@@ -539,10 +547,11 @@ let java = {|
 
 ;; Declarations Java
 
+(def boolean 0)
+(def Exception 0)
+(def int 0)
 (def Object 0)
 (def String 0)
-(def int 0)
-(def boolean 0)
 
 (defmacro FIXME [& args]
   (list 'throw
@@ -555,13 +564,17 @@ let java = {|
 
 ;; Collections
 
-(defmacro contains? [xs x] (list 'call-runtime ''contains xs x))
 (defmacro assoc [xs k v] (list 'call-runtime ''assoc xs k v))
 (defmacro concat [as bs] (list 'call-runtime ''concat as bs))
 (defmacro conj [xs x] (list 'call-runtime ''conj xs x))
+(defmacro contains? [xs x] (list 'call-runtime ''contains xs x))
 (defmacro count [xs] (list 'call-runtime ''count xs))
 (defmacro empty? [xs] (list 'call-runtime ''empty xs))
 (defmacro first [xs] (list 'get xs 0))
+(defmacro get [target key] (list 'call-runtime ''get target key))
+(defmacro get3 [target key default] (list 'let ['result (list 'get target key)] (list 'if (list '= 'nil 'result) default 'result)))
+(defmacro into-array [xs] (list 'call-runtime ''into_array xs))
+(defmacro into-array2 [type xs] (list 'call-runtime ''into_array type xs))
 (defmacro list [& xs] (list 'java.util.LinkedList. (concat (list 'java.util.Arrays/asList) xs)))
 (defmacro list? [x] (list 'is x "java.util.LinkedList"))
 (defmacro map [f xs] (list 'call-runtime ''map f xs))
@@ -578,14 +591,8 @@ let java = {|
 
 (defmacro = [a b] (list 'call-runtime ''equals a b))
 (defmacro def- [k v] (list 'def ^:private k v))
-(defmacro get [target key] (list 'call-runtime ''get target key))
-(defmacro get3 [target key default]
-  (list 'let ['result (list 'get target key)]
-        (list 'if (list '= 'nil 'result) default 'result)))
-
-(defmacro into-array [xs] (list 'call-runtime ''into_array xs))
-(defmacro into-array2 [type xs] (list 'call-runtime ''into_array type xs))
 (defmacro println [& xs] (concat (list 'call-runtime ''println) xs))
+(defmacro recover [f fe] (list 'call-runtime ''recover f fe))
 (defmacro str [& xs] (concat (list 'call-runtime ''str) xs))
 (defmacro throw [e] (list 'call-runtime ''throw_ e))
 (defmacro unescape [x] (list 'call-runtime ''unescape x))
@@ -630,6 +637,7 @@ let bytecode = {|
 (def atom 0)
 (def concat 0)
 (def deref 0)
+(def gensym 0)
 (def get 0)
 (def if 0)
 (def list 0)

@@ -19,6 +19,7 @@
 (eval! (str "A-" (+ 2 2) "-B"))
 (eval! (vec (concat [1 2] [3 4])))
 (eval! {:a 1 :b 2})
+(gensym)
 (if true 1)
 (let [[a] 1] a)
 (let [a 1] a)

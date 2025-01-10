@@ -6,6 +6,7 @@
 (def atom 0)
 (def concat 0)
 (def deref 0)
+(def gensym 0)
 (def get 0)
 (def if 0)
 (def list 0)

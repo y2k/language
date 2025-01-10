@@ -864,6 +864,14 @@ y2k.RT.println(
 null,
 2)
 =============================
+y2k.RT.recover(
+y2k.RT.fn(()->{
+return 1;
+}),
+y2k.RT.fn((e)->{
+return 2;
+}))
+=============================
 y2k.RT.reduce(
 y2k.RT.fn((acc,x)->{
 return (acc+x);
