@@ -14,19 +14,23 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
                 xs
                 |> List.fold_left
                      (fun (i, acc) x ->
-                       ( i + 1,
-                         acc
-                         @ [
-                             x;
-                             expand_core_macro2
-                               (RBList
-                                  ( m,
-                                    [
-                                      Atom (unknown_location, "get");
-                                      Atom (unknown_location, temp_val);
-                                      Atom (unknown_location, string_of_int i);
-                                    ] ));
-                           ] ))
+                       let binding =
+                         match x with
+                         | Atom (_, "_") -> []
+                         | x ->
+                             [
+                               x;
+                               expand_core_macro2
+                                 (RBList
+                                    ( m,
+                                      [
+                                        Atom (unknown_location, "get");
+                                        Atom (unknown_location, temp_val);
+                                        Atom (unknown_location, string_of_int i);
+                                      ] ));
+                             ]
+                       in
+                       (i + 1, acc @ binding))
                      (0, a)
                 |> snd
               in

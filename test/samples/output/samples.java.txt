@@ -651,6 +651,16 @@ java.util.Arrays.asList(
 =============================
 (1 instanceof String)
 =============================
+var p__1 = java.util.Arrays.asList(
+1,
+2,
+3,
+4);;
+var a = y2k.RT.get(
+p__1,
+2);;
+a
+=============================
 var p__1 = "b";;
 var a = y2k.RT.get(
 p__1,

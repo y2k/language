@@ -109,6 +109,7 @@
 (if true 1)
 (into-array [1 2 3])
 (is 1 String)
+(let [[_ _ a _] [1 2 3 4]] a)
 (let [[a] :b] a)
 (let [] (if true 1 2) (str))
 (let [] (str) (println))
