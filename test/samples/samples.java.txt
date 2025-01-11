@@ -100,6 +100,7 @@
 (Foo. :a :b 1)
 (gen-class :name MainActivity :extends Activity :constructors {[] []} :prefix "a_" :methods [[^Override onCreate [Bundle int] void][^Override foo [] String]])
 (gen-class :name MainActivity :extends Activity :constructors {[] []} :prefix "a_" :methods [[onCreate [Bundle int] void][foo [] String]])
+(gensym)
 (get :xs 1)
 (if :a :b :c)
 (if :a :b (println :c))

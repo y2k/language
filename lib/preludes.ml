@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -19,9 +20,15 @@ import java.util.function.UnaryOperator;
 @SuppressWarnings("unchecked")
 public class RT {
 
+  private static AtomicLong gensym_id = new AtomicLong(0);
+
+  public static String gensym() {
+    return "G__" + gensym_id.getAndIncrement();
+  }
+
   public static Object recover(Object f, Object fe) {
     try {
-      return ((Fn)f).invoke();
+      return ((Fn) f).invoke();
     } catch (Exception e) {
       return ((Fn) fe).invoke(e);
     }
@@ -591,6 +598,7 @@ let java = {|
 
 (defmacro = [a b] (list 'call-runtime ''equals a b))
 (defmacro def- [k v] (list 'def ^:private k v))
+(defmacro gensym [] (list 'call-runtime ''gensym))
 (defmacro println [& xs] (concat (list 'call-runtime ''println) xs))
 (defmacro recover [f fe] (list 'call-runtime ''recover f fe))
 (defmacro str [& xs] (concat (list 'call-runtime ''str) xs))

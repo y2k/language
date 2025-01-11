@@ -66,6 +66,7 @@
 
 (defmacro = [a b] (list 'call-runtime ''equals a b))
 (defmacro def- [k v] (list 'def ^:private k v))
+(defmacro gensym [] (list 'call-runtime ''gensym))
 (defmacro println [& xs] (concat (list 'call-runtime ''println) xs))
 (defmacro recover [f fe] (list 'call-runtime ''recover f fe))
 (defmacro str [& xs] (concat (list 'call-runtime ''str) xs))

@@ -577,6 +577,8 @@ public String foo() {
 return (String)a_foo(this); }
 }
 =============================
+y2k.RT.gensym()
+=============================
 y2k.RT.get(
 "xs",
 1)
