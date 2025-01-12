@@ -613,7 +613,7 @@ let java = {|
 ;; Java interop
 
 (defmacro checked! [f] (list 'call-runtime ''try_ (list 'fn (vector) f)))
-(defmacro class [cls] (list 'class-inner (list 'quote (symbol (str cls ".class")))))
+(defmacro class [cls] (list 'class-inner (str cls ".class")))
 (defmacro declare [name] (list 'def name))
 (defmacro fn! [& body] (concat (list ^void 'fn) body))
 (defmacro function [f] (list 'call-runtime ''function f))

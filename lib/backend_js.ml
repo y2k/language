@@ -212,20 +212,26 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   | x -> failnode __LOC__ [ x ]
 
 let main (log : bool) (filename : string) prelude_macros code =
-  let macros_ctx, _macro_sexp =
+  let prelude_ctx, prelude_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
-         { empty_context with interpreter = Backend_interpreter.interpret; eval = Backend_interpreter.mk_eval () }
+         {
+           empty_context with
+           (* scope = Backend_interpreter.Functions.functions |> StringMap.map (fun f -> (OLambda f, ref empty_context)); *)
+           interpreter = Backend_interpreter.mk_interpret;
+           eval = Backend_interpreter.mk_eval ();
+         }
          "prelude"
   in
-  let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log } filename in
+  let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
+  let ctx, node = code |> Frontend.parse_and_simplify { prelude_ctx with log } filename in
   node
   |> try_log "Parse_and_simplify      ->" log
   |> Stage_simplify_let.invoke
   |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
   |> try_log "Stage_normalize_bracket ->" log
-  |> Stage_linter.invoke ctx _macro_sexp
+  |> Stage_linter.invoke ctx prelude_sexp
   (* *)
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_normalize_if      ->" log

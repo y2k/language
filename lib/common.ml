@@ -73,13 +73,26 @@ end
 
 type function_decl = { params : cljexp list; body : cljexp list } [@@deriving show]
 
+type obj =
+  | OVector of obj list
+  | OList of obj list
+  | OMap of (obj * obj) list
+  | OString of string
+  | OInt of int
+  | OBool of bool
+  | ONil
+  | OLambda of (obj list -> obj)
+  | OQuote of cljexp
+[@@deriving show]
+
 type context = {
   log : bool;
   filename : string;
   loc : meta;
   start_line : int;
   macros : cljexp StringMap.t;
-  scope : (cljexp * context ref) StringMap.t;
+  scope : (obj * context ref) StringMap.t;
+  functions : (cljexp * context ref) StringMap.t;
   prelude_scope : unit StringMap.t;
   interpreter : context -> cljexp -> context * cljexp;
   base_ns : string;
@@ -106,6 +119,7 @@ let empty_context =
     base_ns = "";
     imports = StringMap.empty;
     eval = (fun _ _ -> failwith __LOC__);
+    functions = StringMap.empty;
   }
 
 module NameGenerator = struct
@@ -137,6 +151,14 @@ module List = struct
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
 
+let rec debug_show_cljexp1 = function
+  | Atom (m, x) when m.symbol = "" -> x
+  | Atom (m, x) -> "^" ^ m.symbol ^ " " ^ x
+  | RBList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
+  | RBList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
+  | SBList (_, xs) -> "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
+  | CBList (_, xs) -> "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}"
+
 let debug_show_cljexp nodes =
   let rec show_rec = function
     | Atom (m, x) when m.symbol = "" -> x
@@ -146,7 +168,7 @@ let debug_show_cljexp nodes =
     | SBList (_, xs) -> "[" ^ String.concat " " (List.map show_rec xs) ^ "]"
     | CBList (_, xs) -> "{" ^ String.concat " " (List.map show_rec xs) ^ "}"
   in
-  nodes |> List.map show_rec |> String.concat "\n"
+  nodes |> List.map show_rec |> String.concat " "
 
 let log_sexp prefix node =
   prerr_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];

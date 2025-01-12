@@ -42,13 +42,7 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
       let unpacked_let =
         match unpack_let_args vals with
         | RBList (m3, l :: SBList (m4, args) :: let_body) ->
-            let let_scope =
-              args |> List.split_into_pairs
-              |> List.map (function Atom (_, k), v -> (k, (v, ref context)) | k, v -> failnode __LOC__ [ k; v ])
-              |> List.to_seq
-              |> Fun.flip StringMap.add_seq context.scope
-            in
-            let body = List.map (fun x -> desugar_and_register { context with scope = let_scope } x |> snd) body in
+            let body = List.map (fun x -> desugar_and_register context x |> snd) body in
             RBList (m3, (l :: SBList (m4, args) :: let_body) @ body)
         | n -> failnode __LOC__ [ n ]
       in

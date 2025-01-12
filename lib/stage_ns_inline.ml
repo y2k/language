@@ -1,20 +1,5 @@
 open Common
 
-(* module Loader = struct
-  type _ Effect.t += Load : string -> string Effect.t
-
-  let with_scope f =
-    let open Effect.Deep in
-    Effect.Deep.try_with f ()
-      {
-        effc =
-          (fun (type a) (eff : a Effect.t) ->
-            match eff with
-            | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
-            | _ -> None);
-      }
-end *)
-
 let load_file base_path mod_path =
   let mod_path = unpack_string mod_path ^ ".clj" in
   let merge_path () =
@@ -27,7 +12,7 @@ let load_file base_path mod_path =
   let path = merge_path () in
   (path, In_channel.(with_open_bin path input_all))
 
-let rec invoke (execute_code : string -> string -> context * cljexp) (context : context) = function
+let rec invoke (execute_code : string -> string -> context * obj) (context : context) = function
   | Atom _ as x -> (context, x)
   | RBList (_, [ Atom (_, "ns"); RBList (_, [ _; RBList (_, _ :: body) ]) ]) ->
       let context =

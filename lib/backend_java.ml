@@ -52,7 +52,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       let unescp_type = if String.starts_with ~prefix:"\"" type_ then unpack_string type_ else type_ in
       make_operator (Atom (type_meta, unescp_type)) instance (Printf.sprintf "((%s)%s)")
   | RBList (_, [ Atom (_, "quote"); arg ]) -> compile arg |> with_context
-  | RBList (_, [ Atom (_, "class-inner"); RBList (_, [ _; Atom (_, cls_name) ]) ]) -> cls_name |> with_context
+  | RBList (_, [ Atom (_, "class-inner"); Atom (_, cls_name) ]) -> cls_name |> unpack_string |> with_context
   (* Hahs-map *)
   | RBList (m, Atom (_, "hash-map") :: xs) ->
       compile (RBList (m, Atom (unknown_location, "y2k.RT.hash_map") :: xs)) |> with_context
@@ -134,7 +134,11 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   (* Functions *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ])
     ->
-      let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in
+      (* FIXME: *)
+      let context_ref = ref context in
+      let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
+      context_ref := context;
+      (* let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in *)
       let modifier = match fname_meta.symbol with ":private" -> "private" | _ -> "public" in
       let sargs =
         args
@@ -155,7 +159,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         |> Option.value ~default:""
       in
       let return_ = match fname_meta.symbol with "void" -> "" | _ -> "return " in
-      let last_exp = body |> List.rev |> List.hd |> compile in
+      let last_exp = body |> List.rev |> List.hd |> compile_ context |> snd in
       let code =
         Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}\n" modifier (get_type fname_meta) fname sargs sbody return_
           last_exp
@@ -163,16 +167,22 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       (context, code)
   (* Static field *)
   | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); body ]) ->
-      let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in
+      (* FIXME: *)
+      (* let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in *)
       let vis = if fname_meta.symbol = ":private" then "private" else "public" in
       let get_type am = if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol in
+      let context_ref = ref context in
+      let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
+      context_ref := context;
       let result =
         Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname (compile_ context body |> snd)
       in
       (context, result)
   (* Empty declaration *)
-  | RBList (_, [ Atom (_, "def*"); Atom (_, name) ]) ->
-      ({ context with scope = StringMap.add name (node, ref context) context.scope }, "")
+  | RBList (_, [ Atom (_, "def*"); Atom (_, _name) ]) ->
+      (* FIXME: *)
+      (* ({ context with scope = StringMap.add name (node, ref context) context.scope }, "") *)
+      ({ context with scope = context.scope |> StringMap.add _name (ONil, ref context) }, "")
   (* Interop field *)
   | RBList (_, [ Atom (_, "."); target; Atom (_, field) ]) when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target) (String.sub field 2 (String.length field - 2)) |> with_context
@@ -214,15 +224,17 @@ let rec make_scope_for_prelude (context : context) node =
   match node with
   | RBList (_, Atom (_, "do*") :: body) ->
       body |> List.fold_left_map (fun context n -> (make_scope_for_prelude context n, n)) context |> fst
-  | RBList (_, Atom (_, "def*") :: Atom (_, name) :: _) ->
-      { context with scope = StringMap.add name (node, ref context) context.scope }
+  (* FIXME *)
+  (* | RBList (_, Atom (_, "def*") :: Atom (_, name) :: _) ->
+  (* { context with scope = StringMap.add name (node, ref context) context.scope } *)
+  { context with scope = StringMap.add name (OLambda node, ref context) context.scope } *)
   | x -> failnode __LOC__ [ x ]
 
 let main base_ns (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
-         { empty_context with interpreter = Backend_interpreter.interpret; eval = Backend_interpreter.mk_eval () }
+         { empty_context with interpreter = Backend_interpreter.mk_interpret; eval = Backend_interpreter.mk_eval () }
          "prelude"
   in
   let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log; base_ns } filename in
@@ -238,5 +250,7 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
   |> try_log "Stage_a_normal_form     ->" log
-  |> compile_ (make_scope_for_prelude ctx _macro_sexp)
-  |> snd |> String.trim
+  |> compile_ ctx
+  (* |> compile_ (make_scope_for_prelude ctx _macro_sexp) *)
+  |> snd
+  |> String.trim
