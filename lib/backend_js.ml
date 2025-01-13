@@ -203,11 +203,9 @@ let main (log : bool) (filename : string) prelude_macros code =
          "prelude"
   in
   let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
-  let ctx, node = code |> Frontend.parse_and_simplify { prelude_ctx with log } filename in
+  let ctx, node = code |> Frontend.desugar { prelude_ctx with log } filename in
   node
-  |> try_log "Parse_and_simplify             ->" log
-  |> Stage_normalize_bracket.invoke
-  |> try_slog "Stage_normalize_bracket (SEXP) ->" log
+  |> try_slog "Parse_and_simplify             ->" log
   |> Stage_simplify_let.invoke
   |> try_slog "Stage_simplify_let             ->" log
   |> Stage_linter.invoke ctx prelude_sexp

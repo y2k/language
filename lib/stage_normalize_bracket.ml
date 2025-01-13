@@ -7,9 +7,6 @@ let invoke (node : cljexp) : sexp =
     match node with
     | RBList (m, Atom (lm, "let*") :: SBList (bm, bindings) :: body) ->
         SList (m, SAtom (lm, "let*") :: SList (bm, List.map invoke_sexp bindings) :: List.map invoke_sexp body)
-    | RBList (m, (Atom (_, "fn*") as fn) :: RBList (_, args) :: body) ->
-        SList (m, invoke_sexp fn :: SList (unknown_location, List.map invoke_sexp args) :: List.map invoke_sexp body)
-    (* FIXME: delete dup *)
     | RBList (m, (Atom (_, "fn*") as fn) :: SBList (_, args) :: body) ->
         SList (m, invoke_sexp fn :: SList (unknown_location, List.map invoke_sexp args) :: List.map invoke_sexp body)
     | RBList (m, (Atom (_, "def*") as name) :: xs) -> SList (m, invoke_sexp name :: List.map invoke_sexp xs)

@@ -769,6 +769,22 @@ p__1 = null;
 }
 p__1
 =============================
+const a = 1;
+let p__2;
+if (a) {
+const b = a;
+let p__1;
+if (b) {
+p__1 = b;
+} else {
+p__1 = null;
+}
+p__2 = p__1;
+} else {
+p__2 = null;
+}
+p__2
+=============================
 const p__1 = "c";
 const a = p__1[0];
 const b = p__1[1];

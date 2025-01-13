@@ -223,11 +223,9 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
          { empty_context with interpreter = Backend_interpreter.mk_interpret; eval = Backend_interpreter.mk_eval () }
          "prelude"
   in
-  let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log; base_ns } filename in
+  let ctx, node = code |> Frontend.desugar { macros_ctx with log; base_ns } filename in
   node
-  |> try_log "parse_and_simplify      ->" log
-  |> Stage_normalize_bracket.invoke
-  |> try_slog "Stage_a_normal_form     ->" log
+  |> try_slog "parse_and_simplify      ->" log
   |> Stage_simplify_let.invoke
   |> try_slog "Stage_simplify_let      ->" log
   |> Stage_linter.invoke ctx _macro_sexp

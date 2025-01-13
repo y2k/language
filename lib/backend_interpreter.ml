@@ -340,11 +340,9 @@ let main (log : bool) (filename : string) prelude_macros code =
   in
   let prelude_ctx = Stage_normalize_bracket.invoke prelude_sexp |> interpret_with_prelude prelude_ctx |> fst in
   let rec invoke filename code : context * obj =
-    let ctx, node = code |> Frontend.parse_and_simplify prelude_ctx filename in
+    let ctx, node = code |> Frontend.desugar prelude_ctx filename in
     node
-    |> try_log "Parse_and_simplify             ->" log
-    |> Stage_normalize_bracket.invoke
-    |> try_slog "Stage_normalize_bracket (SEXP) ->" log
+    |> try_slog "Parse_and_simplify             ->" log
     |> Stage_simplify_let.invoke
     |> try_slog "Stage_simplify_let             ->" log
     |> Stage_ns_inline.invoke invoke ctx

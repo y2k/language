@@ -39,10 +39,7 @@ let run (ctx : context) (macro : cljexp) (macro_args : cljexp list) : cljexp =
     | n -> failnode __LOC__ [ n ]
   in
   let args =
-    compute_args macro_arg_names macro_args
-    (* FIXME *)
-    (* |> StringMap.map (fun x -> (x, ref ctx)) *)
-    |> StringMap.map cljexp_to_obj
+    compute_args macro_arg_names macro_args |> StringMap.map cljexp_to_obj
     |> StringMap.map (fun x -> (x, ref ctx))
     |> StringMap.to_seq
   in

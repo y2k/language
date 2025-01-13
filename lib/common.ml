@@ -171,8 +171,6 @@ let rec debug_show_sexp1 = function
   | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
   | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
   | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
-(* | SBList (_, xs) -> "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
-  | CBList (_, xs) -> "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}" *)
 
 let debug_show_cljexp nodes =
   let rec show_rec = function
