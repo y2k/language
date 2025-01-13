@@ -31,6 +31,9 @@ let loc (a, b, c, _) = Printf.sprintf "%s:%i:%i" a b c
 type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 
 let unknown_location = { line = 0; pos = 0; symbol = "" }
+let meta_empty = { line = 0; pos = 0; symbol = "" }
+
+type sexp = SAtom of meta * string | SList of meta * sexp list [@@deriving show]
 
 type cljexp =
   | Atom of meta * string
@@ -51,13 +54,17 @@ let change_meta m node =
   | CBList (_, xs) -> CBList (m, xs)
   | SBList (_, xs) -> SBList (m, xs)
 
+let change_smeta m (node : sexp) = match node with SAtom (_, x) -> SAtom (m, x) | SList (_, xs) -> SList (m, xs)
+
 let get_symbol = function
   | Atom (m, _) -> m.symbol
   | RBList (m, _) -> m.symbol
   | SBList (m, _) -> m.symbol
   | CBList (m, _) -> m.symbol
 
+let get_sexp_symbol = function SAtom (m, _) -> m.symbol | SList (m, _) -> m.symbol
 let unwrap_do = function RBList (_, Atom (_, "do*") :: xs) -> xs | x -> [ x ]
+let unwrap_sexp_do = function SList (_, SAtom (_, "do*") :: xs) -> xs | x -> [ x ]
 let unwrap_single_do = function RBList (_, [ Atom (_, "do*"); xs ]) -> xs | x -> x
 
 module StringMap = struct
@@ -82,7 +89,7 @@ type obj =
   | OBool of bool
   | ONil
   | OLambda of (obj list -> obj)
-  | OQuote of cljexp
+  | OQuote of sexp
 [@@deriving show]
 
 type context = {
@@ -159,6 +166,14 @@ let rec debug_show_cljexp1 = function
   | SBList (_, xs) -> "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
   | CBList (_, xs) -> "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}"
 
+let rec debug_show_sexp1 = function
+  | SAtom (m, x) when m.symbol = "" -> x
+  | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
+  | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
+  | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
+(* | SBList (_, xs) -> "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
+  | CBList (_, xs) -> "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}" *)
+
 let debug_show_cljexp nodes =
   let rec show_rec = function
     | Atom (m, x) when m.symbol = "" -> x
@@ -170,13 +185,35 @@ let debug_show_cljexp nodes =
   in
   nodes |> List.map show_rec |> String.concat " "
 
+let debug_show_sexp (nodes : sexp list) =
+  let rec show_rec = function
+    | SAtom (m, x) when m.symbol = "" -> x
+    | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
+    | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+  in
+  nodes |> List.map show_rec |> String.concat " "
+
 let log_sexp prefix node =
   prerr_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
+  node
+
+let log_sexp2 prefix (node : sexp) =
+  prerr_endline @@ prefix ^ " " ^ debug_show_sexp [ node ];
   node
 
 let failnode prefix es =
   es
   |> List.map (fun x -> debug_show_cljexp [ x ])
+  |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
+  |> Option.value ~default:""
+  |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"
+  |> prerr_endline;
+  failwith ("Invalid node [" ^ prefix ^ "]")
+
+let failsexp prefix (es : sexp list) =
+  es
+  |> List.map (fun x -> debug_show_sexp [ x ])
   |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
   |> Option.value ~default:""
   |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"
@@ -195,6 +232,18 @@ let rec show_sexp sexp =
   | SBList (_, xs) -> format "[%s]" xs
   | CBList (_, xs) -> format "{%s}" xs
 
+let rec show_sexp2 (sexp : sexp) =
+  let format template xs =
+    xs |> List.map show_sexp2
+    |> List.reduce_opt (Printf.sprintf "%s %s")
+    |> Option.value ~default:"" |> Printf.sprintf template
+  in
+  match sexp with SAtom (_, x) -> x | SList (_, xs) -> format "(%s)" xs
+
 let try_log prefix (log : bool) (node : cljexp) =
   if log then print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
+  node
+
+let try_slog prefix (log : bool) (node : sexp) =
+  if log then print_endline @@ prefix ^ " " ^ debug_show_sexp [ node ];
   node

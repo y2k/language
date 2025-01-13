@@ -82,7 +82,13 @@ let desugar_fn_arguments expand_core_macro2 args =
 
 let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
   match node with
-  | RBList (mfn, Atom (l, "fn") :: SBList (_, args) :: body) ->
+  | RBList (mfn, Atom (l, "fn") :: args_node :: body) ->
+      let args =
+        match args_node with
+        | SBList (_, args) -> args
+        | RBList (_, args) -> args
+        | n -> failnode __LOC__ [n]
+      in
       let result =
         match desugar_fn_arguments expand_core_macro2 args with
         | new_args, [] -> RBList (mfn, [ Atom (l, "fn*"); SBList (unknown_location, new_args) ])

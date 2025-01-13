@@ -30,7 +30,7 @@ let rec cljexp_to_obj node =
   | RBList (_, xs) -> OList (List.map cljexp_to_obj xs)
   | SBList (_, xs) -> OVector (List.map cljexp_to_obj xs)
   | CBList (_, xs) -> OMap (xs |> List.map cljexp_to_obj |> List.split_into_pairs)
-  | Atom _ as x -> OQuote x
+  | Atom _ as x -> OQuote (Stage_simplify_let.invoke x |> Stage_normalize_bracket.invoke_sexp)
 
 let run (ctx : context) (macro : cljexp) (macro_args : cljexp list) : cljexp =
   let macro_arg_names, macro_body =

@@ -2,7 +2,7 @@ open Common
 
 let pkg_name_from_file_name (context : context) = context.base_ns
 
-let rec compile_ (context : context) (node : cljexp) : context * string =
+let rec compile_ (context : context) (node : sexp) : context * string =
   let compile node = compile_ context node |> snd in
   let with_context node = (context, node) in
   let make_operator a b f =
@@ -12,57 +12,53 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
   in
   match node with
   (* Atoms *)
-  | Atom (_, "nil") -> with_context "null"
-  | Atom (_, "unit") -> with_context "(Object)null"
-  | Atom (_, x) when String.starts_with ~prefix:":" x ->
+  | SAtom (_, "nil") -> with_context "null"
+  | SAtom (_, "unit") -> with_context "(Object)null"
+  | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ String.sub x 1 (String.length x - 1) ^ "\"" |> with_context
-  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
-  | Atom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
+  | SAtom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
+  | SAtom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Operators *)
-  | RBList (_, [ Atom (_, op); a; b ])
+  | SList (_, [ SAtom (_, op); a; b ])
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<" || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
-  (* Version 2.0 *)
-  | RBList (_, [ Atom (_, "let*"); Atom (m, name) ]) ->
+  | SList (_, [ SAtom (_, "let*"); SAtom (m, name) ]) ->
       let js_code = Printf.sprintf "%s %s;" (get_type m) name in
       with_context js_code
-  | RBList (_, [ Atom (_, "let*"); Atom (m, name); value ]) ->
+  | SList (_, [ SAtom (_, "let*"); SAtom (m, name); value ]) ->
       let js_code = Printf.sprintf "%s %s = %s;" (get_type_or_var m) name (compile value) in
       with_context js_code
-  | RBList (_, [ Atom (_, "bind-update*"); Atom (_, name); value ]) ->
+  | SList (_, [ SAtom (_, "bind-update*"); SAtom (_, name); value ]) ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
-  | RBList (_, [ Atom (_, "set!"); Atom (_, name); value ]) ->
+  | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
-  | RBList (_, [ Atom (_, "set!"); name; value ]) ->
+  | SList (_, [ SAtom (_, "set!"); name; value ]) ->
       let js_code = Printf.sprintf "%s = %s;" (compile name) (compile value) in
       with_context js_code
-  | RBList (_, [ Atom (_, "if*"); (Atom _ as cond); then_; else_ ]) ->
+  | SList (_, [ SAtom (_, "if*"); (SAtom _ as cond); then_; else_ ]) ->
       Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond) (compile then_) (compile else_) |> with_context
-  | RBList (_, [ Atom (_, "if*"); cond; then_; else_ ]) ->
+  | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (compile cond) (compile then_) (compile else_) |> with_context
-  | RBList (_, [ Atom (_, "spread"); Atom (_, value) ]) -> Printf.sprintf "...%s" value |> with_context
-  (* /Version 2.0 *)
-  | RBList (_, [ Atom (_, "not"); x ]) -> compile x |> Printf.sprintf "!%s" |> with_context
-  | RBList (_, [ Atom (_, "is"); instance; Atom (tm, type_) ]) ->
+  | SList (_, [ SAtom (_, "spread"); SAtom (_, value) ]) -> Printf.sprintf "...%s" value |> with_context
+  | SList (_, [ SAtom (_, "not"); x ]) -> compile x |> Printf.sprintf "!%s" |> with_context
+  | SList (_, [ SAtom (_, "is"); instance; SAtom (tm, type_) ]) ->
       let unescp_type = if String.starts_with ~prefix:"\"" type_ then unpack_string type_ else type_ in
-      make_operator instance (Atom (tm, unescp_type)) (Printf.sprintf "(%s instanceof %s)")
-  | RBList (_, [ Atom (_, "as"); instance; Atom (type_meta, type_) ]) ->
+      make_operator instance (SAtom (tm, unescp_type)) (Printf.sprintf "(%s instanceof %s)")
+  | SList (_, [ SAtom (_, "as"); instance; SAtom (type_meta, type_) ]) ->
       let unescp_type = if String.starts_with ~prefix:"\"" type_ then unpack_string type_ else type_ in
-      make_operator (Atom (type_meta, unescp_type)) instance (Printf.sprintf "((%s)%s)")
-  | RBList (_, [ Atom (_, "quote"); arg ]) -> compile arg |> with_context
-  | RBList (_, [ Atom (_, "class-inner"); Atom (_, cls_name) ]) -> cls_name |> unpack_string |> with_context
+      make_operator (SAtom (type_meta, unescp_type)) instance (Printf.sprintf "((%s)%s)")
+  | SList (_, [ SAtom (_, "quote"); arg ]) -> compile arg |> with_context
+  | SList (_, [ SAtom (_, "class-inner"); SAtom (_, cls_name) ]) -> cls_name |> unpack_string |> with_context
   (* Hahs-map *)
-  | RBList (m, Atom (_, "hash-map") :: xs) ->
-      compile (RBList (m, Atom (unknown_location, "y2k.RT.hash_map") :: xs)) |> with_context
-  | CBList (_, xs) -> failnode __LOC__ xs
+  | SList (m, SAtom (_, "hash-map") :: xs) ->
+      compile (SList (m, SAtom (unknown_location, "y2k.RT.hash_map") :: xs)) |> with_context
   (* Vector *)
-  | RBList (m, Atom (_, "vector") :: xs) ->
-      compile (RBList (m, Atom (unknown_location, "java.util.Arrays/asList") :: xs)) |> with_context
-  | SBList (_, xs) -> failnode __LOC__ xs
+  | SList (m, SAtom (_, "vector") :: xs) ->
+      compile (SList (m, SAtom (unknown_location, "java.util.Arrays/asList") :: xs)) |> with_context
   (* Namespaces *)
-  | RBList (_, Atom (_, "do*") :: (RBList (_, Atom (_, "ns") :: _) as ns) :: body) ->
+  | SList (_, SAtom (_, "do*") :: (SList (_, SAtom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos = (String.rindex_opt context.filename '/' |> Option.value ~default:(-1)) + 1 in
       let filename = String.sub context.filename name_start_pos (String.length context.filename - name_start_pos) in
       let cls_name =
@@ -75,25 +71,25 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       |> Option.value ~default:""
       |> Printf.sprintf "%s\n/** @noinspection ALL*/\npublic class %s{\n%s}" ns_ cls_name
       |> with_context
-  | RBList (_, [ Atom (_, "ns"); RBList (_, [ Atom (_, "quote*"); RBList (_, Atom _ :: ns_params) ]) ]) ->
+  | SList (_, [ SAtom (_, "ns"); SList (_, [ SAtom (_, "quote*"); SList (_, SAtom _ :: ns_params) ]) ]) ->
       let imports =
         ns_params
         |> List.map (function
-             | RBList (_, Atom (_, ":import") :: imports) ->
+             | SList (_, SAtom (_, ":import") :: imports) ->
                  imports
                  |> List.map (function
-                      | SBList (_, Atom (_, pkg) :: classes) ->
+                      | SList (_, SAtom (_, pkg) :: classes) ->
                           List.map (fun x -> compile x) classes
                           |> List.map (fun c -> Printf.sprintf "import %s.%s;\n" pkg c)
                           |> List.reduce __LOC__ (Printf.sprintf "%s%s")
-                      | n -> failnode __LOC__ [ n ])
+                      | n -> failsexp __LOC__ [ n ])
                  |> List.reduce __LOC__ (Printf.sprintf "%s%s")
-             | n -> failnode __LOC__ [ n ])
+             | n -> failsexp __LOC__ [ n ])
         |> List.fold_left (Printf.sprintf "%s%s") ""
       in
       let pkg_name = pkg_name_from_file_name context in
       Printf.sprintf "package %s;\n%s" pkg_name imports |> with_context
-  | RBList (_, Atom (_, "do*") :: body) ->
+  | SList (_, SAtom (_, "do*") :: body) ->
       let js_body =
         body |> List.fold_left_map compile_ context |> snd
         |> List.filter (( <> ) "")
@@ -102,16 +98,16 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       with_context js_body
   (* Lambda *)
-  | RBList (m, Atom (_, "fn*") :: RBList (_, args) :: body) ->
+  | SList (m, SAtom (_, "fn*") :: SList (_, args) :: body) ->
       let sargs =
         args
-        |> List.map (function Atom (_, aname) -> Printf.sprintf "%s" aname | x -> failnode __LOC__ [ x ])
+        |> List.map (function SAtom (_, aname) -> Printf.sprintf "%s" aname | x -> failsexp __LOC__ [ x ])
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
-      let body = body |> List.concat_map unwrap_do in
+      let body = body |> List.concat_map unwrap_sexp_do in
       let sbody =
-        let body = body |> List.concat_map unwrap_do in
+        let body = body |> List.concat_map unwrap_sexp_do in
         let length = List.length body in
         body
         |> List.filteri (fun i _ -> i < length - 1)
@@ -127,28 +123,26 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       | type_ -> Printf.sprintf "(%s)(%s)->{\n%sreturn %s;\n}" type_ sargs sbody last_exp)
       |> with_context
   (* Constructor *)
-  | RBList (_, Atom (_, "new") :: Atom (_, cnst_name) :: args) ->
+  | SList (_, SAtom (_, "new") :: SAtom (_, cnst_name) :: args) ->
       let cnst_name = unpack_string cnst_name in
       let args = args |> List.map compile |> List.reduce_opt (Printf.sprintf "%s,%s") |> Option.value ~default:"" in
       Printf.sprintf "new %s(%s)" cnst_name args |> with_context
   (* Functions *)
-  | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ])
+  | SList (_, [ SAtom (_, "def*"); SAtom (fname_meta, fname); SList (_, SAtom (_, "fn*") :: SList (_, args) :: body) ])
     ->
-      (* FIXME: *)
       let context_ref = ref context in
       let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
       context_ref := context;
-      (* let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in *)
       let modifier = match fname_meta.symbol with ":private" -> "private" | _ -> "public" in
       let sargs =
         args
         |> List.map (function
-             | Atom (am, aname) -> Printf.sprintf "final %s %s" (get_type am) aname
-             | x -> failnode __LOC__ [ x ])
+             | SAtom (am, aname) -> Printf.sprintf "final %s %s" (get_type am) aname
+             | x -> failsexp __LOC__ [ x ])
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
-      let body = body |> List.concat_map unwrap_do in
+      let body = body |> List.concat_map unwrap_sexp_do in
       let sbody =
         let length = List.length body in
         body
@@ -166,9 +160,7 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       (context, code)
   (* Static field *)
-  | RBList (_, [ Atom (_, "def*"); Atom (fname_meta, fname); body ]) ->
-      (* FIXME: *)
-      (* let context = { context with scope = StringMap.add fname (node, ref context) context.scope } in *)
+  | SList (_, [ SAtom (_, "def*"); SAtom (fname_meta, fname); body ]) ->
       let vis = if fname_meta.symbol = ":private" then "private" else "public" in
       let get_type am = if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol in
       let context_ref = ref context in
@@ -179,38 +171,36 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
       in
       (context, result)
   (* Empty declaration *)
-  | RBList (_, [ Atom (_, "def*"); Atom (_, _name) ]) ->
-      (* FIXME: *)
-      (* ({ context with scope = StringMap.add name (node, ref context) context.scope }, "") *)
+  | SList (_, [ SAtom (_, "def*"); SAtom (_, _name) ]) ->
       ({ context with scope = context.scope |> StringMap.add _name (ONil, ref context) }, "")
   (* Interop field *)
-  | RBList (_, [ Atom (_, "."); target; Atom (_, field) ]) when String.starts_with ~prefix:":-" field ->
+  | SList (_, [ SAtom (_, "."); target; SAtom (_, field) ]) when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target) (String.sub field 2 (String.length field - 2)) |> with_context
   (* Interop method *)
-  | RBList (_, Atom (_, ".") :: target :: Atom (_, mname) :: args) ->
+  | SList (_, SAtom (_, ".") :: target :: SAtom (_, mname) :: args) ->
       let sargs =
         match args with [] -> "" | args -> args |> List.map compile |> List.reduce __LOC__ (Printf.sprintf "%s, %s")
       in
       let result =
-        match get_symbol target with
+        match get_sexp_symbol target with
         | "" -> Printf.sprintf "%s.%s(%s)" (compile target) (unpack_symbol mname) sargs
         | type_ -> Printf.sprintf "((%s)%s).%s(%s)" type_ (compile target) (unpack_symbol mname) sargs
       in
       result |> with_context
-  | RBList (_, Atom (_, "gen-class-inner") :: _) as node -> Macro_gen_class.invoke compile context node
+  | SList (_, SAtom (_, "gen-class-inner") :: _) as node -> Macro_gen_class.invoke compile context node
   (* Call runtime function *)
-  | RBList (m2, Atom (m, "call-runtime") :: RBList (_, [ _; Atom (_, name) ]) :: args) ->
-      compile (RBList (m2, Atom (m, "y2k.RT/" ^ name) :: args)) |> with_context
+  | SList (m2, SAtom (m, "call-runtime") :: SList (_, [ _; SAtom (_, name) ]) :: args) ->
+      compile (SList (m2, SAtom (m, "y2k.RT/" ^ name) :: args)) |> with_context
   (* Function call *)
-  | RBList (_, head :: args) ->
+  | SList (_, head :: args) ->
       let sargs = args |> List.map compile |> String.concat ",\n" in
       let sargs = if sargs = "" then ")" else "\n" ^ sargs ^ ")" in
       let fname =
         match head with
-        | RBList (_, Atom (_, "fn*") :: _) -> "(" ^ compile head ^ ")("
-        | Atom (_, fname) when String.contains fname '/' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
-        | Atom (_, fname) when String.contains fname '.' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
-        | Atom (_, fname) when not (StringMap.mem fname context.scope) ->
+        | SList (_, SAtom (_, "fn*") :: _) -> "(" ^ compile head ^ ")("
+        | SAtom (_, fname) when String.contains fname '/' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
+        | SAtom (_, fname) when String.contains fname '.' -> String.map (function '/' -> '.' | x -> x) fname ^ "("
+        | SAtom (_, fname) when not (StringMap.mem fname context.scope) ->
             (* prerr_endline @@ "LOG: " ^ fname ^ " ["
             ^ (context.scope |> StringMap.bindings |> List.map fst |> String.concat ", ")
             ^ "]"; *)
@@ -218,17 +208,13 @@ let rec compile_ (context : context) (node : cljexp) : context * string =
         | _ -> compile head ^ "("
       in
       fname ^ sargs |> with_context
-  | n -> failnode __LOC__ [ n ]
+  | n -> failsexp __LOC__ [ n ]
 
 let rec make_scope_for_prelude (context : context) node =
   match node with
-  | RBList (_, Atom (_, "do*") :: body) ->
+  | SList (_, SAtom (_, "do*") :: body) ->
       body |> List.fold_left_map (fun context n -> (make_scope_for_prelude context n, n)) context |> fst
-  (* FIXME *)
-  (* | RBList (_, Atom (_, "def*") :: Atom (_, name) :: _) ->
-  (* { context with scope = StringMap.add name (node, ref context) context.scope } *)
-  { context with scope = StringMap.add name (OLambda node, ref context) context.scope } *)
-  | x -> failnode __LOC__ [ x ]
+  | x -> failsexp __LOC__ [ x ]
 
 let main base_ns (log : bool) (filename : string) prelude_macros code =
   let macros_ctx, _macro_sexp =
@@ -246,11 +232,10 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
   |> try_log "Stage_normalize_bracket ->" log
   |> Stage_linter.invoke ctx _macro_sexp
   (* *)
+  |> Stage_normalize_bracket.invoke_sexp
+  |> try_slog "Stage_a_normal_form     ->" log
   |> Stage_java_require.main ctx
-  |> try_log "Stage_java_require      ->" log
+  |> try_slog "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
-  |> try_log "Stage_a_normal_form     ->" log
-  |> compile_ ctx
-  (* |> compile_ (make_scope_for_prelude ctx _macro_sexp) *)
-  |> snd
-  |> String.trim
+  |> try_slog "Stage_a_normal_form     ->" log
+  |> compile_ ctx |> snd |> String.trim
