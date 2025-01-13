@@ -226,14 +226,12 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
   let ctx, node = code |> Frontend.parse_and_simplify { macros_ctx with log; base_ns } filename in
   node
   |> try_log "parse_and_simplify      ->" log
-  |> Stage_simplify_let.invoke
-  |> try_log "Stage_simplify_let      ->" log
   |> Stage_normalize_bracket.invoke
-  |> try_log "Stage_normalize_bracket ->" log
+  |> try_slog "Stage_a_normal_form     ->" log
+  |> Stage_simplify_let.invoke
+  |> try_slog "Stage_simplify_let      ->" log
   |> Stage_linter.invoke ctx _macro_sexp
   (* *)
-  |> Stage_normalize_bracket.invoke_sexp
-  |> try_slog "Stage_a_normal_form     ->" log
   |> Stage_java_require.main ctx
   |> try_slog "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke

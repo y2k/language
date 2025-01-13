@@ -19,14 +19,12 @@ let main (log : bool) (filename : string) prelude_macros code =
     let ctx, node = code |> Frontend.parse_and_simplify { prelude_ctx with log } filename in
     node
     |> try_log "Parse_and_simplify             ->" log
-    |> Stage_simplify_let.invoke
-    |> try_log "Stage_simplify_let             ->" log
     |> Stage_normalize_bracket.invoke
-    |> try_log "Stage_normalize_bracket        ->" log
-    |> Stage_linter.invoke ctx prelude_sexp
-    |> try_log "Stage_linter                   ->" log
-    |> Stage_normalize_bracket.invoke_sexp
     |> try_slog "Stage_normalize_bracket (SEXP) ->" log
+    |> Stage_simplify_let.invoke
+    |> try_slog "Stage_simplify_let             ->" log
+    |> Stage_linter.invoke ctx prelude_sexp
+    (* *)
     |> Stage_unwrap_ns.invoke (fun cfg -> invoke cfg.code) ctx
     |> try_slog "Stage_unwrap_ns                ->" log
   in

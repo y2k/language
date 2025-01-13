@@ -1,16 +1,14 @@
 open Common
 
-let rec invoke (node : cljexp) : cljexp =
+let rec invoke (node : sexp) : sexp =
   let rec convert_bindings bindings =
     match bindings with
     | [] -> []
-    | (Atom (m, _) as k) :: v :: tail -> RBList (m, [ Atom (m, "let*"); k; invoke v ]) :: convert_bindings tail
-    | n -> failnode __LOC__ n
+    | (SAtom (m, _) as k) :: v :: tail -> SList (m, [ SAtom (m, "let*"); k; invoke v ]) :: convert_bindings tail
+    | n -> failsexp __LOC__ n
   in
   match node with
-  | RBList (mr, Atom (m, "let*") :: SBList (_, bindings) :: body) ->
-      RBList (mr, Atom (m, "do*") :: (convert_bindings bindings @ List.map invoke body))
-  | RBList (m, xs) -> RBList (m, List.map invoke xs)
-  | SBList (m, xs) -> SBList (m, List.map invoke xs)
-  | CBList (m, xs) -> CBList (m, List.map invoke xs)
-  | Atom _ as x -> x
+  | SList (mr, SAtom (m, "let*") :: SList (_, bindings) :: body) ->
+      SList (mr, SAtom (m, "do*") :: (convert_bindings bindings @ List.map invoke body))
+  | SList (m, xs) -> SList (m, List.map invoke xs)
+  | SAtom _ as x -> x

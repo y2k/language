@@ -259,7 +259,7 @@ let rec interpret (context : context) (node : sexp) : context * obj =
   | SAtom (_, fname) when StringMap.mem fname context.functions ->
       (* prerr_endline @@ "- FUNCTION: " ^ fname; *)
       let f, _ctx = StringMap.find fname context.functions in
-      let f = f |> Stage_simplify_let.invoke |> Stage_normalize_bracket.invoke_sexp in
+      let f = f |> Stage_normalize_bracket.invoke |> Stage_simplify_let.invoke in
       interpret context f
   | node ->
       prerr_endline @@ "==========================================";
@@ -306,8 +306,8 @@ let rec obj_to_sexp node =
   | n -> failwith @@ __LOC__ ^ " - " ^ show_obj n
 
 let mk_interpret context (code : cljexp) =
+  let code = Stage_normalize_bracket.invoke code in
   let code = Stage_simplify_let.invoke code in
-  let code = Stage_normalize_bracket.invoke_sexp code in
   let ctx, result = interpret_with_prelude context code in
   (ctx, obj_to_sexp result)
 
@@ -318,7 +318,7 @@ let mk_eval () =
     let ctx, node = Frontend.desugar_and_register ctx node in
     (* prerr_endline @@ "LOG:EVAL:2: " ^ debug_show_cljexp [ node ]; *)
     (* let node = Stage_simplify_let.invoke node in *)
-    let node = Stage_normalize_bracket.invoke_sexp node in
+    let node = Stage_normalize_bracket.invoke node in
     let result = interpret_with_prelude ctx node |> snd in
     (* Functions.failobj __LOC__ [ result ] *)
     obj_to_sexp result
@@ -331,31 +331,28 @@ let main (log : bool) (filename : string) prelude_macros code =
            empty_context with
            interpreter =
              (fun ctx node ->
+               let node = Stage_normalize_bracket.invoke node in
                let node = Stage_simplify_let.invoke node in
-               let node = Stage_normalize_bracket.invoke_sexp node in
                let ctx, o = interpret_with_prelude ctx node in
                (ctx, obj_to_sexp o));
          }
          "prelude"
   in
-  (* let prelude_sexp = Stage_normalize_bracket.invoke_sexp prelude_sexp in *)
-  let prelude_ctx = Stage_normalize_bracket.invoke_sexp prelude_sexp |> interpret_with_prelude prelude_ctx |> fst in
+  let prelude_ctx = Stage_normalize_bracket.invoke prelude_sexp |> interpret_with_prelude prelude_ctx |> fst in
   let rec invoke filename code : context * obj =
     let ctx, node = code |> Frontend.parse_and_simplify prelude_ctx filename in
     node
     |> try_log "Parse_and_simplify             ->" log
-    |> Stage_simplify_let.invoke
-    |> try_log "Stage_simplify_let             ->" log
     |> Stage_normalize_bracket.invoke
-    |> try_log "Stage_normalize_bracket        ->" log
+    |> try_slog "Stage_normalize_bracket (SEXP) ->" log
+    |> Stage_simplify_let.invoke
+    |> try_slog "Stage_simplify_let             ->" log
     |> Stage_ns_inline.invoke invoke ctx
     |> fun (ctx, node) ->
     node
-    |> try_log "Stage_ns_inline                ->" log
+    |> try_slog "Stage_ns_inline                ->" log
     |> Stage_linter.invoke ctx prelude_sexp
-    |> try_log "Stage_linter                   ->" log
-    |> Stage_normalize_bracket.invoke_sexp
-    |> try_slog "Stage_normalize_bracket (SEXP) ->" log
+    |> try_slog "Stage_linter                   ->" log
     |> interpret_with_prelude ctx
   in
   invoke filename code |> snd |> Functions.obj_to_string |> unpack_string |> Scanf.unescaped |> String.trim

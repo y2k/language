@@ -13,22 +13,22 @@ let get_var_name name =
   | None, Some _ -> name
   | Some i, Some n -> String.sub name 0 (min i n)
 
-let invoke (code_ctx : context) prelude_node node =
+let invoke (code_ctx : context) prelude_node (node : sexp) : sexp =
   let prelude_node = Stage_normalize_bracket.invoke prelude_node in
-  let rec invoke (ctx : linter_context) (node : cljexp) : linter_context * cljexp =
+  let rec invoke (ctx : linter_context) (node : sexp) : linter_context * sexp =
     (* print_endline @@ "== LOG == " ^ debug_show_cljexp [ node ]; *)
     match node with
-    | RBList (_, Atom (_, "fn*") :: RBList (_, args) :: body) ->
+    | SList (_, SAtom (_, "fn*") :: SList (_, args) :: body) ->
         let scope =
           List.fold_left
             (fun scope a ->
-              let a = match a with Atom (_, x) -> x | x -> failnode __LOC__ [ x ] in
+              let a = match a with SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ] in
               StringMap.add a () scope)
             ctx.scope args
         in
         let _ = List.fold_left_map invoke { scope } body in
         (ctx, node)
-    | RBList (_, [ Atom (_, "if*"); cond; then_; else_ ]) as n ->
+    | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) as n ->
         invoke ctx cond |> ignore;
         let scope =
           ctx.scope
@@ -40,62 +40,61 @@ let invoke (code_ctx : context) prelude_node node =
                (fst (invoke ctx else_)).scope
         in
         ({ scope }, n)
-    | RBList (_, [ Atom (_, "quote*"); _ ]) -> (ctx, node)
-    | RBList (_, Atom (_, "do*") :: body) ->
+    | SList (_, [ SAtom (_, "quote*"); _ ]) -> (ctx, node)
+    | SList (_, SAtom (_, "do*") :: body) ->
         let ctx, _ = List.fold_left_map invoke ctx body in
         (ctx, node)
-    | RBList (_, [ Atom (_, "def*"); Atom (_, k); (RBList (_, Atom (_, "fn*") :: _) as fn_) ]) as x ->
+    | SList (_, [ SAtom (_, "def*"); SAtom (_, k); (SList (_, SAtom (_, "fn*") :: _) as fn_) ]) as x ->
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let ctx, _ = invoke ctx fn_ in
         (ctx, x)
-    | RBList (_, [ Atom (_, "def*"); Atom (_, k) ]) as x -> ({ scope = StringMap.add k () ctx.scope }, x)
-    | RBList (_, [ Atom (_, "def*"); Atom (_, k); value ]) as x ->
+    | SList (_, [ SAtom (_, "def*"); SAtom (_, k) ]) as x -> ({ scope = StringMap.add k () ctx.scope }, x)
+    | SList (_, [ SAtom (_, "def*"); SAtom (_, k); value ]) as x ->
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let _ = invoke ctx value in
         (ctx, x)
-    | RBList (_, [ Atom (_, "let*"); Atom (_, k); value ]) as x ->
+    | SList (_, [ SAtom (_, "let*"); SAtom (_, k); value ]) as x ->
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let _ = invoke ctx value in
         (ctx, x)
     (* TODO: delete this form *)
-    | RBList (_, Atom (_, "let*") :: SBList (_, bindings) :: tail) as x ->
+    | SList (_, SAtom (_, "let*") :: SList (_, bindings) :: tail) as x ->
         let rec loop ctx = function
           | [] -> ctx
-          | Atom (_, k) :: _ :: tail ->
+          | SAtom (_, k) :: _ :: tail ->
               let ctx = { scope = StringMap.add k () ctx.scope } in
               loop ctx tail
-          | n -> failnode __LOC__ n
+          | n -> failsexp __LOC__ n
         in
         let ctx = loop ctx bindings in
         let ctx, _ = List.fold_left_map invoke ctx tail in
         (ctx, x)
-    | RBList (_, [ Atom (_, "ns"); RBList (_, [ Atom (_, "quote*"); RBList (_, _ :: body) ]) ]) as n ->
+    | SList (_, [ SAtom (_, "ns"); SList (_, [ SAtom (_, "quote*"); SList (_, _ :: body) ]) ]) as n ->
         let scope =
           body
           |> List.concat_map (function
-               | RBList (_, Atom (_, ":import") :: body) ->
-                   body
-                   |> List.concat_map (function SBList (_, _ :: classes) -> classes | n -> failnode __LOC__ [ n ])
+               | SList (_, SAtom (_, ":import") :: body) ->
+                   body |> List.concat_map (function SList (_, _ :: classes) -> classes | n -> failsexp __LOC__ [ n ])
                | _ -> [])
           |> List.fold_left
                (fun scope cls ->
-                 match cls with Atom (_, cls_name) -> StringMap.add cls_name () scope | n -> failnode __LOC__ [ n ])
+                 match cls with SAtom (_, cls_name) -> StringMap.add cls_name () scope | n -> failsexp __LOC__ [ n ])
                ctx.scope
         in
         ({ scope }, n)
-    | RBList (_, body) ->
+    | SList (_, body) ->
         List.map (fun x -> invoke ctx x) body |> ignore;
         (ctx, node)
     (* Constants *)
-    | Atom (_, ".") -> (ctx, node)
-    | Atom (_, "nil") -> (ctx, node)
-    | Atom (_, name) when String.contains name '/' -> (ctx, node)
-    | Atom (_, name) when String.get name 0 = ':' -> (ctx, node)
-    | Atom (_, name) when String.get name 0 = '\"' -> (ctx, node)
-    | Atom (_, name) when (String.get name 0 >= '0' && String.get name 0 <= '9') || String.get name 0 = '-' ->
+    | SAtom (_, ".") -> (ctx, node)
+    | SAtom (_, "nil") -> (ctx, node)
+    | SAtom (_, name) when String.contains name '/' -> (ctx, node)
+    | SAtom (_, name) when String.get name 0 = ':' -> (ctx, node)
+    | SAtom (_, name) when String.get name 0 = '\"' -> (ctx, node)
+    | SAtom (_, name) when (String.get name 0 >= '0' && String.get name 0 <= '9') || String.get name 0 = '-' ->
         (ctx, node)
     (* Variables *)
-    | Atom (m, full_name) as n ->
+    | SAtom (m, full_name) as n ->
         let name = get_var_name full_name in
         if ctx.scope |> StringMap.mem name |> not then (
           prerr_endline @@ debug_show_linter_context ctx;
@@ -103,9 +102,9 @@ let invoke (code_ctx : context) prelude_node node =
           ^ string_of_int m.line ^ ":" ^ string_of_int m.pos;
           failwith __LOC__ |> ignore);
         (ctx, n)
-    | node -> failnode (__LOC__ ^ " - " ^ debug_show_linter_context ctx) [ node ]
   in
-  RBList (unknown_location, [ Atom (unknown_location, "do*"); prelude_node; node ])
+  (* let prelude_node = prelude_node |> Stage_simplify_let.invoke |> Stage_normalize_bracket.invoke_sexp in *)
+  SList (unknown_location, [ SAtom (unknown_location, "do*"); prelude_node; node ])
   |> invoke { scope = StringMap.empty }
   |> ignore;
   node

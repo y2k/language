@@ -1,32 +1,12 @@
 open Common
 
-let rec invoke (node : cljexp) : cljexp =
-  (* print_endline @@ "== NORM[] == " ^ debug_show_cljexp [ node ]; *)
-  match node with
-  | RBList (m, [ (Atom (_, "let*") as l); k; v ]) -> RBList (m, [ l; k; invoke v ])
-  | RBList (m, (Atom (_, "fn*") as fn) :: SBList (_, args) :: body) ->
-      RBList (m, fn :: RBList (unknown_location, args) :: List.map invoke body)
-  | RBList (m, (Atom (_, "def*") as name) :: xs) -> RBList (m, name :: List.map invoke xs)
-  | RBList (m, [ (Atom (_, "if*") as i); c; t; e ]) -> RBList (m, [ i; invoke c; invoke t; invoke e ])
-  | RBList (_, [ Atom (_, "quote*"); _ ]) as node -> node
-  | RBList (m, (Atom (_, "do*") as name) :: xs) -> RBList (m, name :: List.map invoke xs)
-  | RBList (m, name :: xs) -> (
-      match name with
-      | Atom (_, name) when String.ends_with ~suffix:"*" name && name <> "*" -> failnode __LOC__ [ node ]
-      | _ -> RBList (m, invoke name :: List.map invoke xs))
-  | SBList (m, xs) -> RBList (m, Atom (unknown_location, "vector") :: List.map invoke xs)
-  | CBList (m, xs) -> RBList (m, Atom (unknown_location, "hash-map") :: List.map invoke xs)
-  | Atom _ as x -> x
-  | n -> failnode __LOC__ [ n ]
-
-let invoke_sexp (node : cljexp) : sexp =
+let invoke (node : cljexp) : sexp =
   let rec invoke_sexp2 (replace_col : bool) (node : cljexp) : sexp =
     let invoke_sexp = invoke_sexp2 replace_col in
     (* print_endline @@ "== NORM[] == " ^ debug_show_cljexp [ node ]; *)
     match node with
-    | RBList (m, [ (Atom (_, "let*") as l); (Atom _ as k) ]) -> SList (m, [ invoke_sexp l; invoke_sexp k ])
-    | RBList (m, [ (Atom (_, "let*") as l); (Atom _ as k); v ]) ->
-        SList (m, [ invoke_sexp l; invoke_sexp k; invoke_sexp v ])
+    | RBList (m, Atom (lm, "let*") :: SBList (bm, bindings) :: body) ->
+        SList (m, SAtom (lm, "let*") :: SList (bm, List.map invoke_sexp bindings) :: List.map invoke_sexp body)
     | RBList (m, (Atom (_, "fn*") as fn) :: RBList (_, args) :: body) ->
         SList (m, invoke_sexp fn :: SList (unknown_location, List.map invoke_sexp args) :: List.map invoke_sexp body)
     (* FIXME: delete dup *)
