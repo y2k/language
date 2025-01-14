@@ -455,6 +455,7 @@ let js = {|
 (defmacro > [a b] (list '__raw_template "(" a " > " b ")"))
 (defmacro >= [a b] (list '__raw_template "(" a " >= " b ")"))
 
+(defmacro boolean? [x] (list '= :boolean (list 'type x)))
 (defmacro export-default [body] (list '__raw_template "export default " body))
 (defmacro nil? [x] (list 'or (list '= 'nil x) (list '= 'undefined x)))
 (defmacro not [x] (list '__raw_template "!(" x ")"))

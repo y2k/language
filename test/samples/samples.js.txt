@@ -52,6 +52,7 @@ __POS__
 (and 1)
 (and 1)
 (atom 1)
+(boolean? false)
 (case 1 :a (alert 2) (alert 3))
 (comment (foo 1))(str 2)
 (concat [1 2] [3 4])
