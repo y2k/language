@@ -5,8 +5,10 @@ module FileReader = struct
 
   let with_stub_scope (content : string) f arg =
     let open Effect.Deep in
-    Effect.Deep.try_with f arg
+    Effect.Deep.match_with f arg
       {
+        retc = Fun.id;
+        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with Load _ -> Some (fun (k : (a, _) continuation) -> continue k content) | _ -> None);
@@ -14,8 +16,10 @@ module FileReader = struct
 
   let with_scope f arg =
     let open Effect.Deep in
-    Effect.Deep.try_with f arg
+    Effect.Deep.match_with f arg
       {
+        retc = Fun.id;
+        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
@@ -135,8 +139,10 @@ module NameGenerator = struct
   let with_scope f =
     let index = ref 0 in
     let open Effect.Deep in
-    Effect.Deep.try_with f ()
+    Effect.Deep.match_with f ()
       {
+        retc = Fun.id;
+        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
