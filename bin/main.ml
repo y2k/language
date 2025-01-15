@@ -1,6 +1,5 @@
 open Lib__.Common
 module Clj2js = Lib
-module Bs = Build_script
 
 let read_code_file filename = if filename = "prelude" then "" else In_channel.(with_open_bin filename input_all)
 
@@ -16,12 +15,6 @@ let compile_file filename target root_ns =
         | t -> failwith @@ "Invalid target " ^ t
       in
       filename |> read_code_file |> FileReader.with_scope compiler |> print_endline)
-
-let compile_file_old () =
-  let target = Sys.argv.(1) in
-  let filename = Sys.argv.(2) in
-  let root_ns = match Sys.argv with [| _; _; _; _; x |] -> x | _ -> "" in
-  compile_file filename target root_ns
 
 let main () =
   let target = ref "" in
@@ -41,7 +34,6 @@ let main () =
   match !command with
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns
-  | "make_build_script" -> Bs.make_build_script ()
-  | _ -> compile_file_old ()
+  | n -> failwith ("Invalid command " ^ n ^ " (" ^ Sys.getcwd () ^ ")")
 
 let () = main ()
