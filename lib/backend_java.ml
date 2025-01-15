@@ -217,20 +217,14 @@ let rec make_scope_for_prelude (context : context) node =
   | x -> failsexp __LOC__ [ x ]
 
 let main base_ns (log : bool) (filename : string) prelude_macros code =
-  let macros_ctx, _macro_sexp =
+  let prelude_ctx, prelude_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
          { empty_context with interpreter = Backend_interpreter.mk_interpret; eval = Backend_interpreter.mk_eval () }
          "prelude"
   in
-  let ctx, node = code |> Frontend.desugar { macros_ctx with log; base_ns } filename in
-  node
-  |> try_slog "parse_and_simplify      ->" log
-  |> Stage_simplify_let.invoke
-  |> try_slog "Stage_simplify_let      ->" log
-  |> Stage_linter.invoke ctx _macro_sexp
-  (* *)
-  |> Stage_java_require.main ctx
+  let ctx, node = code |> Frontend.desugar log prelude_sexp { prelude_ctx with base_ns } filename in
+  node |> Stage_java_require.main ctx
   |> try_slog "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
   |> try_slog "Stage_a_normal_form     ->" log

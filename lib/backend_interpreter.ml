@@ -2,19 +2,14 @@ open Common
 
 module Functions = struct
   let rec sexp_to_string = function
-    (* | SAtom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s *)
     | SAtom (_, s) -> s
     | SList (_, xs) -> "(" ^ String.concat " " (List.map sexp_to_string xs) ^ ")"
-  (* | SBList (_, xs) -> "[" ^ String.concat " " (List.map sexp_to_string xs) ^ "]"
-    | CBList (_, xs) -> "{" ^ String.concat " " (List.map sexp_to_string xs) ^ "}" *)
 
   let rec sexp_to_string2 = function
     | SAtom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s
     | SAtom (_, s) when String.starts_with ~prefix:"\"" s -> unpack_string s
     | SAtom (_, s) -> s
     | SList (_, xs) -> "(" ^ String.concat " " (List.map sexp_to_string2 xs) ^ ")"
-  (* | SBList (_, xs) -> "[" ^ String.concat " " (List.map sexp_to_string2 xs) ^ "]"
-    | CBList (_, xs) -> "{" ^ String.concat " " (List.map sexp_to_string2 xs) ^ "}" *)
 
   let rec debug_obj_to_string = function
     | OList xs -> "(" ^ String.concat " " (List.map debug_obj_to_string xs) ^ ")"
@@ -155,9 +150,6 @@ let rec interpret (context : context) (node : sexp) : context * obj =
          ch >= '0' && ch <= '9' ->
       (* prerr_endline @@ "INTERPRET: INT " ^ debug_show_cljexp [ node ]; *)
       (context, OInt (int_of_string v))
-  (* FIXME: *)
-  (* | CBList (_, vec_args) -> (context, OMap (List.map interpret_ vec_args |> List.split_into_pairs))
-  | SBList (_, vec_args) -> (context, OVector (List.map interpret_ vec_args)) *)
   | SList (_, [ SAtom (_, "transform_nodes"); SList (_, _ :: opt); xs ]) ->
       let rec unpack_to_map = function
         | [] -> []
@@ -340,17 +332,8 @@ let main (log : bool) (filename : string) prelude_macros code =
   in
   let prelude_ctx = Stage_normalize_bracket.invoke prelude_sexp |> interpret_with_prelude prelude_ctx |> fst in
   let rec invoke filename code : context * obj =
-    let ctx, node = code |> Frontend.desugar prelude_ctx filename in
-    node
-    |> try_slog "Parse_and_simplify             ->" log
-    |> Stage_simplify_let.invoke
-    |> try_slog "Stage_simplify_let             ->" log
-    |> Stage_ns_inline.invoke invoke ctx
-    |> fun (ctx, node) ->
-    node
-    |> try_slog "Stage_ns_inline                ->" log
-    |> Stage_linter.invoke ctx prelude_sexp
-    |> try_slog "Stage_linter                   ->" log
-    |> interpret_with_prelude ctx
+    let ctx, node = code |> Frontend.desugar log prelude_sexp prelude_ctx filename in
+    node |> Stage_ns_inline.invoke invoke ctx |> fun (ctx, node) ->
+    node |> try_slog "Stage_ns_inline                ->" log |> interpret_with_prelude ctx
   in
   invoke filename code |> snd |> Functions.obj_to_string |> unpack_string |> Scanf.unescaped |> String.trim

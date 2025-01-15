@@ -16,14 +16,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   in
   let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
   let rec invoke code : sexp =
-    let ctx, node = code |> Frontend.desugar { prelude_ctx with log } filename in
-    node
-    |> try_slog "Parse_and_simplify             ->" log
-    |> Stage_simplify_let.invoke
-    |> try_slog "Stage_simplify_let             ->" log
-    |> Stage_linter.invoke ctx prelude_sexp
-    (* *)
-    |> Stage_unwrap_ns.invoke (fun cfg -> invoke cfg.code) ctx
-    |> try_slog "Stage_unwrap_ns                ->" log
+    let ctx, node = code |> Frontend.desugar log prelude_sexp prelude_ctx filename in
+    node |> Stage_unwrap_ns.invoke (fun cfg -> invoke cfg.code) ctx |> try_slog "Stage_unwrap_ns                ->" log
   in
   invoke code |> compile |> String.trim
