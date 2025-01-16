@@ -305,6 +305,11 @@ public class RT {
     public final TR get() {
       return (TR) invoke();
     }
+
+    @Override
+    public String toString() {
+      return "lambda";
+    }
   }
 
   public static Fn fn(Fn0 f) {

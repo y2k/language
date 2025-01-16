@@ -6,6 +6,7 @@ let desugar_fn_arguments expand_core_macro2 args =
     |> List.fold_left
          (fun (args, lets) a ->
            match a with
+           | Atom (m, "_") -> (args @ [ Atom (m, NameGenerator.get_new_var ()) ], lets)
            | Atom _ as x -> (args @ [ x ], lets)
            | node ->
                let virt_arg = Atom (unknown_location, NameGenerator.get_new_var ()) in
@@ -82,13 +83,7 @@ let desugar_fn_arguments expand_core_macro2 args =
 
 let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
   match node with
-  | RBList (mfn, Atom (l, "fn") :: args_node :: body) ->
-      let args =
-        match args_node with
-        | SBList (_, args) -> args
-        | RBList (_, args) -> args
-        | n -> failnode __LOC__ [n]
-      in
+  | RBList (mfn, Atom (l, "fn") :: SBList (_, args) :: body) ->
       let result =
         match desugar_fn_arguments expand_core_macro2 args with
         | new_args, [] -> RBList (mfn, [ Atom (l, "fn*"); SBList (unknown_location, new_args) ])

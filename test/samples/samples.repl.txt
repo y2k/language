@@ -12,6 +12,7 @@ __POSITION__
 (count (vector 1 2 3))
 (count [1 2 3])
 (def a 1) (defn f [] a) (f)
+(defn f [_ x _] x) (f 1 2 3)
 (defn f [a] a) (f 1)
 (defn f [node] (let [[tag] node] (if (= 1 (count node)) tag (if (map? (get node 1)) nil (str tag (reduce (fn [a x] (str a (f x))) "" (drop 1 node)) tag))))) (f [:A [:B]])
 (do (str 1) (str 2))

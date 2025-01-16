@@ -437,6 +437,9 @@ return b(0) });
 export const bar = ((y) => {
 return y.b });
 =============================
+export const f = ((p__1, x, p__2) => {
+return x });
+=============================
 export const f = ((fx) => {
 return fx(2) });
 =============================

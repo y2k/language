@@ -60,6 +60,7 @@
 (defn b [] (let [a :c] a))
 (defn c [] 3) (comment (defn a [] 1) (defn b [] 2)) (defn d [] 4)
 (defn c [] 3) (defn d [] 4)
+(defn f [_ x _] x)
 (defn f [] (println "a"))
 (defn f [a] (as a "String[]"))
 (defn f [a] (as a String))

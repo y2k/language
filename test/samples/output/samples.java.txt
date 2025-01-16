@@ -298,6 +298,10 @@ public static Object d () {
 return 4;
 }
 =============================
+public static Object f (final Object p__1,final Object x,final Object p__2) {
+return x;
+}
+=============================
 public static Object f () {
 return y2k.RT.println(
 "a");
