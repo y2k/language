@@ -29,6 +29,7 @@
 (ns bar (:require ["./b/c" :as b]) (:require ["../a/b" :as f])) (defn foo [] (b/mb 1 2) (f/mf 3 4))
 (ns bar) (defn foo [a b] (+ a b))
 (println 1 (comment 3) 2)
+(run! (fn [x] 1) [2])
 (vector 1 2 3)
 {:a 1 :b 2}
 {:k1 1 :k2 "v2" "k3" :v3}

@@ -653,6 +653,7 @@ let bytecode = {|
 (def ns 0)
 (def println 0)
 (def reset! 0)
+(def run! 0)
 (def str 0)
 (def vec 0)
 
