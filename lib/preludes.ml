@@ -387,8 +387,9 @@ let js = {|
 (def true 0)
 (def vector 0)
 
-(defmacro not= [a b] (list 'not (list '= a b)))
 (defmacro comment [& args] 'nil)
+(defmacro first [xs] (list 'get xs 0))
+(defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
 
@@ -531,8 +532,9 @@ let java = {|
 (def true 0)
 (def vector 0)
 
-(defmacro not= [a b] (list 'not (list '= a b)))
 (defmacro comment [& args] 'nil)
+(defmacro first [xs] (list 'get xs 0))
+(defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
 
@@ -638,8 +640,9 @@ let bytecode = {|
 (def true 0)
 (def vector 0)
 
-(defmacro not= [a b] (list 'not (list '= a b)))
 (defmacro comment [& args] 'nil)
+(defmacro first [xs] (list 'get xs 0))
+(defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
 
@@ -650,16 +653,22 @@ let bytecode = {|
 (def = 0)
 (def atom 0)
 (def concat 0)
+(def conj 0)
 (def deref 0)
+(def empty? 0)
+(def FIXME 0)
 (def gensym 0)
 (def get 0)
 (def if 0)
 (def list 0)
 (def ns 0)
 (def println 0)
+(def reduce 0)
 (def reset! 0)
+(def rest 0)
 (def run! 0)
 (def str 0)
+(def swap! 0)
 (def vec 0)
 
 (defmacro defonce [name value]
@@ -680,8 +689,9 @@ let interpreter = {|
 (def true 0)
 (def vector 0)
 
-(defmacro not= [a b] (list 'not (list '= a b)))
 (defmacro comment [& args] 'nil)
+(defmacro first [xs] (list 'get xs 0))
+(defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
 

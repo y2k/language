@@ -14,9 +14,10 @@ let load_file base_path mod_path =
     |> String.concat "/"
   in
   let path = merge_path () in
+  (* prerr_endline @@ "LOG[load_file] " ^ base_path ^ " | " ^ mod_path ^ " | " ^ path; *)
   (path, FileReader.read path)
 
-type execute_config = { code : string }
+type execute_config = { path : string; code : string }
 
 let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node : sexp) : sexp =
   let rec invoke (ctx : ns_contex) = function
@@ -44,8 +45,8 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
                           (fun acc req ->
                             match req with
                             | SList (_, [ SAtom (_, mod_path); _; SAtom (_, _) ]) ->
-                                let _, code = load_file global_ctx.filename mod_path in
-                                let ch_node = execute_code { code } in
+                                let path, code = load_file global_ctx.filename mod_path in
+                                let ch_node = execute_code { path; code } in
                                 acc @ [ ch_node ]
                             | n -> failsexp __LOC__ [ n ])
                           acc
