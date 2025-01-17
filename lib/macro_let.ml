@@ -1,15 +1,17 @@
 open Common
 
-let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
+let invoke desugar_and_register context (node : cljexp) =
+  let expand_core_macro2 x = desugar_and_register context x |> snd in
   match node with
   | RBList (m2, Atom (_, "let") :: SBList (_, vals) :: body) ->
       let unpack_let_args args =
         let rec loop = function
           | [] -> []
+          | Atom (m, "_") :: v :: tail -> Atom (m, NameGenerator.get_new_var ()) :: expand_core_macro2 v :: loop tail
           | (Atom _ as k) :: v :: tail -> k :: expand_core_macro2 v :: loop tail
           | SBList (m, xs) :: v :: tail ->
               let temp_val = NameGenerator.get_new_var () in
-              let a = [ Atom (unknown_location, temp_val); expand_core_macro2 v ] in
+              let a = [ Atom (meta_empty, temp_val); expand_core_macro2 v ] in
               let b =
                 xs
                 |> List.fold_left
@@ -24,9 +26,9 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
                                  (RBList
                                     ( m,
                                       [
-                                        Atom (unknown_location, "get");
-                                        Atom (unknown_location, temp_val);
-                                        Atom (unknown_location, string_of_int i);
+                                        Atom (meta_empty, "get");
+                                        Atom (meta_empty, temp_val);
+                                        Atom (meta_empty, string_of_int i);
                                       ] ));
                              ]
                        in
@@ -37,7 +39,7 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
               b @ loop tail
           | xs -> failnode __LOC__ xs
         in
-        RBList (m2, [ Atom (unknown_location, "let*"); SBList (unknown_location, loop args) ])
+        RBList (m2, [ Atom (meta_empty, "let*"); SBList (meta_empty, loop args) ])
       in
       let unpacked_let =
         match unpack_let_args vals with

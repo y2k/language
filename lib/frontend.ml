@@ -14,7 +14,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
   | RBList (m, Atom (l, "quote") :: x) -> RBList (m, Atom (l, "quote*") :: x) |> with_context
   | RBList (_, Atom (_, "fn*") :: _) as o -> o |> with_context
   | RBList (_, Atom (_, "let*") :: _) as o -> o |> with_context
-  | RBList (_, Atom (_, "let") :: _) as n -> Macro_let.invoke desugar_and_register expand_core_macro2 context n
+  | RBList (_, Atom (_, "let") :: _) as n -> Macro_let.invoke desugar_and_register context n
   | RBList (m2, Atom (m, "def") :: xs) -> expand_core_macro1 (RBList (m2, Atom (m, "def*") :: xs))
   (* Define function *)
   | RBList (m, Atom (l, "defn") :: (Atom (_, fname) as name) :: SBList (ma, args) :: body) ->

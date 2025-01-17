@@ -699,6 +699,14 @@ y2k.RT.println(
 "a");
 y2k.RT.str()
 =============================
+var a = y2k.RT.str(
+2);;
+var p__1 = y2k.RT.str(
+2);;
+var c = y2k.RT.str(
+3);;
+c
+=============================
 var a = 1;;
 y2k.RT.str();
 y2k.RT.str();

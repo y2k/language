@@ -118,6 +118,7 @@
 (let [^String a :b] a)
 (let [a (:b :c)] a)
 (let [a (.b :c 123)] (println "a") (str))
+(let [a (str 2) _ (str 2) c (str 3)] c)
 (let [a 1] (str) (str) (str))
 (list 1)
 (list? 1)
