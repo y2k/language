@@ -63,9 +63,17 @@ public class RT {
   }
 
   public static List<Object> map(Object f, Object xs) {
+    var func = (Function<Object, Object>) f;
+    if (xs instanceof Map) {
+      var map = (Map<Object, Object>) xs;
+      var result = new ArrayList<Object>(map.size());
+      for (Map.Entry<Object, Object> entry : map.entrySet()) {
+        result.add(func.apply(List.of(entry.getKey(), entry.getValue())));
+      }
+      return result;
+    }
     var col = (Collection<Object>) xs;
     var result = new ArrayList<Object>(col.size());
-    var func = (Function<Object, Object>) f;
     for (Object x : col) {
       result.add(func.apply(x));
     }

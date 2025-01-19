@@ -1,6 +1,8 @@
 open Lib__.Common
 
-let compile_code compile code = NameGenerator.with_scope (fun _ -> compile "app/main.clj" code)
+let compile_code compile code =
+  NameGenerator.with_scope (fun _ ->
+      FileReader.with_stub_scope {|(ns lib) (defn f [x] x)|} (compile "app/main.clj") code)
 
 let split_string str sep =
   let regexp_sep = Str.regexp_string sep in
