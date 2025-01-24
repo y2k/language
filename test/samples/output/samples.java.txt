@@ -996,6 +996,12 @@ y2k.RT.str(
 =============================
 java.util.Arrays.asList()
 =============================
+var x = 2;;
+java.util.Arrays.asList(
+1,
+2,
+3)
+=============================
 java.util.Arrays.asList(
 1,
 2,
