@@ -204,7 +204,7 @@ let rec interpret (context : context) (node : sexp) : context * obj =
       match interpret_ c with
       | OBool true -> (context, interpret_ a)
       | OBool false -> (context, interpret_ b)
-      | _ -> failwith __LOC__)
+      | n -> failwith @@  Functions.debug_obj_to_string n)
   | SList (_, [ SAtom (_, "def*"); SAtom (_, name); body ]) ->
       let body = interpret context body |> snd in
       let ctx_ref = ref context in

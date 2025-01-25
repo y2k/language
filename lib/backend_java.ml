@@ -31,9 +31,9 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SList (_, [ SAtom (_, "bind-update*"); SAtom (_, name); value ]) ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
-  | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
+  (* | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
-      with_context js_code
+      with_context js_code *)
   | SList (_, [ SAtom (_, "set!"); name; value ]) ->
       let js_code = Printf.sprintf "%s = %s;" (compile name) (compile value) in
       with_context js_code

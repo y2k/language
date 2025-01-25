@@ -8,7 +8,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
   match node with
   | Atom (l, "__POS__") -> Atom (l, Printf.sprintf {|"%s:%d:%d"|} context.filename l.line l.pos) |> with_context
   | Atom (l, x) when String.starts_with ~prefix:"'" x ->
-      RBList (unknown_location, [ Atom (unknown_location, "quote*"); Atom (l, String.sub x 1 (String.length x - 1)) ])
+      RBList (meta_empty, [ Atom (meta_empty, "quote*"); Atom (l, String.sub x 1 (String.length x - 1)) ])
       |> expand_core_macro1
   | Atom _ -> node |> with_context
   | RBList (m, Atom (l, "quote") :: x) -> RBList (m, Atom (l, "quote*") :: x) |> with_context
@@ -19,7 +19,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
   (* Define function *)
   | RBList (m, Atom (l, "defn") :: (Atom (_, fname) as name) :: SBList (ma, args) :: body) ->
       let fbody = expand_core_macro2 (RBList (m, Atom (l, "fn") :: SBList (ma, args) :: body)) in
-      let new_body = RBList (unknown_location, [ Atom (l, "def*"); name; fbody ]) in
+      let new_body = RBList (meta_empty, [ Atom (l, "def*"); name; fbody ]) in
       let context = { context with functions = context.functions |> StringMap.add fname (fbody, ref context) } in
       (context, new_body)
   | RBList (m, Atom (l, "defn-") :: Atom (ln, name) :: rest) ->
@@ -27,29 +27,29 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
         (RBList (m, Atom (l, "defn") :: Atom ({ ln with symbol = ":private" }, name) :: rest))
   | RBList (_, [ Atom (_, "__inject_raw_sexp"); x ]) -> with_context x
   | RBList (m2, Atom (m, "if") :: tail) ->
-      let tail = match tail with [ c; t ] -> [ c; t; Atom (unknown_location, "nil") ] | _ -> tail in
+      let tail = match tail with [ c; t ] -> [ c; t; Atom (meta_empty, "nil") ] | _ -> tail in
       RBList (m2, Atom (m, "if*") :: tail) |> expand_core_macro1
   | RBList (m, Atom (l, "case") :: target :: body) ->
       let var = NameGenerator.get_new_var () in
       let rec loop = function
         | cond :: then_ :: body ->
             RBList
-              ( unknown_location,
+              ( meta_empty,
                 [
-                  Atom (unknown_location, "if");
-                  RBList (unknown_location, [ Atom (unknown_location, "="); Atom (unknown_location, var); cond ]);
+                  Atom (meta_empty, "if");
+                  RBList (meta_empty, [ Atom (meta_empty, "="); Atom (meta_empty, var); cond ]);
                   then_;
                   loop body;
                 ] )
         | [ x ] -> x
         | _ -> failnode __LOC__ [ node ]
       in
-      RBList (m, [ Atom (l, "let"); SBList (unknown_location, [ Atom (unknown_location, var); target ]); loop body ])
+      RBList (m, [ Atom (l, "let"); SBList (meta_empty, [ Atom (meta_empty, var); target ]); loop body ])
       |> expand_core_macro1
   | RBList (m, Atom (_, "cond") :: body) ->
       let rec loop = function
         | [ Atom (_, ":else"); then_ ] -> then_
-        | cond :: then_ :: body -> RBList (m, [ Atom (unknown_location, "if"); cond; then_; loop body ])
+        | cond :: then_ :: body -> RBList (m, [ Atom (meta_empty, "if"); cond; then_; loop body ])
         | _ -> failnode __LOC__ [ node ]
       in
       loop body |> expand_core_macro2 |> with_context
@@ -60,10 +60,10 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
         ( m2,
           [
             Atom (m, "let");
-            SBList (unknown_location, [ Atom (m, var); a1 ]);
+            SBList (meta_empty, [ Atom (m, var); a1 ]);
             RBList
-              ( unknown_location,
-                [ Atom (m, "if"); Atom (m, var); RBList (unknown_location, Atom (m, "and") :: args); Atom (m, var) ] );
+              ( meta_empty,
+                [ Atom (m, "if"); Atom (m, var); RBList (meta_empty, Atom (m, "and") :: args); Atom (m, var) ] );
           ] )
       |> expand_core_macro1
   | RBList (_, [ Atom (_, "or"); a1 ]) -> a1 |> expand_core_macro1
@@ -73,23 +73,21 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
         ( m2,
           [
             Atom (m, "let");
-            SBList (unknown_location, [ Atom (m, var); a1 ]);
+            SBList (meta_empty, [ Atom (m, var); a1 ]);
             RBList
-              ( unknown_location,
-                [ Atom (m, "if"); Atom (m, var); Atom (m, var); RBList (unknown_location, Atom (m, "or") :: args) ] );
+              (meta_empty, [ Atom (m, "if"); Atom (m, var); Atom (m, var); RBList (meta_empty, Atom (m, "or") :: args) ]);
           ] )
       |> expand_core_macro1
   | RBList (m, [ Atom (_, "if-let"); SBList (_, bindings); then_; else_ ]) ->
       let rec loop = function
         | Atom (l, name) :: value :: tail ->
+            let name = if name = "_" then NameGenerator.get_new_var () else name in
             RBList
               ( m,
                 [
                   Atom (l, "let");
-                  SBList (unknown_location, [ Atom (unknown_location, name); value ]);
-                  RBList
-                    ( unknown_location,
-                      [ Atom (unknown_location, "if"); Atom (unknown_location, name); loop tail; else_ ] );
+                  SBList (meta_empty, [ Atom (meta_empty, name); value ]);
+                  RBList (meta_empty, [ Atom (meta_empty, "if"); Atom (meta_empty, name); loop tail; else_ ]);
                 ] )
         | [] -> then_
         | _ -> failwith @@ "if-let has wrong signature [" ^ show_cljexp node ^ "] " ^ __LOC__
@@ -128,8 +126,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
       in
       (ctx2, RBList (m2, xs))
   | RBList (m, (Atom (_, "ns") as ns) :: tail) ->
-      RBList
-        (m, [ ns; RBList (unknown_location, [ Atom (unknown_location, "quote*"); RBList (unknown_location, tail) ]) ])
+      RBList (m, [ ns; RBList (meta_empty, [ Atom (meta_empty, "quote*"); RBList (meta_empty, tail) ]) ])
       |> with_context
   | RBList (m, (RBList _ as h) :: args) ->
       RBList (m, expand_core_macro2 h :: List.map expand_core_macro2 args) |> with_context
@@ -141,11 +138,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
     ->
       let mname = ":" ^ String.sub fname 1 (String.length fname - 1) in
       RBList
-        ( m,
-          Atom (l, ".")
-          :: expand_core_macro2 target
-          :: Atom (unknown_location, mname)
-          :: List.map expand_core_macro2 args )
+        (m, Atom (l, ".") :: expand_core_macro2 target :: Atom (meta_empty, mname) :: List.map expand_core_macro2 args)
       |> with_context
   (* Desugar . macro *)
   | RBList (m, Atom (l, ".") :: target :: Atom (lp, prop) :: args) when not (String.starts_with ~prefix:":" prop) ->
@@ -161,22 +154,22 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
       (* |> log_sexp "MACRO RESULT: " *)
       |> expand_core_macro1
   | RBList (m, [ Atom (l, name); x ]) when String.starts_with ~prefix:":" name ->
-      RBList (m, [ Atom (l, "get"); x; Atom (unknown_location, name) ]) |> expand_core_macro2 |> with_context
+      RBList (m, [ Atom (l, "get"); x; Atom (meta_empty, name) ]) |> expand_core_macro2 |> with_context
   (* Desugar Construtors *)
   | RBList (m, Atom (l, name) :: xs) when name <> "." && String.ends_with ~suffix:"." name ->
       let cnt_name = "\"" ^ String.sub name 0 (String.length name - 1) ^ "\"" in
-      RBList (m, Atom (l, "new") :: Atom (unknown_location, cnt_name) :: List.map expand_core_macro2 xs) |> with_context
+      RBList (m, Atom (l, "new") :: Atom (meta_empty, cnt_name) :: List.map expand_core_macro2 xs) |> with_context
   | RBList (m, (Atom (_l, _fname) as x) :: args) ->
       (* prerr_endline @@ "LOG: " ^ _fname; *)
       RBList (m, x :: List.map expand_core_macro2 args) |> with_context
   | SBList (m, xs) -> RBList (m, Atom (m, "vector") :: xs) |> expand_core_macro1
-  | CBList (m, xs) -> RBList (m, Atom (unknown_location, "hash-map") :: xs) |> expand_core_macro1
+  | CBList (m, xs) -> RBList (m, Atom (meta_empty, "hash-map") :: xs) |> expand_core_macro1
   | x -> failnode __LOC__ [ x ]
 
 let parse_and_simplify (prelude_context : context) filename code : context * cljexp =
   if prelude_context.log && filename <> "prelude" then
     print_endline "==| DEBUG |==============================================\n";
-  let sexp = RBList (unknown_location, Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code) in
+  let sexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_sexp code) in
   (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
   (ctx, unwrap_single_do x)
@@ -185,7 +178,7 @@ let desugar log prelude_sexp prelude_ctx filename code =
   let desugar_ (prelude_context : context) filename code : context * sexp =
     if prelude_context.log && filename <> "prelude" then
       print_endline "==| DEBUG |==============================================\n";
-    let sexp = RBList (unknown_location, Atom (unknown_location, "do*") :: Frontend_parser.string_to_sexp code) in
+    let sexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_sexp code) in
     (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
     let ctx, x = desugar_and_register { prelude_context with filename } sexp in
     (ctx, unwrap_single_do x |> Stage_normalize_bracket.invoke)

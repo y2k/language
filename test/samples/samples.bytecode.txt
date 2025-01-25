@@ -26,6 +26,8 @@
 (FIXME)
 (gensym)
 (if true 1)
+(if-let [_ 1] 10 20)
+(if-let [a 1 b 2] 10 20)
 (let [[a] 1] a)
 (let [a 1] a)
 (let [fx nil] (fx 1))

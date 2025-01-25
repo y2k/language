@@ -149,6 +149,8 @@ __POS__
 (if 1 (if 21 22 23) 3)
 (if 1 2 3)
 (if true 1)
+(if-let [_ 1] 10 20)
+(if-let [a 1 b 2] 10 20)
 (if-let [a 1 b a] b nil)
 (let [[a b] :c] a)
 (let [] (fn [] (if false 1 2)))
