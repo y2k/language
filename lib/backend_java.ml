@@ -223,7 +223,7 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
          { empty_context with interpreter = Backend_interpreter.mk_interpret; eval = Backend_interpreter.mk_eval () }
          "prelude"
   in
-  let ctx, node = code |> Frontend.desugar log prelude_sexp { prelude_ctx with base_ns } filename in
+  let ctx, node = code |> Frontend.desugar config_default log prelude_sexp { prelude_ctx with base_ns } filename in
   node |> Stage_java_require.main ctx
   |> try_slog "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke

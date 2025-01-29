@@ -204,7 +204,7 @@ let rec interpret (context : context) (node : sexp) : context * obj =
       match interpret_ c with
       | OBool true -> (context, interpret_ a)
       | OBool false -> (context, interpret_ b)
-      | n -> failwith @@  Functions.debug_obj_to_string n)
+      | n -> failwith @@ Functions.debug_obj_to_string n)
   | SList (_, [ SAtom (_, "def*"); SAtom (_, name); body ]) ->
       let body = interpret context body |> snd in
       let ctx_ref = ref context in
@@ -332,7 +332,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   in
   let prelude_ctx = Stage_normalize_bracket.invoke prelude_sexp |> interpret_with_prelude prelude_ctx |> fst in
   let rec invoke filename code : context * obj =
-    let ctx, node = code |> Frontend.desugar log prelude_sexp prelude_ctx filename in
+    let ctx, node = code |> Frontend.desugar config_default log prelude_sexp prelude_ctx filename in
     node |> Stage_ns_inline.invoke invoke ctx |> fun (ctx, node) ->
     node |> try_slog "Stage_ns_inline                ->" log |> interpret_with_prelude ctx
   in

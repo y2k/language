@@ -7,7 +7,7 @@ let rec compile (node : sexp) : string =
   | SAtom (_, x) -> Printf.sprintf "%s\n" x
   | SList (_, xs) -> xs |> List.map compile |> String.concat "" |> Printf.sprintf "(\n%s)\n"
 
-let main (log : bool) (filename : string) prelude_macros code =
+let main config (log : bool) (filename : string) prelude_macros code =
   let prelude_ctx, prelude_sexp =
     prelude_macros
     |> Frontend.parse_and_simplify
@@ -16,7 +16,7 @@ let main (log : bool) (filename : string) prelude_macros code =
   in
   let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
   let rec invoke filename code : sexp =
-    let ctx, node = code |> Frontend.desugar log prelude_sexp prelude_ctx filename in
+    let ctx, node = code |> Frontend.desugar config log prelude_sexp prelude_ctx filename in
     node
     |> Stage_unwrap_ns.invoke (fun cfg -> invoke cfg.path cfg.code) ctx
     |> try_slog "Stage_unwrap_ns                ->" log

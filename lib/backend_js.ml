@@ -198,7 +198,7 @@ let main (log : bool) (filename : string) prelude_macros code =
          "prelude"
   in
   let prelude_ctx = Stage_add_def_to_scope.invoke prelude_ctx prelude_sexp |> fst in
-  let ctx, node = code |> Frontend.desugar log prelude_sexp prelude_ctx filename in
+  let ctx, node = code |> Frontend.desugar config_default log prelude_sexp prelude_ctx filename in
   node |> Stage_convert_if_to_statment.invoke
   |> try_slog "Stage_normalize_if             ->" log
   |> compile_ ctx |> snd |> String.trim
