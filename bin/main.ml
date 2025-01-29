@@ -16,6 +16,13 @@ let compile_file filename target root_ns =
       in
       filename |> read_code_file |> FileReader.with_scope compiler |> print_endline)
 
+let get_namespace filename : string =
+  let module F = Lib__.Frontend_parser in
+  let code = In_channel.(with_open_bin filename input_all) in
+  match F.string_to_sexp code with
+  | (RBList (_, Atom (_, "ns") :: _) as ns) :: _ -> show_sexp ns
+  | n -> failnode __LOC__ n
+
 let main () =
   let target = ref "" in
   let src = ref "" in
@@ -32,6 +39,7 @@ let main () =
     ]
     (( := ) command) "clj2js";
   match !command with
+  | "get_namespace" -> print_endline @@ get_namespace !src
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns
   | n -> failwith ("Invalid command " ^ n ^ " (" ^ Sys.getcwd () ^ ")")
