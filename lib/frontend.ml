@@ -174,7 +174,9 @@ let parse_and_simplify (prelude_context : context) filename code : context * clj
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
   (ctx, unwrap_single_do x)
 
-let desugar log prelude_sexp prelude_ctx filename code =
+let invoke_linter no_lint ctx prelude_sexp = if no_lint then Fun.id else Stage_linter.invoke ctx prelude_sexp
+
+let desugar (config : config) log prelude_sexp prelude_ctx filename code =
   let desugar_ (prelude_context : context) filename code : context * sexp =
     if prelude_context.log && filename <> "prelude" then
       print_endline "==| DEBUG |==============================================\n";
@@ -189,6 +191,6 @@ let desugar log prelude_sexp prelude_ctx filename code =
     |> try_slog "Parse_and_simplify             ->" log
     |> Stage_simplify_let.invoke
     |> try_slog "Stage_simplify_let             ->" log
-    |> Stage_linter.invoke ctx prelude_sexp
+    |> invoke_linter config.no_lint ctx prelude_sexp
   in
   (ctx, node)

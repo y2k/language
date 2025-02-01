@@ -672,6 +672,9 @@ p__2 = 20;
 };
 p__2
 =============================
+Integer.parseInt(
+1)
+=============================
 y2k.RT.into_array(
 java.util.Arrays.asList(
 1,

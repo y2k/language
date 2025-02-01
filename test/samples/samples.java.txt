@@ -110,6 +110,7 @@
 (if true 1)
 (if-let [_ 1] 10 20)
 (if-let [a 1 b 2] 10 20)
+(Integer/parseInt 1)
 (into-array [1 2 3])
 (is 1 String)
 (let [[_ _ a _] [1 2 3 4]] a)

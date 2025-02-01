@@ -3,24 +3,34 @@ module Clj2js = Lib
 
 let read_code_file filename = if filename = "prelude" then "" else In_channel.(with_open_bin filename input_all)
 
-let compile_file filename target root_ns =
+let compile_file filename target root_ns no_lint virtual_src =
   prerr_endline @@ "Compile: [" ^ Sys.getcwd () ^ "] " ^ target ^ " | " ^ filename;
   NameGenerator.with_scope (fun _ ->
       let compiler =
         match target with
         | "js" -> Clj2js.main_js_with_strict false filename
         | "java" -> Clj2js.main_java root_ns false filename
-        | "bytecode" -> Clj2js.main_bytecode false filename
+        | "bytecode" ->
+            Clj2js.main_bytecode { no_lint; virtual_src } false (if virtual_src <> "" then virtual_src else filename)
         | "repl" -> Clj2js.main_interpreter false filename
         | t -> failwith @@ "Invalid target " ^ t
       in
       filename |> read_code_file |> FileReader.with_scope compiler |> print_endline)
+
+let get_namespace filename : string =
+  let module F = Lib__.Frontend_parser in
+  let code = In_channel.(with_open_bin filename input_all) in
+  match F.string_to_sexp code with
+  | (RBList (_, Atom (_, "ns") :: _) as ns) :: _ -> show_sexp ns
+  | n -> failnode __LOC__ n
 
 let main () =
   let target = ref "" in
   let src = ref "" in
   let command = ref "" in
   let root_ns = ref "" in
+  let no_lint = ref false in
+  let virtual_src = ref "" in
   Arg.parse
     [
       ("-target", Arg.Set_string target, "Target: js, java, repl, bytecode");
@@ -29,11 +39,14 @@ let main () =
       ("-lang", Arg.String ignore, "Deprecated");
       ("-lib", Arg.String ignore, "Deprecated");
       ("-path", Arg.String ignore, "Deprecated");
+      ("-no_lint", Arg.Bool (( := ) no_lint), "Disable linting");
+      ("-virtual_src", Arg.Set_string virtual_src, "Virtual source");
     ]
     (( := ) command) "clj2js";
   match !command with
+  | "get_namespace" -> print_endline @@ get_namespace !src
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
-  | "compile" -> compile_file !src !target !root_ns
+  | "compile" -> compile_file !src !target !root_ns !no_lint !virtual_src
   | n -> failwith ("Invalid command " ^ n ^ " (" ^ Sys.getcwd () ^ ")")
 
 let () = main ()
