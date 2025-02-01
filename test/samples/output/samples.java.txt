@@ -18,9 +18,9 @@ String.join("", java.util.Arrays.asList(
 2,
 3))
 =============================
-m.foo().run()
+String.foo().run()
 =============================
-((Runnable)m.foo()).run()
+((Runnable)String.foo()).run()
 =============================
 ("a"*"b")
 =============================
@@ -206,7 +206,7 @@ public static Object a=ClassLoader.getSystemClassLoader();
 =============================
 public static Object a=null;
 =============================
-public static Object f=m.g(
+public static Object f=String.g(
 1);
 =============================
 public static Object foo=new java.util.concurrent.atomic.AtomicReference(y2k.RT.hash_map());
@@ -494,7 +494,7 @@ return a;
 }
 =============================
 private static Object foo (final Object context) {
-return ((String)context.getSySe(Ctx.AU_SE));
+return ((String)context.getSySe(String.AU_SE));
 }
 =============================
 y2k.RT.str(

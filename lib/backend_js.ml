@@ -61,7 +61,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       xs |> List.map compile
       |> List.reduce_opt (Printf.sprintf "%s, %s")
       |> Option.value ~default:"" |> Printf.sprintf "[%s]" |> with_context
-  (* *)
+  (* Namespace *)
   | SList (_, [ SAtom (_, "ns"); SList (_, [ SAtom (_, "quote*"); SList (_, _ :: depencencies) ]) ]) ->
       depencencies
       |> List.map (function
@@ -78,6 +78,15 @@ let rec compile_ (context : context) (node : sexp) : context * string =
                           else Printf.sprintf "./%s.js" package
                         in
                         Printf.sprintf "import * as %s from '%s';" alias target
+                    | SList (_, [ SAtom (_, file); SAtom (_, ":refer"); SList (_, classes) ]) ->
+                        let file =
+                          if String.starts_with ~prefix:"js." file then String.sub file 3 (String.length file - 3)
+                          else file
+                        in
+                        let str_classes =
+                          List.map (function SAtom (_, x) -> x | _ -> failwith __LOC__) classes |> String.concat ", "
+                        in
+                        Printf.sprintf "import { %s } from '%s';" str_classes file
                     | _ -> failsexp __LOC__ requiries)
                |> List.reduce __LOC__ (Printf.sprintf "%s\n%s")
            | x -> failsexp __LOC__ [ x ])

@@ -75,6 +75,12 @@ let invoke (code_ctx : context) prelude_node (node : sexp) : sexp =
           |> List.concat_map (function
                | SList (_, SAtom (_, ":import") :: body) ->
                    body |> List.concat_map (function SList (_, _ :: classes) -> classes | n -> failsexp __LOC__ [ n ])
+               | SList (_, SAtom (_, ":require") :: body) ->
+                   body
+                   |> List.concat_map (function
+                        | SList (_, [ _; SAtom (_, ":as"); name ]) -> [ name ]
+                        | SList (_, [ _; SAtom (_, ":refer"); SList (_, xs) ]) -> xs
+                        | n -> failsexp __LOC__ [ n ])
                | _ -> [])
           |> List.fold_left
                (fun scope cls ->
@@ -88,12 +94,18 @@ let invoke (code_ctx : context) prelude_node (node : sexp) : sexp =
     (* Constants *)
     | SAtom (_, ".") -> (ctx, node)
     | SAtom (_, "nil") -> (ctx, node)
-    | SAtom (_, name) when String.contains name '/' -> (ctx, node)
     | SAtom (_, name) when String.get name 0 = ':' -> (ctx, node)
     | SAtom (_, name) when String.get name 0 = '\"' -> (ctx, node)
     | SAtom (_, name) when (String.get name 0 >= '0' && String.get name 0 <= '9') || String.get name 0 = '-' ->
         (ctx, node)
     (* Variables *)
+    | SAtom (_, name) when String.contains name '/' && name <> "/" ->
+        let ns_name = name |> String.split_on_char '/' |> List.hd in
+        if (not (String.contains ns_name '.')) && not (ctx.scope |> StringMap.mem ns_name) then (
+          prerr_endline @@ debug_show_linter_context ctx;
+          prerr_endline @@ "Not found: " ^ ns_name ^ " in " ^ code_ctx.filename;
+          failwith __LOC__ |> ignore);
+        (ctx, node)
     | SAtom (m, full_name) as n ->
         let name = get_var_name full_name in
         if ctx.scope |> StringMap.mem name |> not then (

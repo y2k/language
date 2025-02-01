@@ -165,6 +165,7 @@ __POS__
 (not (+ 1 2))
 (not 1)
 (not= 1 2)
+(ns _ (:require [js.node:buffer :refer [Buffer]]))
 (ns html)
 (ns resources (:require [main.shared :as app]))
 (or (.foo document) (.bar document))

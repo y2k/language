@@ -23,6 +23,7 @@
 ;; Declarations Java
 
 (def boolean 0)
+(def ClassLoader 0)
 (def Exception 0)
 (def int 0)
 (def Object 0)
