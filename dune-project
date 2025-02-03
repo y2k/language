@@ -19,6 +19,8 @@
   ppx_deriving
   yojson
   ppx_deriving_yojson
-  (alcotest :with-test))
+  (alcotest :with-test)
+  tiny_httpd
+  bencode)
  (tags
   (topics "to describe" your project)))
