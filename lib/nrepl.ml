@@ -14,26 +14,24 @@ open Unix
   Printf.printf "listening on http://%s:%d\n%!" (S.addr server) (S.port server);
   match S.run server with Ok () -> () | Error e -> raise e *)
 
-(* d11:new-session36:db639f15-5253-4884-bb2c-cf709679270b7:session36:8be2f58f-642a-4e2a-8c62-cb93328eb5b46:statusl4:doneee *)
-
 let handle_client (ic, oc) =
-  let buffer = Bytes.create 1024 in
+  (* let buffer = Bytes.create 1024 in *)
   try
-    while true do
-      (* let line = input_byte ic in *)
-      (* let line = input_line ic in *)
-      let n = input ic buffer 0 (Bytes.length buffer) in
-      let line = Bytes.sub_string buffer 0 n in
-      (* print_endline line; *)
-      let result = B.decode (`String line) in
-      (* *)
-      print_endline @@ "RESULT: " ^ (B.dict_get result "op" |> Option.get |> B.as_string |> Option.get);
-      Printf.printf "Client: %s\n%!" line;
-      flush_all ();
-      (* output_string oc (line ^ "\n"); *)
-      output_string oc ({|{:id "1", :new-session "abcd1234", :status ["done"]}|} ^ "\n");
-      flush oc
-    done
+    let result = B.decode (`Channel ic) in
+    print_endline @@ "DECODED: " ^ B.pretty_print result;
+    let session = "3cea014e-78e1-473e-b486-8f3cab55432a" in
+    (match Option.bind (B.dict_get result "op") B.as_string with
+    | Some "clone" ->
+        B.encode (`Channel oc)
+          (B.Dict [ ("id", B.String "1"); ("new-session", B.String session); ("status", B.List [ B.String "done" ]) ])
+    | Some "load-file" ->
+        B.encode (`Channel oc)
+          (B.Dict [ ("session", B.String session); ("value", B.String "2"); ("status", B.List [ B.String "done" ]) ])
+    | Some "close" ->
+        B.encode (`Channel oc) (B.Dict [ ("session", B.String session); ("status", B.List [ B.String "done" ]) ])
+    | Some x -> failwith @@ __LOC__ ^ " Unknown command: " ^ x |> ignore
+    | None -> failwith "No op found" |> ignore);
+    flush oc
   with End_of_file -> print_endline "Client disconnected"
 
 let start_server port =
