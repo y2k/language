@@ -21,8 +21,8 @@ module ProxyServer = struct
         Unix.sleepf 0.5;
         read_code context
 
-  let start_proxy_server (context : Context.t) =
-    let server = S.create () in
+  let start_proxy_server (context : Context.t) port =
+    let server = S.create () ~port in
     S.add_route_handler ~meth:`POST server
       S.Route.(exact_path "write" return)
       (fun req ->
@@ -40,13 +40,6 @@ module ProxyServer = struct
     match S.run server with Ok () -> () | Error e -> raise e
 end
 
-(*
-{ "file": "(ns user) (+ 1 1)",
-  "file-path": "/Users/igor/Projects/language/lib/nrepl.ml",
-  "op": "load-file",
-  "session": "db639f15-5253-4884-bb2c-cf709679270b7" }
-*)
-
 module NreplServer = struct
   module B = Bencode
 
@@ -59,6 +52,10 @@ module NreplServer = struct
       | Some "clone" ->
           B.encode (`Channel oc)
             (B.Dict [ ("id", B.String "1"); ("new-session", B.String session); ("status", B.List [ B.String "done" ]) ])
+      (* { "file": "(ns user) (+ 1 1)",
+           "file-path": "/Users/igor/Projects/language/lib/nrepl.ml",
+           "op": "load-file",
+           "session": "db639f15-5253-4884-bb2c-cf709679270b7" } *)
       | Some "load-file" ->
           let code = B.dict_get result "file" |> Fun.flip Option.bind B.as_string |> Option.get in
           Context.update_state context (fun state -> { state with raw_code = Some code });
@@ -112,7 +109,7 @@ end
 let start () =
   let context = Context.empty () in
   [
-    Domain.spawn (fun _ -> ProxyServer.start_proxy_server context);
+    Domain.spawn (fun _ -> ProxyServer.start_proxy_server context 8080);
     Domain.spawn (fun _ -> NreplServer.start_nrepl_server context 8081);
     Domain.spawn (fun _ -> Compiler.start_compaling context);
   ]
