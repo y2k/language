@@ -8,4 +8,3 @@ let main_java (base_ns : string) log (filename : string) code =
 
 let main_bytecode config log (filename : string) code = Backend_bytecode.main config log filename Preludes.bytecode code
 let main_interpreter log (filename : string) code = Backend_interpreter.main log filename Preludes.interpreter code
-let nrepl = Nrepl.start

@@ -1,0 +1,5 @@
+(library
+ (name nrepl)
+ (libraries lib yojson ppx_deriving_yojson.runtime unix tiny_httpd bencode)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving_yojson)))

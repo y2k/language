@@ -1,3 +1,5 @@
+open Lib__
+
 type msg = ..
 
 module EventBus = struct

@@ -44,7 +44,7 @@ let main () =
     ]
     (( := ) command) "clj2js";
   match !command with
-  | "nrepl" -> Clj2js.nrepl ()
+  | "nrepl" -> Nrepl.start ()
   | "get_namespace" -> print_endline @@ get_namespace !src
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns !no_lint !virtual_src
