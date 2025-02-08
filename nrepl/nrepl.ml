@@ -1,10 +1,6 @@
-type code_compiled = { value : string } [@@deriving yojson]
-type result_received = { result : string } [@@deriving yojson]
-
-let code_compiled_signal = Signal.make "code_compiled" code_compiled_to_yojson
-let result_received_signal = Signal.make "result_received" result_received_to_yojson
-
-type _ Effect.t += Update : 'a Signal.t * 'a -> unit Effect.t
+type code_compiled = Code_compiled of { value : string } [@@deriving yojson]
+type result_received = Result_received of { result : string } [@@deriving yojson]
+type _ Effect.t += Update : Yojson.Safe.t -> unit Effect.t
 
 module ProxyServer = struct
   module S = Tiny_httpd
@@ -14,23 +10,21 @@ module ProxyServer = struct
     S.add_route_handler ~meth:`GET server
       S.Route.(exact_path "read" return)
       (fun _ ->
-        Signal.get code_compiled_signal ~timeout:300.0
-        |> Option.map (fun x -> x.value)
+        Signal.get code_compiled_of_yojson ~timeout:300.0
+        |> Option.map (fun (Code_compiled x) -> x.value)
         |> Option.to_result ~none:(503, "Timeout exceeded")
         |> S.Response.make_string);
     S.add_route_handler ~meth:`POST server
       S.Route.(exact_path "write" return)
       (fun req ->
         let result = req.S.Request.body in
-        Effect.perform (Update (result_received_signal, { result }));
+        Effect.perform (Update (Result_received { result } |> result_received_to_yojson));
         S.Response.make_string (Ok "OK"));
     Printf.printf "PROXY listening on http://%s:%d\n%!" (S.addr server) (S.port server);
     match S.run server with Ok () -> () | Error e -> raise e
 end
 
-type new_code_received = { code : string } [@@deriving yojson]
-
-let new_code_received_signal = Signal.make "new_code_received" new_code_received_to_yojson
+type new_code_received = New_code_received of { code : string } [@@deriving yojson]
 
 module NreplServer = struct
   module B = Bencode
@@ -44,10 +38,10 @@ module NreplServer = struct
           (B.Dict [ ("id", B.String "1"); ("new-session", B.String session); ("status", B.List [ B.String "done" ]) ])
     | Some "load-file" ->
         let code = B.dict_get result "file" |> Fun.flip Option.bind B.as_string |> Option.get in
-        Effect.perform (Update (new_code_received_signal, { code }));
+        Effect.perform (Update (New_code_received { code } |> new_code_received_to_yojson));
         let result =
-          Signal.get result_received_signal ~timeout:2.0
-          |> Option.map (fun x -> x.result)
+          Signal.get result_received_of_yojson ~timeout:2.0
+          |> Option.map (fun (Result_received x) -> x.result)
           |> Option.value ~default:"<TIMEOUT_ERROR>"
         in
         B.encode (`Channel oc)
@@ -84,11 +78,13 @@ module Compiler = struct
   let compile = Backend_bytecode.main { no_lint = true; virtual_src = "" } false "user.clj" Preludes.bytecode
 
   let rec start () =
-    let codes = Signal.get new_code_received_signal ~timeout:30.0 |> Option.map (fun x -> x.code) in
+    let codes =
+      Signal.get new_code_received_of_yojson ~timeout:30.0 |> Option.map (fun (New_code_received x) -> x.code)
+    in
     match codes with
     | Some code ->
         let compiled_code = compile code in
-        Effect.perform (Update (code_compiled_signal, { value = compiled_code }))
+        Effect.perform (Update (Code_compiled { value = compiled_code } |> code_compiled_to_yojson))
     | None -> start ()
 end
 
@@ -102,12 +98,11 @@ module Logger = struct
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
-            | Update (signal, value) ->
+            | Update value ->
                 Some
                   (fun (k : (a, _) continuation) ->
-                    `Assoc [ ("id", `String signal.id); ("value", signal.to_json value) ]
-                    |> Yojson.Safe.pretty_to_string |> print_endline;
-                    continue k (Signal.update signal value))
+                    value |> Yojson.Safe.pretty_to_string |> print_endline;
+                    continue k (Signal.dispatch value))
             | _ -> None);
       }
 end
