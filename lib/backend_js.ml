@@ -3,7 +3,6 @@ open Common
 
 let unpack_string x = String.sub x 1 (String.length x - 2)
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
-let unwrap_do = function SList (_, SAtom (_, "do*") :: xs) -> xs | x -> [ x ]
 
 let rec compile_ (context : context) (node : sexp) : context * string =
   (* log_sexp "js: " node |> ignore; *)
@@ -124,9 +123,8 @@ let rec compile_ (context : context) (node : sexp) : context * string =
        Printf.sprintf "(function() { try { %s } catch (%s) { %s } })()" try_body e_name catch_body)
       |> with_context
   (* Functions *)
-  | SList (_, [ SAtom (l, "def*"); SAtom (mn, fname); SList (m2, SAtom (_, "fn*") :: SList (m3, args) :: body) ]) ->
+  | SList (_, [ SAtom (_, "def*"); SAtom (mn, fname); (SList (_, SAtom (_, "fn*") :: _) as fn) ]) ->
       let modifier = match mn.symbol with ":private" -> "" | _ -> "export " in
-      let fn = SList (m2, SAtom (l, "fn*") :: SList (m3, args) :: body) in
       Printf.sprintf "%sconst %s = %s;" modifier fname (compile fn) |> with_context
   (* Constants *)
   | SList (_, [ SAtom (dm, "def*"); SAtom (sm, name); body ]) ->
@@ -153,7 +151,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
         (body |> List.map compile |> List.reduce __LOC__ (Printf.sprintf "%s;%s"))
       |> with_context
   (* Lambda *)
-  | SList (_, SAtom (_, "fn*") :: SList (_, args) :: body) ->
+  | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
       let rec loop_args = function
         | SAtom (_, "&") :: SAtom (_, x) :: _ -> Printf.sprintf "...%s" x
         | SAtom (_, x) :: [] -> x
@@ -163,11 +161,13 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       in
       let sargs = loop_args args in
       let sbody =
-        let body = body |> List.concat_map unwrap_do in
-        body |> List.map compile |> List.rev
-        |> List.mapi (fun i x -> if i = 0 then "return " ^ x else x)
-        |> List.rev
-        |> List.reduce __LOC__ (Printf.sprintf "%s;\n%s")
+        let body_rev = unwrap_sexp_do body |> List.rev in
+        let last_body = body_rev |> List.hd |> compile |> Printf.sprintf "return %s" in
+        match List.tl body_rev |> List.rev with
+        | [] -> last_body
+        | xs ->
+            let body = SList (meta_empty, SAtom (meta_empty, "do*") :: xs) |> compile in
+            Printf.sprintf "%s;\n%s" body last_body
       in
       Printf.sprintf "((%s) => {\n%s })" sargs sbody |> with_context
   (* Interop field *)

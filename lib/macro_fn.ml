@@ -97,13 +97,16 @@ let invoke desugar_and_register expand_core_macro2 context (node : cljexp) =
                   RBList (unknown_location, [ Atom (unknown_location, "let*"); SBList (unknown_location, let_args) ]);
                 ] )
       in
-      let expand_body _ _ body = List.map (fun x -> desugar_and_register context x |> snd) body in
+      let expand_body body =
+        let body = List.map (fun x -> desugar_and_register context x |> snd) body in
+        let body = match body with [ x ] -> [ x ] | xs -> [ RBList (meta_empty, Atom (meta_empty, "do*") :: xs) ] in
+        body
+      in
       let fn =
         match result with
-        | RBList (m, [ fa; SBList (m2, args) ]) -> RBList (m, fa :: SBList (m2, args) :: expand_body args [] body)
+        | RBList (m, [ fa; SBList (m2, args) ]) -> RBList (m, fa :: SBList (m2, args) :: expand_body body)
         | RBList (m, [ fa; SBList (m2, args); RBList (m3, [ (Atom (_, "let*") as l); SBList (m4, let_args) ]) ]) ->
-            RBList
-              (m, [ fa; SBList (m2, args); RBList (m3, l :: SBList (m4, let_args) :: expand_body args let_args body) ])
+            RBList (m, [ fa; SBList (m2, args); RBList (m3, l :: SBList (m4, let_args) :: expand_body body) ])
         | n -> failnode __LOC__ [ n ]
       in
       (context, fn)

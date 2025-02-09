@@ -41,7 +41,7 @@ alert("foo\"bar")
 alert(fetch(eval()))
 =============================
 alert(((a, b, c) => {
-let p__1;;
+let p__1;
 if (a) {
 p__1 = b;
 } else {
@@ -441,8 +441,8 @@ export const f = ((p__1, x, p__2) => {
 return x });
 =============================
 export const f = ((p__1) => {
-const a = p__1["a"];;
-const c = p__1;;
+const a = p__1["a"];
+const c = p__1;
 const b = p__1["b"];;
 return c });
 =============================
@@ -556,9 +556,9 @@ fetch({["a"]: p__1})
 (function(){throw new Error(("" + "FIXME app/main.clj:1:1 - "))})()
 =============================
 ((p__1) => {
-const p__2 = p__1[0];;
-const a = p__2["b"];;
-const c = p__2["d"];;
+const p__2 = p__1[0];
+const a = p__2["b"];
+const c = p__2["d"];
 const e = p__1[1];;
 return (a + c + e) })
 =============================
@@ -566,17 +566,17 @@ return (a + c + e) })
 return 2 })
 =============================
 ((p__1, e) => {
-const a = p__1["b"];;
+const a = p__1["b"];
 const c = p__1["d"];;
 return (a + c + e) })
 =============================
 ((p__1) => {
-const a = p__1["url"];;
+const a = p__1["url"];
 const b = p__1["props"];;
 return [a, b] })
 =============================
 ((a, p__1, d) => {
-const b = p__1[0];;
+const b = p__1[0];
 const c = p__1[1];;
 return a(b, c, d) })
 =============================
@@ -585,7 +585,7 @@ const b = p__1["b"];;
 return a(b, c) })
 =============================
 ((a, b, c) => {
-let p__1;;
+let p__1;
 if (a) {
 p__1 = b;
 } else {
@@ -827,7 +827,7 @@ const b = p__1[1];
 a
 =============================
 (() => {
-let p__1;;
+let p__1;
 if (false) {
 p__1 = 1;
 } else {
