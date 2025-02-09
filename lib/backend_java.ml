@@ -31,9 +31,6 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SList (_, [ SAtom (_, "bind-update*"); SAtom (_, name); value ]) ->
       let js_code = Printf.sprintf "%s = %s;" name (compile value) in
       with_context js_code
-  (* | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
-      let js_code = Printf.sprintf "%s = %s;" name (compile value) in
-      with_context js_code *)
   | SList (_, [ SAtom (_, "set!"); name; value ]) ->
       let js_code = Printf.sprintf "%s = %s;" (compile name) (compile value) in
       with_context js_code
@@ -98,14 +95,14 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       in
       with_context js_body
   (* Lambda *)
-  | SList (m, SAtom (_, "fn*") :: SList (_, args) :: body) ->
+  | SList (m, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
       let sargs =
         args
         |> List.map (function SAtom (_, aname) -> Printf.sprintf "%s" aname | x -> failsexp __LOC__ [ x ])
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
-      let body = body |> List.concat_map unwrap_sexp_do in
+      let body = body |> unwrap_sexp_do in
       let sbody =
         let body = body |> List.concat_map unwrap_sexp_do in
         let length = List.length body in
@@ -128,7 +125,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       let args = args |> List.map compile |> List.reduce_opt (Printf.sprintf "%s,%s") |> Option.value ~default:"" in
       Printf.sprintf "new %s(%s)" cnst_name args |> with_context
   (* Functions *)
-  | SList (_, [ SAtom (_, "def*"); SAtom (fname_meta, fname); SList (_, SAtom (_, "fn*") :: SList (_, args) :: body) ])
+  | SList (_, [ SAtom (_, "def*"); SAtom (fname_meta, fname); SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ])
     ->
       let context_ref = ref context in
       let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
@@ -142,7 +139,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
         |> List.reduce_opt (Printf.sprintf "%s,%s")
         |> Option.value ~default:""
       in
-      let body = body |> List.concat_map unwrap_sexp_do in
+      let body = body |> unwrap_sexp_do in
       let sbody =
         let length = List.length body in
         body
