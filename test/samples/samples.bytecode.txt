@@ -6,6 +6,7 @@
 (def a 1) a
 (def a)
 (defn f [_ x _] x)
+(defn f [{a :a :as c b :b}] c)
 (defn f [a] (a 1))
 (defn foo [{a :b}] a)
 (defn foo [a b] (+ a b))

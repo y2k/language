@@ -9,7 +9,9 @@ let _assert_bytecode = Utils.assert_ (Lib.main_bytecode config_default true)
 let () =
   Alcotest.run "Tests"
     [
-      ("Local", []);
+      ("Local", [
+        (* _assert_js __POS__ {|(defn f [{a :a :as c b :b}] c)|} "" *)
+      ]);
       ("Repl", U.make_samples_test (Lib.main_interpreter true) "samples.repl");
       ("Bytecode", U.make_samples_test (Lib.main_bytecode config_default true) "samples.bytecode");
       ("JS", U.make_samples_test (Lib.main_js true) "samples.js");

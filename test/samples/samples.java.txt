@@ -62,6 +62,7 @@
 (defn c [] 3) (defn d [] 4)
 (defn f [_ x _] x)
 (defn f [] (println "a"))
+(defn f [{a :a :as c b :b}] c)
 (defn f [a] (as a "String[]"))
 (defn f [a] (as a String))
 (defn foo [[a b]] (a b))

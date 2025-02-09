@@ -88,6 +88,7 @@ __POS__
 (defn b [x] x) (defn fetch [r e c] (-> 0 b))
 (defn bar [y] y.b)
 (defn f [_ x _] x)
+(defn f [{a :a :as c b :b}] c)
 (defn f [fx] (fx 2))
 (defn f [x y] y)(f 1 2)
 (defn f [x] x?.foo?.bar)

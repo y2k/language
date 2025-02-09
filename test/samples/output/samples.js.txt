@@ -440,6 +440,12 @@ return y.b });
 export const f = ((p__1, x, p__2) => {
 return x });
 =============================
+export const f = ((p__1) => {
+const a = p__1["a"];;
+const c = p__1;;
+const b = p__1["b"];;
+return c });
+=============================
 export const f = ((fx) => {
 return fx(2) });
 =============================

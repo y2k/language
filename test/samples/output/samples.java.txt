@@ -307,6 +307,17 @@ return y2k.RT.println(
 "a");
 }
 =============================
+public static Object f (final Object p__1) {
+var a = y2k.RT.get(
+p__1,
+"a");;
+var c = p__1;;
+var b = y2k.RT.get(
+p__1,
+"b");;
+return c;
+}
+=============================
 public static Object f (final Object a) {
 return ((String[])a);
 }

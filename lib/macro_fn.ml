@@ -67,6 +67,7 @@ let desugar_fn_arguments expand_core_macro2 args =
     | (CBList (m, xs), (Atom _ as v)) :: t ->
         let rec loop2 = function
           | [] -> []
+          | Atom (_, ":as") :: lv :: t -> (lv, v) :: loop2 t
           | av :: Atom (_, k) :: t ->
               (av, expand_core_macro2 (RBList (m, [ Atom (unknown_location, "get"); v; Atom (unknown_location, k) ])))
               :: loop2 t
