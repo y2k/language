@@ -577,6 +577,7 @@ let java = {|
 (def Integer 0)
 (def Object 0)
 (def String 0)
+(def Thread 0)
 
 (defmacro FIXME [& args]
   (list 'throw
