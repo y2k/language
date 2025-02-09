@@ -54,7 +54,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   (* Vector *)
   | SList (m, SAtom (_, "vector") :: xs) ->
       compile (SList (m, SAtom (unknown_location, "java.util.Arrays/asList") :: xs)) |> with_context
-  (* Namespaces *)
+  (* Root class name *)
   | SList (_, SAtom (_, "do*") :: (SList (_, SAtom (_, "ns") :: _) as ns) :: body) ->
       let name_start_pos = (String.rindex_opt context.filename '/' |> Option.value ~default:(-1)) + 1 in
       let filename = String.sub context.filename name_start_pos (String.length context.filename - name_start_pos) in
@@ -68,6 +68,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       |> Option.value ~default:""
       |> Printf.sprintf "%s\n/** @noinspection ALL*/\npublic class %s{\n%s}" ns_ cls_name
       |> with_context
+  (* Namespace *)
   | SList (_, [ SAtom (_, "ns"); SList (_, [ SAtom (_, "quote*"); SList (_, SAtom _ :: ns_params) ]) ]) ->
       let imports =
         ns_params
@@ -141,24 +142,12 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       in
       let body = body |> unwrap_sexp_do in
       let sbody =
-        let length = List.length body in
-        body
-        |> List.filteri (fun i _ -> i < length - 1)
-        |> List.fold_left_map compile_ context |> snd
-        |> List.reduce_opt (Printf.sprintf "%s;\n%s")
-        |> Option.map (Printf.sprintf "%s;\n")
-        |> Option.value ~default:""
-
-        (* let body_rev = unwrap_sexp_do body |> List.rev in
-        let last_body = body_rev |> List.hd |> compile |> Printf.sprintf "return %s" in
-        match List.tl body_rev |> List.rev with
-        | [] -> last_body
-        | xs ->
-            let body = SList (meta_empty, SAtom (meta_empty, "do*") :: xs) |> compile in
-            Printf.sprintf "%s;\n%s" body last_body *)
+        match body |> List.rev |> List.tl |> List.rev with
+        | [] -> ""
+        | xs -> SList (meta_empty, SAtom (meta_empty, "do*") :: xs) |> compile_ context |> snd |> Printf.sprintf "%s;\n"
       in
-      let return_ = match fname_meta.symbol with "void" -> "" | _ -> "return " in
       let last_exp = body |> List.rev |> List.hd |> compile_ context |> snd in
+      let return_ = match fname_meta.symbol with "void" -> "" | _ -> "return " in
       let code =
         Printf.sprintf "%s static %s %s (%s) {\n%s%s%s;\n}\n" modifier (get_type fname_meta) fname sargs sbody return_
           last_exp
