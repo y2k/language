@@ -4,24 +4,19 @@ type _ Effect.t += Update : Yojson.Safe.t -> unit Effect.t
 
 module ProxyServer = struct
   module S = Tiny_httpd
+  open Unix
 
-  let start port =
-    let server = S.create () ~port in
-    S.add_route_handler ~meth:`GET server
-      S.Route.(exact_path "read" return)
-      (fun _ ->
-        Signal.get code_compiled_of_yojson ~timeout:300.0
-        |> Option.map (fun (Code_compiled x) -> x.value)
-        |> Option.to_result ~none:(503, "Timeout exceeded")
-        |> S.Response.make_string);
-    S.add_route_handler ~meth:`POST server
-      S.Route.(exact_path "write" return)
-      (fun req ->
-        let result = req.S.Request.body in
-        Effect.perform (Update (Result_received { result } |> result_received_to_yojson));
-        S.Response.make_string (Ok "OK"));
-    Printf.printf "PROXY listening on http://%s:%d\n%!" (S.addr server) (S.port server);
-    match S.run server with Ok () -> () | Error e -> raise e
+  let rec start host port =
+    let sock = socket PF_INET SOCK_STREAM 0 in
+    let server_addr = ADDR_INET (inet_addr_of_string host, port) in
+    connect sock server_addr;
+    (match Signal.get code_compiled_of_yojson ~timeout:300.0 with
+    | None -> ()
+    | Some (Code_compiled msg) ->
+        let msg = msg.value in
+        ignore (write sock (Bytes.of_string msg) 0 (String.length msg)));
+    close sock;
+    start host port
 end
 
 type new_code_received = New_code_received of { code : string } [@@deriving yojson]
@@ -110,7 +105,7 @@ end
 let start () =
   [
     Domain.spawn (fun _ -> Logger.decorate NreplServer.start 8080);
-    Domain.spawn (fun _ -> Logger.decorate ProxyServer.start 8081);
+    Domain.spawn (fun _ -> Logger.decorate ProxyServer.start "localhost" 8080);
     Domain.spawn (fun _ -> Logger.decorate Compiler.start ());
   ]
   |> List.iter Domain.join
