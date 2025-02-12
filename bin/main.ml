@@ -31,6 +31,7 @@ let main () =
   let root_ns = ref "" in
   let no_lint = ref false in
   let virtual_src = ref "" in
+  let client_host = ref "" in
   Arg.parse
     [
       ("-target", Arg.Set_string target, "Target: js, java, repl, bytecode");
@@ -41,10 +42,11 @@ let main () =
       ("-path", Arg.String ignore, "Deprecated");
       ("-no_lint", Arg.Bool (( := ) no_lint), "Disable linting");
       ("-virtual_src", Arg.Set_string virtual_src, "Virtual source");
+      ("-host", Arg.Set_string client_host, "Client host");
     ]
     (( := ) command) "clj2js";
   match !command with
-  | "nrepl" -> Nrepl.start ()
+  | "nrepl" -> Nrepl.start !client_host
   | "get_namespace" -> print_endline @@ get_namespace !src
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns !no_lint !virtual_src
