@@ -76,13 +76,14 @@ let rec invoke (ctx : inner_context) (node : sexp) : inner_context * sexp =
       (ctx, SList (m, [ if_; cond; then_; else_ ]))
   (* Catch unhandled special forms *)
   | SList (_, SAtom (_, name) :: _) when name <> "*" && String.ends_with ~suffix:"*" name -> failsexp __LOC__ [ node ]
+  (* Function call *)
   | SList (mr, SAtom (m, name) :: args) ->
       let name = fix_name ctx name in
       let ctx, args = List.fold_left_map invoke ctx args in
       (ctx, SList (mr, SAtom (m, name) :: args))
-  | n ->
-      print_endline @@ show_inner_context ctx;
-      failsexp __LOC__ [ n ]
+  | SList (mr, args) ->
+      let ctx, args = List.fold_left_map invoke ctx args in
+      (ctx, SList (mr, args))
 
 let main (context : context) (node : sexp) : sexp =
   let _, node = invoke { requires = StringMap.empty; context } node in

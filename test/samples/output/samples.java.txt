@@ -251,6 +251,15 @@ return 1;
 }
 ;
 public static Object b () {
+return y2k.RT.invoke(a(), 
+1);
+}
+=============================
+public static Object a () {
+return 1;
+}
+;
+public static Object b () {
 return 2;
 }
 =============================
@@ -799,6 +808,16 @@ import b.Ctx;
 public class main{
 public static Object a=y2k.RT.str(
 Ctx.A_S);}
+=============================
+package app;
+
+/** @noinspection ALL*/
+public class main{
+public static Object b () {
+return y2k.RT.invoke(app.a.foo(), 
+1);
+}
+}
 =============================
 package app;
 import c.An;

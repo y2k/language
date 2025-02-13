@@ -199,7 +199,10 @@ let rec compile_ (context : context) (node : sexp) : context * string =
             ^ (context.scope |> StringMap.bindings |> List.map fst |> String.concat ", ")
             ^ "]"; *)
             Printf.sprintf "y2k.RT.invoke(%s%s" fname (if List.is_empty args then "" else ", ")
-        | _ -> compile head ^ "("
+        | SList _ as head ->
+            let fname = compile head in
+            Printf.sprintf "y2k.RT.invoke(%s%s" fname (if List.is_empty args then "" else ", ")
+        | head -> compile head ^ "("
       in
       fname ^ sargs |> with_context
   | n -> failsexp __LOC__ [ n ]
