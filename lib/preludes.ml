@@ -26,11 +26,11 @@ public class RT {
     return "G__" + gensym_id.getAndIncrement();
   }
 
-  public static Object recover(Object f, Object fe) {
+  public static <T> T recover(Object f, Object fe) {
     try {
-      return ((Fn) f).invoke();
+      return (T)((Fn) f).invoke();
     } catch (Exception e) {
-      return ((Fn) fe).invoke(e);
+      return (T)((Fn) fe).invoke(e);
     }
   }
 
