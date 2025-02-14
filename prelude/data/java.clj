@@ -71,6 +71,7 @@
 (defmacro def- [k v] (list 'def ^:private k v))
 (defmacro gensym [] (list 'call-runtime ''gensym))
 (defmacro println [& xs] (concat (list 'call-runtime ''println) xs))
+(defmacro eprintln [& xs] (concat (list 'call-runtime ''eprintln) xs))
 (defmacro recover [f fe] (list 'call-runtime ''recover f fe))
 (defmacro str [& xs] (concat (list 'call-runtime ''str) xs))
 (defmacro throw [e] (list 'call-runtime ''throw_ e))

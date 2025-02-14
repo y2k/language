@@ -201,6 +201,15 @@ public class RT {
     return null;
   }
 
+  public static Object eprintln(Object... xs) {
+    for (Object x : xs) {
+      System.err.print(x);
+      System.err.print(" ");
+    }
+    System.err.println();
+    return null;
+  }
+
   public static Runnable runnable(Supplier<Object> f) {
     return f::get;
   }
