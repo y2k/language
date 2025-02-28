@@ -85,6 +85,7 @@
 ;; Java interop
 
 (defmacro checked! [f] (list 'call-runtime ''try_ (list 'fn (vector) f)))
+(defmacro unchecked! [f] (list 'call-runtime ''try_ (list 'fn (vector) f)))
 (defmacro class [cls] (list 'class-inner (str cls ".class")))
 (defmacro declare [name] (list 'def name))
 (defmacro fn! [& body] (concat (list ^void 'fn) body))
