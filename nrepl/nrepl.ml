@@ -3,10 +3,15 @@ module NreplServer = struct
 
   let send_to_server host code =
     let open Unix in
-    let ic, oc = open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string host, 8090)) in
+    let ic, oc = open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string host, 18090)) in
+    let len = String.length code in
+    output_byte oc (len land 0xff);
+    output_byte oc ((len lsr 8) land 0xff);
+    output_byte oc 0;
+    output_byte oc 0;
     output_string oc code;
     flush oc;
-    shutdown (descr_of_out_channel oc) SHUTDOWN_SEND;
+    (* shutdown (descr_of_out_channel oc) SHUTDOWN_SEND; *)
     In_channel.input_all ic
 
   let compile =
