@@ -20,6 +20,7 @@ prelude:
 .PHONY: test_e2e
 test_e2e: test
 	@ cp -f _build/default/bin/main.exe _build/default/bin/clj2js
+	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/repl test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/interpreter test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/compose_news test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/minesweeper test
