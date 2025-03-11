@@ -20,9 +20,15 @@ type ns_contex = { ns : string; scope : unit StringMap.t; aliases : string Strin
 
 let rec get_namespace (node : sexp) : string =
   match node with
-  | SList (_, SAtom (_, "def*") :: SAtom (_, fn) :: _) -> String.sub fn 0 (String.index fn '/')
+  | SList (_, SAtom (_, "def*") :: SAtom (_, fn) :: _) when String.contains fn '/' -> failsexp "Deprecated" [ node ]
+  | SList (_, SAtom (_, "def*") :: SAtom (_, fn) :: _) ->
+      let ns_len = Scanf.sscanf fn "G%i%s" (fun i _ -> i) in
+      String.sub fn (1 + String.length (string_of_int ns_len)) ns_len
   | SList (_, SAtom (_, "do*") :: body) -> get_namespace (List.hd body)
   | n -> failsexp __LOC__ [ n ]
+
+let mangle_name (ns : string) (name : string) : string =
+  Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
 
 let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node : sexp) : sexp =
   let rec invoke_with_ctx (ctx : ns_contex) node : ns_contex * sexp =
@@ -31,9 +37,9 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
     | SList (m, [ (SAtom (_, "if*") as i); cond; then_; else_ ]) ->
         (ctx, SList (m, [ i; invoke ctx cond; invoke ctx then_; invoke ctx else_ ]))
     | SList (m2, [ (SAtom (_, "def*") as def); SAtom (m, name) ]) ->
-        (ctx, SList (m2, [ def; SAtom (m, ctx.ns ^ "/" ^ name) ]))
+        (ctx, SList (m2, [ def; SAtom (m, mangle_name ctx.ns name) ]))
     | SList (m2, [ (SAtom (_, "def*") as def); SAtom (m, name); value ]) ->
-        (ctx, SList (m2, [ def; SAtom (m, ctx.ns ^ "/" ^ name); invoke ctx value ]))
+        (ctx, SList (m2, [ def; SAtom (m, mangle_name ctx.ns name); invoke ctx value ]))
     | SList (m, (SAtom (_, "fn*") as fn_) :: (SList (_, arg_names) as args) :: body) ->
         let scope =
           arg_names |> List.to_seq
@@ -91,9 +97,9 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
             let al_name = String.sub fn_name 0 i in
             let mod_name = ctx.aliases |> StringMap.find al_name in
             let fn_name = String.sub fn_name (i + 1) (String.length fn_name - i - 1) in
-            mod_name ^ "/" ^ fn_name
+            mangle_name mod_name fn_name
           else if StringMap.mem fn_name global_ctx.prelude_scope || StringMap.mem fn_name ctx.scope then fn_name
-          else ctx.ns ^ "/" ^ fn_name
+          else mangle_name ctx.ns fn_name
         in
         (ctx, SList (m2, SAtom (m, full_name) :: args))
     | node -> (ctx, node)
