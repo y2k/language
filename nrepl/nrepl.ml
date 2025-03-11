@@ -18,8 +18,15 @@ module NreplServer = struct
     let open Lib__ in
     Backend_bytecode.main { no_lint = true; virtual_src = "" } false "user.clj" Preludes.bytecode
 
+  let rec to_json = function
+    | B.String x -> `String x
+    | B.Dict xs -> `Assoc (List.map (fun (k, v) -> (k, to_json v)) xs)
+    | B.Integer x -> `Int (Int64.to_int x)
+    | B.List xs -> `List (List.map to_json xs)
+
   let handle_client host ic oc =
     let result = B.decode (`Channel ic) in
+    print_endline @@ "INPUT: " ^ (to_json result |> Yojson.Safe.pretty_to_string);
     let session = "3cea014e-78e1-473e-b486-8f3cab55432a" in
     (match Option.bind (B.dict_get result "op") B.as_string with
     | Some "complete" ->
@@ -46,6 +53,7 @@ module NreplServer = struct
     print_endline "NREPL client disconnected"
 
   let start host port =
+    prerr_endline @@ "NRepl started on port " ^ string_of_int port;
     let open Unix in
     let addr = ADDR_INET (inet_addr_any, port) in
     let sock = socket PF_INET SOCK_STREAM 0 in
