@@ -43,7 +43,10 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SList (_, [ SAtom (_, "is"); instance; SAtom (tm, type_) ]) ->
       let unescp_type = if String.starts_with ~prefix:"\"" type_ then unpack_string type_ else type_ in
       make_operator instance (SAtom (tm, unescp_type)) (Printf.sprintf "(%s instanceof %s)")
-  | SList (_, [ SAtom (_, "as"); instance; SAtom (type_meta, type_) ]) ->
+  (* Deprecated *)
+  | SList (m1, [ SAtom (m2, "as"); instance; type_ ]) ->
+      compile_ context (SList (m1, [ SAtom (m2, "cast"); type_; instance ]))
+  | SList (_, [ SAtom (_, "cast"); SAtom (type_meta, type_); instance ]) ->
       let unescp_type = if String.starts_with ~prefix:"\"" type_ then unpack_string type_ else type_ in
       make_operator (SAtom (type_meta, unescp_type)) instance (Printf.sprintf "((%s)%s)")
   | SList (_, [ SAtom (_, "quote"); arg ]) -> compile arg |> with_context

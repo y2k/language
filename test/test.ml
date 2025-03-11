@@ -11,6 +11,9 @@ let () =
     [
       ( "Local",
         [
+          _assert_java __POS__ {|(cast Number 1)|} "((Number)1)";
+          _assert_java __POS__ {|(as 1 Number)|} "((Number)1)";
+          (* *)
           _assert_bytecode __POS__ {|(ns m (:require ["./lib" :as bb])) (bb/f 3)|}
             "(\ndo*\n(\ndef*\nG3lib1f\n(\nfn*\n(\nx\n)\nx\n)\n)\n(\nG3lib1f\n3\n)\n)";
           _assert_bytecode __POS__ {|(ns m) (def bb)|} "(\ndef*\nG1m2bb\n)";
