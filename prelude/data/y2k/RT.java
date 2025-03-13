@@ -1,5 +1,6 @@
 package y2k;
 
+import java.io.File;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,9 +14,34 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 
 @SuppressWarnings("unchecked")
 public class RT {
+
+  public static Object spit(Object path, Object content) {
+    try {
+      Files.write(new File((String) path).toPath(), ((String) content).getBytes(), StandardOpenOption.APPEND);
+      return null;
+    } catch (Exception e) {
+      RT.throwException(e, null);
+      return null;
+    }
+  }
+
+  public static String slurp(Object path) {
+    var file = new File((String) path);
+    if (!file.exists())
+      return null;
+
+    try {
+      return new String(Files.readAllBytes(file.toPath()));
+    } catch (Exception e) {
+      RT.throwException(e, null);
+      return null;
+    }
+  }
 
   private static AtomicLong gensym_id = new AtomicLong(0);
 
@@ -25,9 +51,9 @@ public class RT {
 
   public static <T> T recover(Object f, Object fe) {
     try {
-      return (T)((Fn) f).invoke();
+      return (T) ((Fn) f).invoke();
     } catch (Exception e) {
-      return (T)((Fn) fe).invoke(e);
+      return (T) ((Fn) fe).invoke(e);
     }
   }
 

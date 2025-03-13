@@ -11,6 +11,9 @@ let () =
     [
       ( "Local",
         [
+          _assert_java __POS__ {|(spit "file.txt" "data")|} "y2k.RT.spit(\n\"file.txt\",\n\"data\")";
+          _assert_java __POS__ {|(slurp "file.txt")|} "y2k.RT.slurp(\n\"file.txt\")";
+          (* *)
           _assert_java __POS__ {|(cast Number 1)|} "((Number)1)";
           _assert_java __POS__ {|(as 1 Number)|} "((Number)1)";
           (* *)
