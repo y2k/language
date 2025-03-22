@@ -2,6 +2,8 @@ package y2k;
 
 import java.io.File;
 import java.lang.reflect.Array;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,15 +16,18 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 
 @SuppressWarnings("unchecked")
 public class RT {
 
   public static Object spit(Object path, Object content) {
     try {
-      Files.write(new File((String) path).toPath(), ((String) content).getBytes(), StandardOpenOption.APPEND);
+      var f = new File((String) path);
+      if (!f.exists()) {
+        f.getParentFile().mkdirs();
+        f.createNewFile();
+      }
+      Files.write(f.toPath(), ((String) content).getBytes(), StandardOpenOption.APPEND);
       return null;
     } catch (Exception e) {
       RT.throwException(e, null);
