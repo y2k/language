@@ -11,6 +11,22 @@ let () =
     [
       ( "Local",
         [
+          _assert_bytecode __POS__ {|(def f 2) true|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\ntrue\n)";
+          _assert_bytecode __POS__ {|(def f 2) false|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\nfalse\n)";
+          _assert_bytecode __POS__ {|(def f 2) nil|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\nnil\n)";
+          _assert_bytecode __POS__ {|(def f 2) :f|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\n\"f\"\n)";
+          _assert_bytecode __POS__ {|(def f 2) "f"|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\n\"f\"\n)";
+          _assert_bytecode __POS__ {|(def f 2) (let [f 1] f)|}
+            "(\ndo*\n(\ndef*\nG4user1f\n2\n)\n(\ndo*\n(\nlet*\nf\n1\n)\nf\n)\n)";
+          _assert_bytecode __POS__ {|(def f 2) f|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\nG4user1f\n)";
+          _assert_bytecode __POS__ {|(def a 2) (defn g [f] f)|}
+            "(\ndo*\n(\ndef*\nG4user1a\n2\n)\n(\ndef*\nG4user1g\n(\nfn*\n(\nf\n)\nf\n)\n)\n)";
+          _assert_bytecode __POS__ {|(def a 2) (defn g [f] f)|}
+            "(\ndo*\n(\ndef*\nG4user1a\n2\n)\n(\ndef*\nG4user1g\n(\nfn*\n(\nf\n)\nf\n)\n)\n)";
+          _assert_bytecode __POS__ {|(def f 2) (defn g [f] f)|}
+            "(\ndo*\n(\ndef*\nG4user1f\n2\n)\n(\ndef*\nG4user1g\n(\nfn*\n(\nf\n)\nf\n)\n)\n)";
+          _assert_bytecode __POS__ {|(defn f [x] x) (f 1)|}
+            "(\ndo*\n(\ndef*\nG4user1f\n(\nfn*\n(\nx\n)\nx\n)\n)\n(\nG4user1f\n1\n)\n)";
           _assert_java __POS__ {|(spit "file.txt" "data")|} "y2k.RT.spit(\n\"file.txt\",\n\"data\")";
           _assert_java __POS__ {|(slurp "file.txt")|} "y2k.RT.slurp(\n\"file.txt\")";
           (* *)

@@ -30,10 +30,31 @@ let rec get_namespace (node : sexp) : string =
 let mangle_name (ns : string) (name : string) : string =
   Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
 
+let is_number (x : string) =
+  let c = String.get x 0 in
+  (c >= '0' && c <= '9') || c = '-'
+
+let is_literal (x : string) =
+  let c = String.get x 0 in
+  c = ':' || c = '\"' || is_number x || x = "nil"
+
+let resolve_name global_ctx ctx fn_name =
+  if String.contains fn_name '/' && fn_name <> "/" then
+    let i = String.index fn_name '/' in
+    let al_name = String.sub fn_name 0 i in
+    let mod_name = ctx.aliases |> StringMap.find al_name in
+    let fn_name = String.sub fn_name (i + 1) (String.length fn_name - i - 1) in
+    mangle_name mod_name fn_name
+  else if StringMap.mem fn_name global_ctx.prelude_scope || StringMap.mem fn_name ctx.scope then fn_name
+  else mangle_name ctx.ns fn_name
+
 let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node : sexp) : sexp =
   let rec invoke_with_ctx (ctx : ns_contex) node : ns_contex * sexp =
     let invoke ctx node = invoke_with_ctx ctx node |> snd in
     match node with
+    | SAtom (m, name) when not (is_literal name) ->
+        let full_name = resolve_name global_ctx ctx name in
+        (ctx, SAtom (m, full_name))
     | SList (m, [ (SAtom (_, "if*") as i); cond; then_; else_ ]) ->
         (ctx, SList (m, [ i; invoke ctx cond; invoke ctx then_; invoke ctx else_ ]))
     | SList (m2, [ (SAtom (_, "def*") as def); SAtom (m, name) ]) ->
@@ -92,14 +113,15 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
         (* prerr_endline @@ "LOG:CALL: " ^ (ctx.scope |> StringMap.bindings |> List.map fst |> String.concat ","); *)
         let args = List.map (invoke ctx) args in
         let full_name =
-          if String.contains fn_name '/' && fn_name <> "/" then
+          resolve_name global_ctx ctx fn_name
+          (* if String.contains fn_name '/' && fn_name <> "/" then
             let i = String.index fn_name '/' in
             let al_name = String.sub fn_name 0 i in
             let mod_name = ctx.aliases |> StringMap.find al_name in
             let fn_name = String.sub fn_name (i + 1) (String.length fn_name - i - 1) in
             mangle_name mod_name fn_name
           else if StringMap.mem fn_name global_ctx.prelude_scope || StringMap.mem fn_name ctx.scope then fn_name
-          else mangle_name ctx.ns fn_name
+          else mangle_name ctx.ns fn_name *)
         in
         (ctx, SList (m2, SAtom (m, full_name) :: args))
     | node -> (ctx, node)
