@@ -1,7 +1,10 @@
 open Lib__.Common
 module Clj2js = Lib
 
-let read_code_file filename = if filename = "prelude" then "" else In_channel.(with_open_bin filename input_all)
+let read_code_file filename =
+  if filename = "prelude" then ""
+  else if filename = "@stdin" then In_channel.input_all stdin
+  else In_channel.(with_open_bin filename input_all)
 
 let compile_file filename target root_ns no_lint virtual_src =
   prerr_endline @@ "Compile: [" ^ Sys.getcwd () ^ "] " ^ target ^ " | " ^ filename;
@@ -35,7 +38,7 @@ let main () =
   Arg.parse
     [
       ("-target", Arg.Set_string target, "Target: js, java, repl, bytecode");
-      ("-src", Arg.Set_string src, "Source file");
+      ("-src", Arg.Set_string src, "Source file (use @stdin for standard input)");
       ("-root_ns", Arg.Set_string root_ns, "Root namespace");
       ("-lang", Arg.String ignore, "Deprecated");
       ("-lib", Arg.String ignore, "Deprecated");
@@ -50,6 +53,6 @@ let main () =
   | "get_namespace" -> print_endline @@ get_namespace !src
   | "gen" -> print_endline @@ Lib__.Preludes.java_runtime
   | "compile" -> compile_file !src !target !root_ns !no_lint !virtual_src
-  | n -> failwith ("Invalid command " ^ n ^ " (" ^ Sys.getcwd () ^ ")")
+  | n -> failwith ("Invalid command '" ^ n ^ "' (" ^ Sys.getcwd () ^ ")")
 
 let () = main ()
