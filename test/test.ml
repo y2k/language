@@ -5,12 +5,14 @@ let _assert_js = Utils.assert_ (Lib.main_js true)
 let _assert_java = Utils.assert_ (Lib.main_java "app" true)
 let _assert_repl = Utils.assert_ (Lib.main_interpreter true)
 let _assert_bytecode = Utils.assert_ (Lib.main_bytecode { config_default with log = true })
+let _assert_bytecode_repl = Utils.assert_ (Lib.main_bytecode { config_default with log = true; no_deps = true })
 
 let () =
   Alcotest.run "Tests"
     [
       ( "Local",
         [
+          _assert_bytecode_repl __POS__ {|(ns bar (:require [lib :as ui])) (ui/a 1)|} "(\nG3lib1a\n1\n)";
           _assert_bytecode __POS__ {|(def f 2) true|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\ntrue\n)";
           _assert_bytecode __POS__ {|(def f 2) false|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\nfalse\n)";
           _assert_bytecode __POS__ {|(def f 2) nil|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\nnil\n)";

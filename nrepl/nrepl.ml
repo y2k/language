@@ -17,7 +17,7 @@ module NreplServer = struct
 
   let compile =
     let open Lib__ in
-    Backend_bytecode.main { C.config_default with no_lint = true } "user.clj" Preludes.bytecode
+    Backend_bytecode.main { C.config_default with no_lint = true; no_deps = true } "user.clj" Preludes.bytecode
 
   let rec to_json = function
     | B.String x -> `String x

@@ -48,7 +48,7 @@ let resolve_name global_ctx ctx fn_name =
   else if StringMap.mem fn_name global_ctx.prelude_scope || StringMap.mem fn_name ctx.scope then fn_name
   else mangle_name ctx.ns fn_name
 
-let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node : sexp) : sexp =
+let invoke (config : config) (execute_code : execute_config -> sexp) (global_ctx : context) (node : sexp) : sexp =
   let rec invoke_with_ctx (ctx : ns_contex) node : ns_contex * sexp =
     let invoke ctx node = invoke_with_ctx ctx node |> snd in
     match node with
@@ -85,7 +85,12 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
                        |> List.fold_left
                             (fun (ctx, acc) req ->
                               match req with
-                              | SList (_, [ SAtom (_, mod_path); _; SAtom (_, aln) ]) ->
+                              | SList (_, [ SAtom (_, ch_ns); _; SAtom (_, aln) ])
+                                when (not (String.starts_with ~prefix:"\"" ch_ns)) && config.no_deps ->
+                                  let ctx = { ctx with aliases = StringMap.add aln ch_ns ctx.aliases } in
+                                  (ctx, acc)
+                              | SList (_, [ SAtom (_, mod_path); _; SAtom (_, aln) ])
+                                when String.starts_with ~prefix:"\"" mod_path && not config.no_deps ->
                                   let path, code = load_file global_ctx.filename mod_path in
                                   let ch_node = execute_code { path; code } in
                                   let ch_ns = get_namespace ch_node in
@@ -110,19 +115,8 @@ let invoke (execute_code : execute_config -> sexp) (global_ctx : context) (node 
     | SList (_, SAtom (_, name) :: _) as n when String.ends_with ~suffix:"*" name -> failsexp __LOC__ [ n ]
     (* Function call *)
     | SList (m2, SAtom (m, fn_name) :: args) ->
-        (* prerr_endline @@ "LOG:CALL: " ^ (ctx.scope |> StringMap.bindings |> List.map fst |> String.concat ","); *)
         let args = List.map (invoke ctx) args in
-        let full_name =
-          resolve_name global_ctx ctx fn_name
-          (* if String.contains fn_name '/' && fn_name <> "/" then
-            let i = String.index fn_name '/' in
-            let al_name = String.sub fn_name 0 i in
-            let mod_name = ctx.aliases |> StringMap.find al_name in
-            let fn_name = String.sub fn_name (i + 1) (String.length fn_name - i - 1) in
-            mangle_name mod_name fn_name
-          else if StringMap.mem fn_name global_ctx.prelude_scope || StringMap.mem fn_name ctx.scope then fn_name
-          else mangle_name ctx.ns fn_name *)
-        in
+        let full_name = resolve_name global_ctx ctx fn_name in
         (ctx, SList (m2, SAtom (m, full_name) :: args))
     | node -> (ctx, node)
   in

@@ -14,7 +14,12 @@ let compile_file filename target root_ns no_lint virtual_src =
         | "js" -> Clj2js.main_js_with_strict false filename
         | "java" -> Clj2js.main_java root_ns false filename
         | "bytecode" ->
-            Clj2js.main_bytecode { no_lint; virtual_src; log = false }
+            Clj2js.main_bytecode
+              { config_default with no_lint; virtual_src }
+              (if virtual_src <> "" then virtual_src else filename)
+        | "bytecode_repl" ->
+            Clj2js.main_bytecode
+              { config_default with no_lint; virtual_src; no_deps = true }
               (if virtual_src <> "" then virtual_src else filename)
         | "repl" -> Clj2js.main_interpreter false filename
         | t -> failwith @@ "Invalid target " ^ t
