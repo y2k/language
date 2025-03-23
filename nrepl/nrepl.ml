@@ -1,5 +1,6 @@
 module NreplServer = struct
   module B = Bencode
+  module C = Lib__.Common
 
   let send_to_server host code =
     let open Unix in
@@ -16,7 +17,7 @@ module NreplServer = struct
 
   let compile =
     let open Lib__ in
-    Backend_bytecode.main { no_lint = true; virtual_src = "" } false "user.clj" Preludes.bytecode
+    Backend_bytecode.main { C.config_default with no_lint = true } "user.clj" Preludes.bytecode
 
   let rec to_json = function
     | B.String x -> `String x

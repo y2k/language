@@ -1,6 +1,6 @@
-type config = { no_lint : bool; virtual_src : string }
+type config = { no_lint : bool; virtual_src : string; log : bool }
 
-let config_default = { no_lint = false; virtual_src = "" }
+let config_default = { no_lint = false; virtual_src = ""; log = false }
 
 module FileReader = struct
   type _ Effect.t += Load : string -> string Effect.t

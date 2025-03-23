@@ -6,5 +6,5 @@ let main_js_with_strict log (filename : string) code =
 let main_java (base_ns : string) log (filename : string) code =
   Backend_java.main base_ns log filename Preludes.java code
 
-let main_bytecode config log (filename : string) code = Backend_bytecode.main config log filename Preludes.bytecode code
+let main_bytecode config (filename : string) code = Backend_bytecode.main config filename Preludes.bytecode code
 let main_interpreter log (filename : string) code = Backend_interpreter.main log filename Preludes.interpreter code
