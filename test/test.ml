@@ -12,6 +12,10 @@ let () =
     [
       ( "Local",
         [
+          _assert_java __POS__ {|(defn f [] ^a.v.V.OCL:void (fn [v] (.toString v)))|}
+            "public static Object f () {\nreturn (a.v.V.OCL)(v)->{\nv.toString();\n};\n}";
+          _assert_java __POS__ {|(defn f [] ^a.v.V.OCL (fn [v] (.toString v)))|}
+            "public static Object f () {\nreturn (a.v.V.OCL)(v)->{\nreturn v.toString();\n};\n}";
           _assert_java __POS__ {|(cast Boolean nil)|} "((Boolean)null)";
           _assert_bytecode_repl __POS__ {|(ns bar (:require [lib :as ui])) (ui/a 1)|} "(\nG3lib1a\n1\n)";
           _assert_bytecode __POS__ {|(def f 2) true|} "(\ndo*\n(\ndef*\nG4user1f\n2\n)\ntrue\n)";

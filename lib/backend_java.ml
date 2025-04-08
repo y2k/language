@@ -121,6 +121,9 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       let last_exp = body |> List.rev |> List.hd |> compile in
       (match m.symbol with
       | "" -> Printf.sprintf "y2k.RT.fn((%s)->{\n%sreturn %s;\n})" sargs sbody last_exp
+      | type_ when String.contains type_ ':' ->
+          let type_parts = String.split_on_char ':' type_ in
+          Printf.sprintf "(%s)(%s)->{\n%s%s;\n}" (List.hd type_parts) sargs sbody last_exp
       | type_ -> Printf.sprintf "(%s)(%s)->{\n%sreturn %s;\n}" type_ sargs sbody last_exp)
       |> with_context
   (* Constructor *)
