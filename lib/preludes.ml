@@ -23,6 +23,11 @@ import java.util.function.UnaryOperator;
 @SuppressWarnings("unchecked")
 public class RT {
 
+  public static Object drop(Object n, Object xs) {
+    var col = (List<Object>) xs;
+    return col.subList((Integer) n, col.size());
+  }
+
   public static Object spit(Object path, Object content) {
     try {
       var f = new File((String) path);
@@ -656,6 +661,7 @@ let java = {|
 (defmacro second [xs] (list 'get xs 1))
 (defmacro vec [xs] (list 'java.util.Arrays/asList xs))
 (defmacro vector? [x] (list 'is x "java.util.ArrayList"))
+(defmacro drop [n xs] (list 'call-runtime ''drop n xs))
 
 ;; Other
 

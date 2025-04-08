@@ -20,6 +20,11 @@ import java.util.function.UnaryOperator;
 @SuppressWarnings("unchecked")
 public class RT {
 
+  public static Object drop(Object n, Object xs) {
+    var col = (List<Object>) xs;
+    return col.subList((Integer) n, col.size());
+  }
+
   public static Object spit(Object path, Object content) {
     try {
       var f = new File((String) path);
