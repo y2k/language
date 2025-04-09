@@ -165,6 +165,7 @@
 (str (if :a :b :c))
 (String/valueOf :level)
 (swap! nil (fn [x] x))
+(unchecked 1)
 (unescape "a\"b")
 (vector? 1)
 [(if true 1 2)]
