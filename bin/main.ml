@@ -29,7 +29,7 @@ let compile_file filename target root_ns no_lint virtual_src =
 let get_namespace filename : string =
   let module F = Lib__.Frontend_parser in
   let code = In_channel.(with_open_bin filename input_all) in
-  match F.string_to_sexp code with
+  match F.string_to_cjexp code with
   | (RBList (_, Atom (_, "ns") :: _) as ns) :: _ -> show_sexp ns
   | n -> failnode __LOC__ n
 

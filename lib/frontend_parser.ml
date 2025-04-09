@@ -54,7 +54,7 @@ let find_line_and_pos str index =
   in
   aux 0 1 1
 
-let string_to_sexp code =
+let string_to_cjexp code =
   code
   |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
   |> Result.fold ~ok:Fun.id ~error:(fun error -> failwith ("Parse SEXP error: " ^ error))

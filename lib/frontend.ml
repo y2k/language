@@ -169,7 +169,7 @@ let rec desugar_and_register (context : context) (node : cljexp) : context * clj
 let parse_and_simplify (prelude_context : context) filename code : context * cljexp =
   if prelude_context.log && filename <> "prelude" then
     print_endline "==| DEBUG |==============================================\n";
-  let sexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_sexp code) in
+  let sexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_cjexp code) in
   (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
   let ctx, x = desugar_and_register { prelude_context with filename } sexp in
   (ctx, unwrap_single_do x)
@@ -180,17 +180,17 @@ let desugar (config : config) log prelude_sexp prelude_ctx filename code =
   let desugar_ (prelude_context : context) filename code : context * sexp =
     if prelude_context.log && filename <> "prelude" then
       print_endline "==| DEBUG |==============================================\n";
-    let sexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_sexp code) in
+    let cjexp = RBList (meta_empty, Atom (meta_empty, "do*") :: Frontend_parser.string_to_cjexp code) in
     (* if prelude_context.log && filename <> "prelude" then print_endline (debug_show_cljexp [ sexp ]); *)
-    let ctx, x = desugar_and_register { prelude_context with filename } sexp in
+    let ctx, x = desugar_and_register { prelude_context with filename } cjexp in
     (ctx, unwrap_single_do x |> Stage_normalize_bracket.invoke)
   in
   let ctx, node = code |> desugar_ { prelude_ctx with log } filename in
   let node =
     node
-    |> try_slog "Parse_and_simplify             ->" log
+    |> try_slog "Parse_and_simplify      ->" log
     |> Stage_simplify_let.invoke
-    |> try_slog "Stage_simplify_let             ->" log
+    |> try_slog "Stage_simplify_let      ->" log
     |> invoke_linter config.no_lint ctx prelude_sexp
   in
   (ctx, node)
