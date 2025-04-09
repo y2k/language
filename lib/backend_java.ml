@@ -135,7 +135,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SList (_, [ SAtom (_, "def*"); SAtom (fname_meta, fname); SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ])
     ->
       let context_ref = ref context in
-      let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
+      let context = { context with scope = context.scope |> StringMap.add fname (ONil meta_empty, context_ref) } in
       context_ref := context;
       let modifier = match fname_meta.symbol with ":private" -> "private" | _ -> "public" in
       let sargs =
@@ -164,7 +164,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       let vis = if fname_meta.symbol = ":private" then "private" else "public" in
       let get_type am = if am.symbol = "" || am.symbol = ":private" then "Object" else am.symbol in
       let context_ref = ref context in
-      let context = { context with scope = context.scope |> StringMap.add fname (ONil, context_ref) } in
+      let context = { context with scope = context.scope |> StringMap.add fname (ONil meta_empty, context_ref) } in
       context_ref := context;
       let result =
         Printf.sprintf "%s static %s %s=%s;" vis (get_type fname_meta) fname (compile_ context body |> snd)
@@ -172,7 +172,7 @@ let rec compile_ (context : context) (node : sexp) : context * string =
       (context, result)
   (* Empty declaration *)
   | SList (_, [ SAtom (_, "def*"); SAtom (_, _name) ]) ->
-      ({ context with scope = context.scope |> StringMap.add _name (ONil, ref context) }, "")
+      ({ context with scope = context.scope |> StringMap.add _name (ONil meta_empty, ref context) }, "")
   (* Interop field *)
   | SList (_, [ SAtom (_, "."); target; SAtom (_, field) ]) when String.starts_with ~prefix:":-" field ->
       Printf.sprintf "%s.%s" (compile target) (String.sub field 2 (String.length field - 2)) |> with_context

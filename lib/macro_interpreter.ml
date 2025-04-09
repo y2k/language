@@ -25,12 +25,12 @@ let rec unpack_to_map = function
 let rec cljexp_to_obj node =
   (* prerr_endline @@ "CLJ2OBJ: " ^ debug_show_cljexp [ node ]; *)
   match node with
-  | Atom (_, x) when String.get x 0 >= '0' && String.get x 0 <= '9' -> OInt (int_of_string x)
-  | Atom (_, x) when String.starts_with ~prefix:"\"" x -> OString (unpack_string x)
-  | RBList (_, xs) -> OList (List.map cljexp_to_obj xs)
-  | SBList (_, xs) -> OVector (List.map cljexp_to_obj xs)
-  | CBList (_, xs) -> OMap (xs |> List.map cljexp_to_obj |> List.split_into_pairs)
-  | Atom _ as x -> OQuote (x |> Stage_normalize_bracket.invoke |> Stage_simplify_let.invoke)
+  | Atom (m, x) when String.get x 0 >= '0' && String.get x 0 <= '9' -> OInt (m, int_of_string x)
+  | Atom (m, x) when String.starts_with ~prefix:"\"" x -> OString (m, unpack_string x)
+  | RBList (m, xs) -> OList (m, List.map cljexp_to_obj xs)
+  | SBList (m, xs) -> OVector (m, List.map cljexp_to_obj xs)
+  | CBList (m, xs) -> OMap (m, xs |> List.map cljexp_to_obj |> List.split_into_pairs)
+  | Atom (m, _) as x -> OQuote (m, x |> Stage_normalize_bracket.invoke |> Stage_simplify_let.invoke)
 
 let run (ctx : context) (macro : cljexp) (macro_args : cljexp list) : cljexp =
   let macro_arg_names, macro_body =

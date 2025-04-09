@@ -13,7 +13,8 @@ let () =
       ( "Local",
         [
           _assert_java __POS__ {|(.al (.p "1") ^FL:void (fn [e] nil))|} "\"1\".p().al((FL)(e)->{\nnull;\n})";
-          (* _assert_java __POS__ {|(unchecked! (.al (.p "1") ^FL:void (fn [e] nil)))|} ""; *)
+          _assert_java __POS__ {|(unchecked! (.al (.p "1") ^FL:void (fn [e] nil)))|}
+            "y2k.RT.try_(\ny2k.RT.fn(()->{\nreturn \"1\".p().al((FL)(e)->{\nnull;\n});\n}))";
           (* *)
           _assert_java __POS__ {|(drop 2 [1 2 3 4])|} "y2k.RT.drop(\n2,\njava.util.Arrays.asList(\n1,\n2,\n3,\n4))";
           _assert_java __POS__ {|(defn f [] ^a.v.V.OCL:void (fn [v] (.toString v)))|}

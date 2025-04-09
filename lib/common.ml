@@ -89,15 +89,15 @@ end
 type function_decl = { params : cljexp list; body : cljexp list } [@@deriving show]
 
 type obj =
-  | OVector of obj list
-  | OList of obj list
-  | OMap of (obj * obj) list
-  | OString of string
-  | OInt of int
-  | OBool of bool
-  | ONil
-  | OLambda of (obj list -> obj)
-  | OQuote of sexp
+  | OVector of meta * obj list
+  | OList of meta * obj list
+  | OMap of meta * (obj * obj) list
+  | OString of meta * string
+  | OInt of meta * int
+  | OBool of meta * bool
+  | ONil of meta
+  | OLambda of meta * (obj list -> obj)
+  | OQuote of meta * sexp
 [@@deriving show]
 
 type context = {
