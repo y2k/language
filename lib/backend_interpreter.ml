@@ -285,20 +285,6 @@ let interpret_with_prelude (context : context) node : context * obj =
   in
   interpret { context with scope } node
 
-(* let rec obj_to_sexp = function
-  | OString x -> SAtom (meta_empty, "\"" ^ x ^ "\"")
-  | OInt x -> SAtom (meta_empty, string_of_int x)
-  | OQuote x -> x
-  | OList xs -> SList (meta_empty, List.map obj_to_sexp xs)
-  | OVector xs -> SList (meta_empty, SAtom (meta_empty, "vector") :: List.map obj_to_sexp xs)
-  | OMap xs ->
-      SList
-        ( meta_empty,
-          SAtom (meta_empty, "hash-map") :: (xs |> List.concat_map (fun (k, v) -> [ obj_to_sexp k; obj_to_sexp v ])) )
-  (* | OVector xs -> SBList (meta_empty, List.map obj_to_sexp xs)
-  | OMap xs -> CBList (meta_empty, xs |> List.concat_map (fun (k, v) -> [ obj_to_sexp k; obj_to_sexp v ])) *)
-  | n -> failwith @@ __LOC__ ^ " - " ^ show_obj n *)
-
 let rec obj_to_sexp node =
   let rec sexp_to_cljexp = function
     | SAtom (m, x) -> Atom (m, x)

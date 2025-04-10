@@ -593,6 +593,7 @@ let java = {|
 
 ;; Declarations
 
+(def __raw_template 0)
 (def - 0)
 (def . 0)
 (def * 0)

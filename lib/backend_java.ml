@@ -19,6 +19,11 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SAtom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | SAtom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Operators *)
+  | SList (_, SAtom (_, "__raw_template") :: args) ->
+      args |> List.map compile
+      (* |> List.mapi (fun i x -> if i mod 2 = 0 then unpack_string x else x) *)
+      |> List.map (fun x -> unpack_string x |> Scanf.unescaped)
+      |> List.reduce __LOC__ ( ^ ) |> with_context
   | SList (_, [ SAtom (_, op); a; b ])
     when op = "+" || op = "-" || op = "*" || op = "/" || op = ">" || op = "<" || op = ">=" || op = "<=" ->
       make_operator a b (fun a b -> Printf.sprintf "(%s%s%s)" a op b)
