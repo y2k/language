@@ -7,6 +7,7 @@ deploy: test_e2e deploy_force
 
 .PHONY: deploy_force
 deploy_force: test
+	@ echo "\n>>> New clj2js version is deployed <<<\n"
 	@ cp -f _build/default/bin/main.exe ~/.local/bin/clj2js
 
 .PHONY: restore

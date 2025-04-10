@@ -5,6 +5,7 @@ let invoke (node : cljexp) : sexp =
     let invoke_sexp = invoke_sexp2 replace_col in
     (* print_endline @@ "== NORM[] == " ^ debug_show_cljexp [ node ]; *)
     match node with
+    | RBList (m, [ Atom (lm, "let*"); Atom (nm, name) ]) -> SList (m, [ SAtom (lm, "let*"); SAtom (nm, name) ])
     | RBList (m, Atom (lm, "let*") :: SBList (bm, bindings) :: body) ->
         SList (m, SAtom (lm, "let*") :: SList (bm, List.map invoke_sexp bindings) :: List.map invoke_sexp body)
     | RBList (m, (Atom (_, "fn*") as fn) :: SBList (_, args) :: body) ->

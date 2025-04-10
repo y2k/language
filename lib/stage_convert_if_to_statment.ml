@@ -11,19 +11,19 @@ let rec invoke (node : sexp) : sexp =
       let else_ = invoke else_ in
       let var = NameGenerator.get_new_var () in
       SList
-        ( unknown_location,
+        ( meta_empty,
           [
-            SAtom (unknown_location, "do*");
-            SList (unknown_location, [ SAtom (unknown_location, "let*"); SAtom (unknown_location, var) ]);
+            SAtom (meta_empty, "do*");
+            SList (meta_empty, [ SAtom (meta_empty, "let*"); SAtom (meta_empty, var) ]);
             SList
-              ( unknown_location,
+              ( meta_empty,
                 [
                   if_;
                   cond;
-                  SList (unknown_location, [ SAtom (unknown_location, "set!"); SAtom (unknown_location, var); then_ ]);
-                  SList (unknown_location, [ SAtom (unknown_location, "set!"); SAtom (unknown_location, var); else_ ]);
+                  SList (meta_empty, [ SAtom (meta_empty, "set!"); SAtom (meta_empty, var); then_ ]);
+                  SList (meta_empty, [ SAtom (meta_empty, "set!"); SAtom (meta_empty, var); else_ ]);
                 ] );
-            SAtom (unknown_location, var);
+            SAtom (meta_empty, var);
           ] )
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
       let body = List.map invoke body in
@@ -62,14 +62,13 @@ let rec invoke_up_do (node : sexp) : sexp =
       SList
         ( m,
           List.concat
-            [
-              [ SAtom (unknown_location, "do*") ];
-              butlast cond;
-              [ SList (unknown_location, [ if_; last cond; then_; else_ ]) ];
-            ] )
+            [ [ SAtom (meta_empty, "do*") ]; butlast cond; [ SList (meta_empty, [ if_; last cond; then_; else_ ]) ] ] )
   | SList (m, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
       (* failsexp __LOC__ [ node ] |> ignore; *)
       SList (m, [ if_; invoke_up_do cond; invoke_up_do then_; invoke_up_do else_ ])
+  | SList (m, (SAtom (_, "___raw_template") as rt) :: body) ->
+      let body = List.map invoke_up_do body in
+      SList (m, rt :: body)
   | SList (m, fname :: args) -> (
       (* print_endline @@ "LOG[2.1.1]:: " ^ debug_show_cljexp [ SBList (fname :: args) ]; *)
       let args = List.map invoke_up_do args in
@@ -83,7 +82,7 @@ let rec invoke_up_do (node : sexp) : sexp =
       let args = args |> List.map (function SList (_, SAtom (_, "do*") :: body) -> last body | n -> n) in
       match lets with
       | [] -> SList (m, fname :: args)
-      | _ -> SList (m, (SAtom (unknown_location, "do*") :: lets) @ [ SList (unknown_location, fname :: args) ]))
+      | _ -> SList (m, (SAtom (meta_empty, "do*") :: lets) @ [ SList (meta_empty, fname :: args) ]))
   | n -> failsexp __LOC__ [ n ]
 
 let rec invoke_up_do_ level (node : sexp) : sexp =

@@ -19,9 +19,8 @@ let rec compile_ (context : context) (node : sexp) : context * string =
   | SAtom (_, x) when String.starts_with ~prefix:"\"" x -> x |> with_context
   | SAtom (_, x) -> String.map (function '/' -> '.' | x -> x) x |> with_context
   (* Operators *)
-  | SList (_, SAtom (_, "__raw_template") :: args) ->
+  | SList (_, SAtom (_, "___raw_template") :: args) ->
       args |> List.map compile
-      (* |> List.mapi (fun i x -> if i mod 2 = 0 then unpack_string x else x) *)
       |> List.map (fun x -> unpack_string x |> Scanf.unescaped)
       |> List.reduce __LOC__ ( ^ ) |> with_context
   | SList (_, [ SAtom (_, op); a; b ])
@@ -235,5 +234,5 @@ let main base_ns (log : bool) (filename : string) prelude_macros code =
   node |> Stage_java_require.main ctx
   |> try_slog "Stage_java_require      ->" log
   |> Stage_convert_if_to_statment.invoke
-  |> try_slog "Stage_a_normal_form     ->" log
+  |> try_slog "Stage_conv_if_to_stmnt  ->" log
   |> compile_ ctx |> snd |> String.trim

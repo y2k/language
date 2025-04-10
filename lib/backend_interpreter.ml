@@ -48,6 +48,7 @@ module Functions = struct
 
   let functions : (obj list -> obj) StringMap.t =
     StringMap.empty
+    |> StringMap.add "gensym" (fun _ -> OQuote (meta_empty, SAtom (meta_empty, NameGenerator.get_new_var ())))
     |> StringMap.add "vector" (fun args -> OVector (meta_empty, args))
     |> StringMap.add "list" (fun args -> OList (meta_empty, args))
     |> StringMap.add "hash-map" (fun args -> OMap (meta_empty, args |> List.split_into_pairs))

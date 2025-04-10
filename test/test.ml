@@ -12,6 +12,20 @@ let () =
     [
       ( "Local",
         [
+          _assert_java __POS__ {|(println (try (do (/ 2 0) (/ 1 0)) (catch Exception e (do (/ 3 0) nil))))|}
+            "Object p__1;;\n\
+             try {\n\
+             (2/0);\n\
+             p__1 = (1/0);\n\
+             } catch (Exception e) {\n\
+             (3/0);\n\
+             p__1 = null;\n\
+             };\n\
+             y2k.RT.println(\n\
+             p__1)";
+          _assert_java __POS__ {|(println (try (/ 1 0) (catch Exception e nil)))|}
+            "Object p__1;;\ntry {\np__1 = (1/0);\n} catch (Exception e) {\np__1 = null;\n};\ny2k.RT.println(\np__1)";
+          (* *)
           _assert_java __POS__ {|(gen-class :annotations ["RW(AJU4::class)"] :name Tests)|}
             "@RW(AJU4::class)\npublic static class Tests extends Object {\npublic java.util.List<Object> state;\n}";
           _assert_java __POS__ {|(gen-class :name Tests)|}

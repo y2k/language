@@ -1,6 +1,6 @@
 ;; Declarations
 
-(def __raw_template 0)
+(def ___raw_template 0)
 (def - 0)
 (def . 0)
 (def * 0)
@@ -89,6 +89,18 @@
 (defmacro deref [a] (list '.get (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>")))
 (defmacro reset! [a x] (list '.set (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") x))
 (defmacro swap! [a f] (list '.getAndUpdate (list 'as a "java.util.concurrent.atomic.AtomicReference<Object>") f))
+
+(defmacro try [body catch]
+  (let* [result (gensym)]
+        (list 'do
+              (list 'let* result)
+              (list '___raw_template
+                    "try {\n"
+                    (list 'set! result body)
+                    "\n} catch (" (get catch 1) " " (str (get catch 2))  ") {\n"
+                    (list 'set! result (get catch 3))
+                    "\n}")
+              result)))
 
 ;; Java interop
 

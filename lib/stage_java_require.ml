@@ -65,6 +65,7 @@ let rec invoke (ctx : inner_context) (node : sexp) : inner_context * sexp =
       let ctx, value = invoke ctx value in
       (ctx, SList (m, [ def; name; value ]))
   | SList (_, SAtom (_, "quote*") :: _) -> (ctx, node)
+  | SList (m, [ (SAtom (_, "let*") as let_); name ]) -> (ctx, SList (m, [ let_; name ]))
   | SList (m, [ (SAtom (_, "let*") as let_); name; value ]) ->
       let ctx, value = invoke ctx value in
       (ctx, SList (m, [ let_; name; value ]))

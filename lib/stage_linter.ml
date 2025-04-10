@@ -53,6 +53,9 @@ let invoke (code_ctx : context) prelude_node (node : sexp) : sexp =
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let _ = invoke ctx value in
         (ctx, x)
+    | SList (_, [ SAtom (_, "let*"); SAtom (_, k) ]) as x ->
+        let ctx = { scope = StringMap.add k () ctx.scope } in
+        (ctx, x)
     | SList (_, [ SAtom (_, "let*"); SAtom (_, k); value ]) as x ->
         let ctx = { scope = StringMap.add k () ctx.scope } in
         let _ = invoke ctx value in
