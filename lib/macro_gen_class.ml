@@ -1,6 +1,6 @@
 open Common
 
-let generate_class (compile_exp : sexp -> string) prefix params clsName (methods : sexp list) superCls =
+let generate_class (compile_exp : sexp -> string) prefix params clsName (methods : sexp list) superCls annotations =
   let prefix = String.sub prefix 1 (String.length prefix - 2) in
   let cnt_params =
     match params with
@@ -52,35 +52,53 @@ let generate_class (compile_exp : sexp -> string) prefix params clsName (methods
              Printf.sprintf "%spublic %s %s(%s) {\n%s%s%s%s(%s); }\n" annot rtype mname args_ call_super return_ prefix
                mname full_args
          | x -> failsexp __LOC__ [ x ])
-    |> List.reduce __LOC__ (Printf.sprintf "%s%s")
+    |> List.fold_left (Printf.sprintf "%s%s") ""
   in
-  Printf.sprintf "public static class %s extends %s {\npublic java.util.List<Object> state;\n%s%s}" clsName superCls
-    state ms
+  let annotations =
+    if annotations = [] then ""
+    else
+      annotations
+      |> List.fold_left
+           (fun acc x ->
+             let x = unpack_string x in
+             Printf.sprintf "%s@%s\n" acc x)
+           ""
+  in
+  Printf.sprintf "%spublic static class %s extends %s {\npublic java.util.List<Object> state;\n%s%s}" annotations
+    clsName superCls state ms
 
 let invoke compile context = function
-  | SList
-      ( _,
-        [
-          SAtom (_, "gen-class-inner");
-          SList
-            ( _,
-              [
-                _;
-                SList
-                  ( _,
-                    [
-                      SAtom (_, ":name");
-                      SAtom (_, clsName);
-                      SAtom (_, ":extends");
-                      SAtom (_, superCls);
-                      SAtom (_, ":constructors");
-                      SList (_, [ SList (_, params); SList _ ]);
-                      SAtom (_, ":prefix");
-                      SAtom (_, prefix);
-                      SAtom (_, ":methods");
-                      SList (_, methods);
-                    ] );
-              ] );
-        ] ) ->
-      (context, generate_class compile prefix params clsName methods superCls)
+  | SList (_, [ SAtom (_, "gen-class-inner"); SList (_, [ _; SList (_, props) ]) ]) ->
+      let props = props |> List.split_into_pairs in
+      let get_string_value name def =
+        props
+        |> List.find_map (function SAtom (_, n), SAtom (_, p) when n = name -> Some p | _ -> None)
+        |> Option.value ~default:def
+      in
+
+      let prefix = get_string_value ":prefix" "\"_\"" in
+      let clsName = get_string_value ":name" "App" in
+      let superCls = get_string_value ":extends" "Object" in
+      let methods =
+        props
+        |> List.find_map (function SAtom (_, n), SList (_, xs) when n = ":methods" -> Some xs | _ -> None)
+        |> Option.value ~default:[]
+      in
+
+      let params =
+        props
+        |> List.find_map (function SAtom (_, n), SList (_, xs) when n = ":constructors" -> Some xs | _ -> None)
+        |> Option.value ~default:[]
+        |> List.find_map (function SList (_, xs) -> Some xs | _ -> None)
+        |> Option.value ~default:[]
+      in
+
+      let annotations =
+        props
+        |> List.find_map (function SAtom (_, n), SList (_, xs) when n = ":annotations" -> Some xs | _ -> None)
+        |> Option.value ~default:[]
+        |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ])
+      in
+
+      (context, generate_class compile prefix params clsName methods superCls annotations)
   | n -> failsexp __LOC__ [ n ]

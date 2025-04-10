@@ -12,6 +12,11 @@ let () =
     [
       ( "Local",
         [
+          _assert_java __POS__ {|(gen-class :annotations ["RW(AJU4::class)"] :name Tests)|}
+            "@RW(AJU4::class)\npublic static class Tests extends Object {\npublic java.util.List<Object> state;\n}";
+          _assert_java __POS__ {|(gen-class :name Tests)|}
+            "public static class Tests extends Object {\npublic java.util.List<Object> state;\n}";
+          (* *)
           _assert_java __POS__ {|(.al (.p "1") ^FL:void (fn [e] nil))|} "\"1\".p().al((FL)(e)->{\nnull;\n})";
           _assert_java __POS__ {|(unchecked! (.al (.p "1") ^FL:void (fn [e] nil)))|}
             "y2k.RT.try_(\ny2k.RT.fn(()->{\nreturn \"1\".p().al((FL)(e)->{\nnull;\n});\n}))";
