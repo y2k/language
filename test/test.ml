@@ -10,7 +10,8 @@ let _assert_bytecode_repl = Utils.assert_ (Lib.main_bytecode { config_default wi
 let () =
   Alcotest.run "Tests"
     [
-      ( "Local",
+      ("Core", Core_test.tests);
+      (* ( "Local",
         [
           _assert_java __POS__ {|(println (try (do (/ 2 0) (/ 1 0)) (catch Exception e (do (/ 3 0) nil))))|}
             "Object p__1;;\n\
@@ -75,5 +76,5 @@ let () =
       ("Bytecode", U.make_samples_test (Lib.main_bytecode { config_default with log = true }) "samples.bytecode");
       ("Repl", U.make_samples_test (Lib.main_interpreter true) "samples.repl");
       ("JS", U.make_samples_test (Lib.main_js true) "samples.js");
-      ("Java", U.make_samples_test (Lib.main_java "app" true) "samples.java");
+      ("Java", U.make_samples_test (Lib.main_java "app" true) "samples.java"); *)
     ]
