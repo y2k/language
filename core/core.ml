@@ -7,33 +7,32 @@ let parse_text code =
   |> ( function [ x ] -> x | xs -> RBList (meta_empty, Atom (meta_empty, "do*") :: xs) )
   |> NB.invoke
 
-let rec serialize_to_string = function
-  | SAtom (_, x) -> x
-  | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
-
 module Prelude = struct
   let code =
     {|
-    (def* vector
-      (fn* [& xs]
-        (sexp
-          "java.util.Arrays.asList("
-          (reduce (fn* [acc x] (sexp acc ", " x)) xs)
-          ")")))
 
-    (def* def
-      (fn* [name value]
-        (sexpstr
-          "public static Object " name "=" value ";")))
+    (def* vector (fn* [& xs] xs))
+
+    ;    (def* vector
+    ;      (fn* [& xs]
+    ;        (sexp
+    ;          "java.util.Arrays.asList("
+    ;          (reduce (fn* [acc x] (sexp acc ", " x)) xs)
+    ;          ")")))
+    ;
+    ;    (def* def
+    ;      (fn* [name value]
+    ;        (sexpstr
+    ;          "public static Object " name "=" value ";")))
     |}
 end
 
 module Eval = struct
   module OUtils = Lib__.Backend_interpreter.Functions
 
-  type eval_context = { ns : (string * obj) list ref; scope : (string * obj) list }
+  type eval_context = { ns : (string * obj ref) list; scope : (string * obj) list }
 
-  let empty_eval_context = { ns = ref []; scope = [] }
+  let empty_eval_context = { ns = []; scope = [] }
   let rec_level = ref 0
   let failobj loc x = Printf.sprintf "%s %s" loc (OUtils.obj_to_string x) |> failwith
 
@@ -43,7 +42,17 @@ module Eval = struct
     | OString (m, x) -> SAtom (m, "\"" ^ x ^ "\"")
     | OList (m, xs) -> SList (m, List.map obj_to_sexp xs)
     | OQuote (_, x) -> x
+    | ONil m -> SAtom (m, "nil")
     | x -> failobj __LOC__ x
+
+  let resolve_value ctx name =
+    if name = "true" then OBool (meta_empty, true)
+    else if name = "false" then OBool (meta_empty, false)
+    else
+      let scope = ctx.scope @ (ctx.ns |> List.map (fun (x, y) -> (x, !y))) in
+      match List.assoc_opt name scope with
+      | Some v -> v
+      | None -> failwith @@ __LOC__ ^ " - Can't find value: '" ^ name ^ "'"
 
   let rec eval_ (ctx : eval_context) node =
     (* if !rec_level > 10 then failwith __LOC__;
@@ -53,31 +62,27 @@ module Eval = struct
     | SAtom (m, x) when String.starts_with ~prefix:"\"" x -> (ctx, OString (m, unpack_string x))
     | SAtom (m, x) when String.starts_with ~prefix:":" x -> (ctx, OString (m, unpack_symbol x))
     | SAtom (m, x) when String.starts_with ~prefix:"'" x -> (ctx, OQuote (m, SAtom (m, unpack_symbol x)))
-    | SAtom (_, name) as x -> (
-        let scope = ctx.scope @ !(ctx.ns) in
-        match List.assoc_opt name scope with
-        (* *)
-        | Some v -> (ctx, v)
-        | None -> failsexp __LOC__ [ x ])
-    (* | SList (_, SAtom (_, "sexpstr") :: args) ->
-        let args = List.map (fun x -> eval_ ctx x |> snd) args in
-        let args = List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x) args |> String.concat "" in
-        (ctx, OString (meta_empty, args)) *)
-    | SList (_, SAtom (_, "sexp") :: args) ->
-        (* *)
-        let args = List.map (fun x -> eval_ ctx x |> snd) args in
-        let args = args |> List.map obj_to_sexp in
-        (*
-        let args = List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x) args |> String.concat "" in *)
-        (ctx, OQuote (meta_empty, SList (meta_empty, args)))
-        (* *)
+    (* Resolve value *)
+    | SAtom (_, name) -> (ctx, resolve_value ctx name)
     | SList (_, SAtom (_, "do*") :: body) ->
         let ctx, result = List.fold_left_map (fun ctx x -> eval_ ctx x) ctx body in
         (ctx, result |> List.rev |> List.hd)
     | SList (_, [ SAtom (_, "def*"); SAtom (_, fname); value ]) ->
+        let r = ref (ONil meta_empty) in
+        let ctx = { ctx with ns = (fname, r) :: ctx.ns } in
         let value = eval_ ctx value |> snd in
-        ctx.ns := (fname, value) :: !(ctx.ns);
+        r := value;
         (ctx, ONil meta_empty)
+    | SList (_, [ SAtom (_, "let*"); SAtom (_, fname); value ]) ->
+        let value = eval_ ctx value |> snd in
+        let ctx = { ctx with scope = (fname, value) :: ctx.scope } in
+        (ctx, ONil meta_empty)
+    (* if then else *)
+    | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) -> (
+        match eval_ ctx cond with
+        | ctx, OBool (_, true) -> eval_ ctx then_
+        | ctx, OBool (_, false) -> eval_ ctx else_
+        | _ -> failsexp __LOC__ [ node ])
     | SList (_, [ SAtom (_, "fn*"); SList (_, [ SAtom (_, "&"); SAtom (_, args_name) ]); body ]) ->
         let l =
           OLambda
@@ -99,22 +104,26 @@ module Eval = struct
                 result )
         in
         (ctx, l)
-    (* Call a function *)
-    | SList (_, SAtom (_, fname) :: args) as node -> (
-        let scope = ctx.scope @ !(ctx.ns) in
-        match List.assoc_opt fname scope with
-        | Some f ->
-            let f = f |> function OLambda (_, f) -> f | _ -> failobj (__LOC__ ^ " | " ^ fname) f in
-            let args = List.map (fun x -> eval_ ctx x |> snd) args in
-            (ctx, f args)
-        | None -> failsexp __LOC__ [ node ])
+    | SList (_, SAtom (_, fname) :: args) ->
+        let f = resolve_value ctx fname in
+        let f = resolve_value ctx fname |> function OLambda (_, f) -> f | _ -> failobj (__LOC__ ^ " | " ^ fname) f in
+        let args = List.map (fun x -> eval_ ctx x |> snd) args in
+        (ctx, f args)
     | x -> failsexp __LOC__ [ x ]
+
+  let reg_fun name f ctx = { ctx with ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns }
 
   let eval x =
     prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ];
     rec_level := 0;
-    let ctx = empty_eval_context in
-    ctx.ns :=
+    let ctx =
+      empty_eval_context
+      |> reg_fun "str" (fun xs ->
+             xs |> List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x) |> String.concat ""
+             |> fun xs -> OString (meta_empty, xs))
+      |> reg_fun "+" (function [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x + y) | _ -> failwith __LOC__)
+    in
+    (* ctx.ns :=
       ( "escape",
         OLambda
           ( meta_empty,
@@ -127,19 +136,6 @@ module Eval = struct
                 prerr_endline @@ "LOG2: " ^ OUtils.obj_to_string x;
                 x
             | _ -> failwith __LOC__ ) )
-      :: !(ctx.ns);
-    ctx.ns :=
-      ( "str",
-        OLambda
-          ( meta_empty,
-            fun xs ->
-              xs |> List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x) |> String.concat ""
-              |> fun xs -> OString (meta_empty, xs) ) )
-      :: !(ctx.ns);
-    ctx.ns :=
-      ( "+",
-        OLambda (meta_empty, function [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x + y) | _ -> failwith __LOC__)
-      )
       :: !(ctx.ns);
     ctx.ns :=
       ( "map",
@@ -160,9 +156,13 @@ module Eval = struct
                 let xs = List.tl xs in
                 List.fold_left (fun acc x -> f [ acc; x ]) init xs
             | _ -> failwith __LOC__ ) )
-      :: !(ctx.ns);
+      :: !(ctx.ns); *)
     eval_ ctx x |> snd
 end
+
+let rec serialize_to_string = function
+  | SAtom (_, x) -> x
+  | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
 
 let compile code =
   parse_text (Prelude.code ^ code)
@@ -170,6 +170,6 @@ let compile code =
   (* *)
   |> Eval.obj_to_sexp
   |> serialize_to_string
-  (* *)
-  |> unpack_string
-  |> unpack_string
+(* *)
+(* |> unpack_string *)
+(* |> unpack_string *)
