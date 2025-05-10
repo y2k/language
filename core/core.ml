@@ -205,8 +205,11 @@ end = struct
 end
 
 module JavaCompiler : sig
-  val do_compile : sexp -> string
+  type compile_opt = { filename : string }
+
+  val do_compile : compile_opt -> sexp -> string
 end = struct
+  type compile_opt = { filename : string }
   type complie_context = { macro : Eval.eval_context }
 
   let sexp_to_obj = function
@@ -229,7 +232,7 @@ end = struct
         in
         let body = compile ctx body in
         let sargs = String.concat "," args in
-        Printf.sprintf "y2k.RT.fn((%s)->{%s})" sargs body
+        Printf.sprintf "y2k.RT.fn((%s)->{\nreturn %s;\n})" sargs body
     | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
     | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
         let cond = compile ctx cond in
@@ -259,9 +262,10 @@ end = struct
         else Printf.sprintf "y2k.RT.invoke(%s,%s)" name (String.concat "," args)
     | x -> failsexp __LOC__ [ x ]
 
-  let do_compile sexp =
+  let do_compile (opt : compile_opt) sexp =
     let macro = Parser.parse_text Prelude.prelude_java in
     let ctx = { macro = Eval.eval macro |> fst } in
+    let _clazz = Printf.sprintf "public class %s {\n}" opt.filename in
     compile ctx sexp
 end
 
@@ -280,8 +284,8 @@ let eval code =
   |> Simplify.simplify |> Eval.eval |> snd |> Utils.obj_to_sexp
   |> serialize_to_string
 
-let compile code =
+let compile (filename : string) code =
   Parser.parse_text code
   (* *)
   |> Simplify.simplify
-  |> JavaCompiler.do_compile
+  |> JavaCompiler.do_compile { filename }
