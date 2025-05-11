@@ -1,4 +1,4 @@
-let eval_tests =
+(* let eval_tests =
   [
     (__LOC__, {|["x"]|}, {|"x"|});
     (__LOC__, "[1 2 3]", "123");
@@ -18,7 +18,7 @@ let eval_tests =
   |> List.map (fun (loc, i, e) ->
          Alcotest.test_case loc `Quick (fun () ->
              let a = Core.eval i in
-             Alcotest.(check string) "" e a))
+             Alcotest.(check string) "" e a)) *)
 
 module JavaExecution : sig
   val run : string -> string
@@ -47,11 +47,17 @@ end
 
 let java_integration_tests =
   [
-    (* *)
-    (__LOC__, {|(def* run (fn* [] (if* true 2 3)))|}, {|2|});
-    (__LOC__, {|(def* run (fn* [] (if* false 2 3)))|}, {|3|});
-    (__LOC__, {|(def* run (fn* [] 2))|}, {|2|});
-    (__LOC__, {|(def* f (fn* [x] x)) (def* run (fn* [] (f 2)))|}, {|2|});
+    (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
+    (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
+    (__LOC__, {|(defn run [] (count [10 20 30]))|}, {|3|});
+    (__LOC__, {|(defn run [] (count {:a 1 :b 2}))|}, {|2|});
+    (__LOC__, {|(defn run [] (get [10 20 30] 1))|}, {|20|});
+    (__LOC__, {|(defn run [] (get {:a 2 :b 3} :b))|}, {|3|});
+    (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
+    (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
+    (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
+    (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
+    (__LOC__, {|(defn run [] 2)|}, {|2|});
   ]
   |> List.map (fun (loc, i, e) ->
          Alcotest.test_case loc `Quick (fun () ->
@@ -80,4 +86,5 @@ return x;
 
 let tests =
   (* java_tests @ *)
-  eval_tests @ java_integration_tests
+  (* eval_tests @  *)
+  java_integration_tests

@@ -1,8 +1,12 @@
 open Lib__.Common
+module P = Lib__.Frontend_parser
+module NB = Lib__.Stage_normalize_bracket
 
 let parse_text code =
-  let module P = Lib__.Frontend_parser in
-  let module NB = Lib__.Stage_normalize_bracket in
-  P.string_to_cjexp code
-  |> ( function [ x ] -> x | xs -> RBList (meta_empty, Atom (meta_empty, "do*") :: xs) )
-  |> NB.invoke
+  if code = "" then SAtom (meta_empty, "nil")
+  else
+    P.string_to_cjexp code
+    |> ( function
+    | [ x ] -> x
+    | xs -> RBList (meta_empty, Atom (meta_empty, "do") :: xs) )
+    |> NB.invoke

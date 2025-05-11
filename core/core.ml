@@ -3,22 +3,51 @@ open Lib__.Common
 module Prelude = struct
   let prelude_java =
     {|
-    (def* list
-      (fn* [& xs] xs))
+(defn list [& xs] xs)
 
-    (def* macro_str
-      (fn* [& xs]
-           (concat
-            (list
-             (quote* String.format)
-             (reduce (fn* [acc x] (str acc "%s")) "" xs))
-            xs)))
+(defn macro_= [x y]
+  (list 'java.util.Objects.equals x y))
 
-    (def* macro_vector
-      (fn* [& xs]
-           (concat
-            (list (quote* java.util.Arrays.asList))
-            xs)))
+(defn macro_hash-map [& xs]
+  (concat
+    (list 'java.util.Map.of)
+    xs))
+
+(defn macro_count [xs]
+  (let* vxs (gensym))
+  (list
+    'do*
+    (list 'let* vxs xs)
+    (list
+      'if
+      (list 'instance? 'java.util.Map vxs)
+      (list '. (list 'cast 'java.util.Map vxs) 'size)
+      (list '. (list 'cast 'java.util.Collection vxs) 'size))))
+
+(defn macro_get [xs i]
+  (let* vxs (gensym))
+  (let* vi (gensym))
+  (list
+    'do*
+    (list 'let* vxs xs)
+    (list 'let* vi i)
+    (list
+      'if
+      (list 'instance? 'java.util.Map vxs)
+      (list '. (list 'cast 'java.util.Map vxs) 'get vi)
+      (list '. (list 'cast 'java.util.List vxs) 'get (list 'cast 'int vi)))))
+
+(defn macro_str [& xs]
+  (concat
+   (list
+    (quote* String.format)
+    (reduce (fn* [acc x] (str acc "%s")) "" xs))
+   xs))
+
+(defn macro_vector [& xs]
+  (concat
+   (list (quote* java.util.Arrays.asList))
+   xs))
     |}
 
   let prelude_eval = {|
@@ -40,12 +69,15 @@ module Utils = struct
     | OList (m, xs) -> SList (m, List.map obj_to_sexp xs)
     | OQuote (_, x) -> x
     | ONil m -> SAtom (m, "nil")
+    | OVector (m, xs) ->
+        SList (m, SAtom (m, "vector") :: List.map obj_to_sexp xs)
     | x -> failobj __LOC__ x
 end
 
 module Eval : sig
   type eval_context
 
+  val empty_eval_context : eval_context
   val show_eval_context : eval_context -> string
   val eval : sexp -> eval_context * obj
   val get_function : eval_context -> string -> (obj list -> obj) option
@@ -168,11 +200,17 @@ end = struct
       ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns;
     }
 
-  let eval x =
-    prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ];
+  let eval node =
+    (* prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ]; *)
     rec_level := 0;
     let ctx =
       empty_eval_context
+      |> reg_fun "vector" (fun xs -> OVector (meta_empty, xs))
+      |> reg_fun "gensym" (fun _ ->
+             OQuote
+               ( meta_empty,
+                 SAtom (meta_empty, Lib__.Common.NameGenerator.get_new_var ())
+               ))
       |> reg_fun "concat" (fun xs ->
              xs
              |> List.map (function OList (_, x) -> x | x -> [ x ])
@@ -201,45 +239,65 @@ end = struct
                OList (meta_empty, List.map (fun x -> f [ x ]) xs)
            | _ -> failwith __LOC__)
     in
-    eval_ ctx x
+    node |> eval_ ctx
 end
 
-module JavaCompiler : sig
-  type compile_opt = { filename : string }
+module Simplify : sig
+  type simplify_opt = { log : bool; prelude : string }
 
-  val do_compile : compile_opt -> sexp -> string
+  val do_simplify : simplify_opt -> sexp -> sexp
 end = struct
-  type compile_opt = { filename : string }
-  type complie_context = { macro : Eval.eval_context }
+  type simplify_opt = { log : bool; prelude : string }
+  type simplify_ctx = { macro : Eval.eval_context }
 
   let sexp_to_obj = function
     | SAtom (m, _) as x -> OQuote (m, x)
     | SList (m, _) as x -> OQuote (m, x)
 
-  let rec compile (ctx : complie_context) sexp =
-    prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ];
+  let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
+    (* prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ]; *)
     match sexp with
-    | SAtom (_, x) -> x
-    | SList (_, SAtom (_, "do*") :: body) ->
-        body |> List.map (compile ctx) |> String.concat ";\n"
-    | SList (_, [ SAtom (_, "def*"); SAtom (_, name); value ]) ->
-        Printf.sprintf "public static Object %s=%s" name (compile ctx value)
-    | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
-        let args =
-          List.map
-            (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ])
-            args
+    | SAtom _ as x -> x
+    | SList (_, []) as x -> x
+    | SList (m, SAtom (mif, "if") :: if_args) ->
+        SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
+    | SList (m, SAtom (mdo, "do") :: body) ->
+        SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)
+    | SList
+        ( m,
+          SAtom (md, "defn")
+          :: name
+          :: SList (_, SAtom (_, "vector") :: args)
+          :: body ) ->
+        let body =
+          match body with
+          | [ x ] -> x
+          | xs -> SList (meta_empty, SAtom (meta_empty, "do*") :: xs)
         in
-        let body = compile ctx body in
-        let sargs = String.concat "," args in
-        Printf.sprintf "y2k.RT.fn((%s)->{\nreturn %s;\n})" sargs body
-    | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
-    | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
-        let cond = compile ctx cond in
-        let then_ = compile ctx then_ in
-        let else_ = compile ctx else_ in
-        Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" cond then_ else_
-    (* Macro call *)
+        SList
+          ( m,
+            [
+              SAtom (md, "def*");
+              name;
+              SList
+                ( m,
+                  [
+                    SAtom (md, "fn*");
+                    SList (meta_empty, args);
+                    simplify ctx body;
+                  ] );
+            ] )
+        |> simplify ctx
+    | SList (m, [ SAtom (dm, "def"); k; v ]) ->
+        SList (m, [ SAtom (dm, "def*"); k; simplify ctx v ])
+    (* | SList (m, [ SAtom (dm, "defn"); name; args; body ]) ->
+        SList
+          ( m,
+            [
+              SAtom (dm, "def*");
+              name;
+              SList (dm, [ SAtom (dm, "fn*"); args; simplify ctx body ]);
+            ] ) *)
     | SList (_, SAtom (_, name) :: args)
       when Eval.get_function ctx.macro ("macro_" ^ name) <> None ->
         let f =
@@ -252,27 +310,123 @@ end = struct
         let args = args |> List.map sexp_to_obj in
         let result = f args in
         let result = Utils.obj_to_sexp result in
-        compile ctx result
+        (* prerr_endline @@ "LOG1: " ^ debug_show_sexp [ result ]; *)
+        let result = simplify ctx result in
+        (* prerr_endline @@ "LOG2: " ^ debug_show_sexp [ result ]; *)
+        (* let result = Lib__.Stage_convert_if_to_statment.invoke result in *)
+        (* prerr_endline @@ "LOG3: " ^ debug_show_sexp [ result ]; *)
+        (* compile ctx result *)
+        result
+    (* Function call *)
+    | SList (m, SAtom (mn, name) :: args) ->
+        let args = List.map (simplify ctx) args in
+        SList (m, SAtom (mn, name) :: args)
+    (*
+    | SList (m, SAtom (mn, name) :: args)
+      when not (String.ends_with ~suffix:"*" name) ->
+        let args = List.map (simplify ctx) args in
+        SList (m, SAtom (mn, name) :: args)
+    *)
+    | sexp -> failsexp __LOC__ [ sexp ]
+
+  let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
+    if opt.log then prerr_endline @@ "SIMPLIFY(IN): " ^ debug_show_sexp [ node ];
+    let macro =
+      Parser.parse_text opt.prelude
+      |> simplify { macro = Eval.empty_eval_context }
+    in
+    simplify { macro = Eval.eval macro |> fst } node
+    |> Lib__.Stage_convert_if_to_statment.invoke
+end
+
+module JavaCompiler : sig
+  type compile_opt = { filename : string }
+
+  val do_compile : compile_opt -> sexp -> string
+end = struct
+  type compile_opt = { filename : string }
+  type complie_context = unit
+
+  let rec compile (ctx : complie_context) sexp =
+    (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
+    match sexp with
+    | SAtom (_, x) when String.starts_with ~prefix:":" x ->
+        "\"" ^ unpack_symbol x ^ "\""
+    | SAtom (_, x) -> x
+    | SList (_, SAtom (_, "do*") :: body) ->
+        body |> List.map (compile ctx) |> String.concat ";\n"
+    | SList (_, [ SAtom (_, "let*"); SAtom (_, name) ]) ->
+        Printf.sprintf "Object %s" name
+    | SList (_, [ SAtom (_, "let*"); SAtom (_, name); value ]) ->
+        Printf.sprintf "Object %s=%s" name (compile ctx value)
+    | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
+        Printf.sprintf "%s=%s" name (compile ctx value)
+    | SList (_, [ SAtom (_, "def*"); SAtom (_, name); value ]) ->
+        Printf.sprintf "public static Object %s=%s" name (compile ctx value)
+    | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
+        let args =
+          List.map
+            (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ])
+            args
+        in
+        let body = unwrap_sexp_do body in
+        let last_body = body |> List.rev |> List.hd |> compile ctx in
+        let body =
+          body |> List.rev |> List.tl |> List.rev
+          |> List.map (compile ctx)
+          |> List.map (fun x -> x ^ ";")
+          |> String.concat "\n"
+        in
+        let sargs = String.concat "," args in
+        Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body
+          last_body
+    | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
+    | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
+        let cond = compile ctx cond in
+        let then_ = compile ctx then_ in
+        let else_ = compile ctx else_ in
+        Printf.sprintf "if (%s) {\n%s;\n} else {\n%s;\n}" cond then_ else_
+    | SList (_, [ SAtom (_, "cast"); SAtom (_, type_); value ]) ->
+        let value = compile ctx value in
+        Printf.sprintf "((%s)%s)" type_ value
+    (* instanceof *)
+    | SList (_, [ SAtom (_, "instance?"); SAtom (_, type_); instance ]) ->
+        let instance = compile ctx instance in
+        Printf.sprintf "(%s instanceof %s)" instance type_
+    (* Interop call *)
+    | SList (_, SAtom (_, ".") :: instance :: SAtom (_, method_) :: args) ->
+        let instance = compile ctx instance in
+        let args = List.map (compile ctx) args |> String.concat "," in
+        Printf.sprintf "%s.%s(%s)" instance method_ args
+    (* Macro call *)
+    (* | SList (_, SAtom (_, name) :: args)
+      when Eval.get_function ctx.macro ("macro_" ^ name) <> None ->
+        let f =
+          match Eval.get_function ctx.macro ("macro_" ^ name) with
+          | Some x -> x
+          | None ->
+              failwith @@ __LOC__ ^ "\nCan't find macro '" ^ name ^ "' in:\n"
+              ^ Eval.show_eval_context ctx.macro
+        in
+        let args = args |> List.map sexp_to_obj in
+        let result = f args in
+        let result = Utils.obj_to_sexp result in
+        let result = Simplify.simplify { log = false } result in
+        let result = Lib__.Stage_convert_if_to_statment.invoke result in
+        compile ctx result *)
     (* Function call *)
     | SList (_, SAtom (_, name) :: args)
       when not (String.ends_with ~suffix:"*" name) ->
-        let args = List.map (fun x -> compile ctx x) args in
+        let args = List.map (compile ctx) args in
         if String.contains name '.' then
           Printf.sprintf "%s(%s)" name (String.concat "," args)
         else Printf.sprintf "y2k.RT.invoke(%s,%s)" name (String.concat "," args)
     | x -> failsexp __LOC__ [ x ]
 
   let do_compile (opt : compile_opt) sexp =
-    let macro = Parser.parse_text Prelude.prelude_java in
-    let ctx = { macro = Eval.eval macro |> fst } in
+    prerr_endline @@ "COMPILE(IN): " ^ debug_show_sexp [ sexp ];
     let _clazz = Printf.sprintf "public class %s {\n}" opt.filename in
-    compile ctx sexp
-end
-
-module Simplify : sig
-  val simplify : sexp -> sexp
-end = struct
-  let simplify sexp = sexp
+    compile () sexp
 end
 
 let eval code =
@@ -281,11 +435,13 @@ let eval code =
     | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
   in
   Parser.parse_text (Prelude.prelude_eval ^ code)
-  |> Simplify.simplify |> Eval.eval |> snd |> Utils.obj_to_sexp
-  |> serialize_to_string
+  |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_eval }
+  |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string
 
 let compile (filename : string) code =
-  Parser.parse_text code
-  (* *)
-  |> Simplify.simplify
-  |> JavaCompiler.do_compile { filename }
+  Lib__.Common.NameGenerator.with_scope (fun () ->
+      Parser.parse_text code
+      (* *)
+      |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_java }
+      (* |> Lib__.Stage_convert_if_to_statment.invoke *)
+      |> JavaCompiler.do_compile { filename })
