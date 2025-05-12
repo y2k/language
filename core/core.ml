@@ -40,13 +40,13 @@ module Prelude = struct
 (defn macro_str [& xs]
   (concat
    (list
-    (quote* String.format)
+    'String.format
     (reduce (fn* [acc x] (str acc "%s")) "" xs))
    xs))
 
 (defn macro_vector [& xs]
   (concat
-   (list (quote* java.util.Arrays.asList))
+   (list 'java.util.Arrays.asList)
    xs))
     |}
 
@@ -290,14 +290,7 @@ end = struct
         |> simplify ctx
     | SList (m, [ SAtom (dm, "def"); k; v ]) ->
         SList (m, [ SAtom (dm, "def*"); k; simplify ctx v ])
-    (* | SList (m, [ SAtom (dm, "defn"); name; args; body ]) ->
-        SList
-          ( m,
-            [
-              SAtom (dm, "def*");
-              name;
-              SList (dm, [ SAtom (dm, "fn*"); args; simplify ctx body ]);
-            ] ) *)
+    (* Macro call *)
     | SList (_, SAtom (_, name) :: args)
       when Eval.get_function ctx.macro ("macro_" ^ name) <> None ->
         let f =
@@ -317,16 +310,23 @@ end = struct
         (* prerr_endline @@ "LOG3: " ^ debug_show_sexp [ result ]; *)
         (* compile ctx result *)
         result
+    (* Constructor *)
+    | SList (m, SAtom (mn, clazz) :: args)
+      when String.ends_with ~suffix:"." clazz && clazz <> "." ->
+        let clazz = String.sub clazz 0 (String.length clazz - 1) in
+        let args = List.map (simplify ctx) args in
+        SList (m, SAtom (meta_empty, "new") :: SAtom (mn, clazz) :: args)
+    (* Interop method call *)
+    | SList (m, SAtom (mn, name) :: instance :: args)
+      when String.starts_with ~prefix:"." name && name <> "." ->
+        let name = String.sub name 1 (String.length name - 1) in
+        SList
+          (m, SAtom (meta_empty, ".") :: instance :: SAtom (mn, name) :: args)
+        |> simplify ctx
     (* Function call *)
     | SList (m, SAtom (mn, name) :: args) ->
         let args = List.map (simplify ctx) args in
         SList (m, SAtom (mn, name) :: args)
-    (*
-    | SList (m, SAtom (mn, name) :: args)
-      when not (String.ends_with ~suffix:"*" name) ->
-        let args = List.map (simplify ctx) args in
-        SList (m, SAtom (mn, name) :: args)
-    *)
     | sexp -> failsexp __LOC__ [ sexp ]
 
   let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
@@ -393,32 +393,23 @@ end = struct
     | SList (_, [ SAtom (_, "instance?"); SAtom (_, type_); instance ]) ->
         let instance = compile ctx instance in
         Printf.sprintf "(%s instanceof %s)" instance type_
+    (* Constructor *)
+    | SList (_, SAtom (_, "new") :: SAtom (_, clazz) :: args) ->
+        let args = List.map (compile ctx) args in
+        Printf.sprintf "new %s(%s)" clazz (String.concat "," args)
     (* Interop call *)
     | SList (_, SAtom (_, ".") :: instance :: SAtom (_, method_) :: args) ->
         let instance = compile ctx instance in
         let args = List.map (compile ctx) args |> String.concat "," in
         Printf.sprintf "%s.%s(%s)" instance method_ args
-    (* Macro call *)
-    (* | SList (_, SAtom (_, name) :: args)
-      when Eval.get_function ctx.macro ("macro_" ^ name) <> None ->
-        let f =
-          match Eval.get_function ctx.macro ("macro_" ^ name) with
-          | Some x -> x
-          | None ->
-              failwith @@ __LOC__ ^ "\nCan't find macro '" ^ name ^ "' in:\n"
-              ^ Eval.show_eval_context ctx.macro
-        in
-        let args = args |> List.map sexp_to_obj in
-        let result = f args in
-        let result = Utils.obj_to_sexp result in
-        let result = Simplify.simplify { log = false } result in
-        let result = Lib__.Stage_convert_if_to_statment.invoke result in
-        compile ctx result *)
     (* Function call *)
     | SList (_, SAtom (_, name) :: args)
       when not (String.ends_with ~suffix:"*" name) ->
         let args = List.map (compile ctx) args in
         if String.contains name '.' then
+          Printf.sprintf "%s(%s)" name (String.concat "," args)
+        else if String.contains name '/' then
+          let name = String.map (fun x -> if x = '/' then '.' else x) name in
           Printf.sprintf "%s(%s)" name (String.concat "," args)
         else Printf.sprintf "y2k.RT.invoke(%s,%s)" name (String.concat "," args)
     | x -> failsexp __LOC__ [ x ]
