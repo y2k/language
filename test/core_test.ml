@@ -35,6 +35,7 @@ end
 
 let tests =
   [
+    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 2)))|}, {|999|});
     (* *)
     (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
     (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});

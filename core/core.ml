@@ -259,6 +259,30 @@ end = struct
     match sexp with
     | SAtom _ as x -> x
     | SList (_, []) as x -> x
+    | SList (m, SAtom (_, "ns") :: _ :: args) ->
+        let args =
+          args
+          |> List.concat_map (function
+               | SList (_, SAtom (_, ":import") :: imports) ->
+                   imports
+                   |> List.concat_map (function
+                        | SList (_, _ :: SAtom (_, pkg) :: classes) ->
+                            classes
+                            |> List.map (function
+                                 | SAtom (_, class_name) ->
+                                     SList
+                                       ( meta_empty,
+                                         [
+                                           SAtom (meta_empty, "def*");
+                                           SAtom (meta_empty, class_name);
+                                           SAtom
+                                             (meta_empty, pkg ^ "." ^ class_name);
+                                         ] )
+                                 | x -> failsexp __LOC__ [ x ])
+                        | x -> failsexp __LOC__ [ x ])
+               | x -> failsexp __LOC__ [ x ])
+        in
+        SList (m, SAtom (meta_empty, "do*") :: args)
     | SList (m, SAtom (mif, "if") :: if_args) ->
         SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
     | SList (m, SAtom (mdo, "do") :: body) ->

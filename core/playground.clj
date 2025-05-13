@@ -1,5 +1,26 @@
 ;;
 
+(ns _
+  (:import [java.util Date]))
+
+(defn run []
+  (.hashCode (Date. 2)))
+
+;; ->
+
+(ns _
+  (:import [java.util Date]))
+
+(defn run []
+  (.hashCode (new Date 2)))
+
+;; ->
+
+(defn run []
+  (.hashCode (java.util.Date. 2)))
+
+;;
+
 (defn list [& xs] xs)
 
 (defn macro_get [xs i]
@@ -26,7 +47,7 @@
 ;;
 (if  (instance? java.util.Map (vector 10 20 30)) (. (cast java.util.Map (vector 10 20 30)) size) (. (cast java.util.Collection (vector 10 20 30)) size))
 (if* (instance? java.util.Map (vector 10 20 30)) (. (cast java.util.Map (vector 10 20 30)) size) (. (cast java.util.Collection (vector 10 20 30)) size))
-L;;
+;;
 
 (def* run
   (fn* ()
