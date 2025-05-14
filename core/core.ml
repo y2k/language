@@ -16,8 +16,8 @@ module Prelude = struct
 (defn macro_count [xs]
   (let* vxs (gensym))
   (list
-    'do*
-    (list 'let* vxs xs)
+    'do
+    (list 'let vxs xs)
     (list
       'if
       (list 'instance? 'java.util.Map vxs)
@@ -28,9 +28,9 @@ module Prelude = struct
   (let* vxs (gensym))
   (let* vi (gensym))
   (list
-    'do*
-    (list 'let* vxs xs)
-    (list 'let* vi i)
+    'do
+    (list 'let vxs xs)
+    (list 'let vi i)
     (list
       'if
       (list 'instance? 'java.util.Map vxs)
@@ -242,6 +242,62 @@ end = struct
     node |> eval_ ctx
 end
 
+module ResolveImport : sig
+  val do_resolve : sexp -> sexp
+end = struct
+  type resolve_ctx = { links : (string * string) list }
+
+  let rec resolve (ctx : resolve_ctx) node =
+    match node with
+    | SAtom (m, name) -> (
+        match ctx.links |> List.assoc_opt name with
+        | Some x -> (ctx, SAtom (m, x))
+        | None -> (ctx, SAtom (m, name)))
+    | SList
+        ( _,
+          [
+            SAtom (_, "def*");
+            SAtom (_, name);
+            SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]);
+          ] ) ->
+        let ctx = { links = (name, value) :: ctx.links } in
+        let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
+        (ctx, node)
+    | SList (m, [ (SAtom (_, "def*") as def_); name; value ]) ->
+        let _, value = resolve ctx value in
+        (ctx, SList (m, [ def_; name; value ]))
+    | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
+        let _, body = resolve ctx body in
+        (ctx, SList (m, [ fn_; args; body ]))
+    | SList (m, (SAtom (_, "do*") as do_) :: body) ->
+        let ctx, body =
+          List.fold_left_map (fun ctx x -> resolve ctx x) ctx body
+        in
+        (ctx, SList (m, do_ :: body))
+    | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
+        let value = value |> List.map (fun x -> resolve ctx x |> snd) in
+        (ctx, SList (m, let_ :: name :: value))
+    | SList (m, (SAtom (_, "if*") as if_) :: args) ->
+        let args = args |> List.map (fun x -> resolve ctx x |> snd) in
+        (ctx, SList (m, if_ :: args))
+    (* Function call *)
+    | SList (m, SAtom (_, fun_name) :: args)
+      when not (String.ends_with ~suffix:"*" fun_name) ->
+        let _, args =
+          List.fold_left_map (fun ctx x -> resolve ctx x) ctx args
+        in
+        (ctx, SList (m, SAtom (m, fun_name) :: args))
+    | SList (m, fn :: args) ->
+        let _, fn = resolve ctx fn in
+        let args = List.map (fun x -> resolve ctx x |> snd) args in
+        (ctx, SList (m, fn :: args))
+    | x -> failsexp __LOC__ [ x ]
+
+  let do_resolve node =
+    let ctx = { links = [] } in
+    resolve ctx node |> snd
+end
+
 module Simplify : sig
   type simplify_opt = { log : bool; prelude : string }
 
@@ -275,8 +331,14 @@ end = struct
                                          [
                                            SAtom (meta_empty, "def*");
                                            SAtom (meta_empty, class_name);
-                                           SAtom
-                                             (meta_empty, pkg ^ "." ^ class_name);
+                                           SList
+                                             ( meta_empty,
+                                               [
+                                                 SAtom (meta_empty, "quote*");
+                                                 SAtom
+                                                   ( meta_empty,
+                                                     pkg ^ "." ^ class_name );
+                                               ] );
                                          ] )
                                  | x -> failsexp __LOC__ [ x ])
                         | x -> failsexp __LOC__ [ x ])
@@ -287,6 +349,9 @@ end = struct
         SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
     | SList (m, SAtom (mdo, "do") :: body) ->
         SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)
+    | SList (m, SAtom (ml, "let") :: name :: value) ->
+        let value = List.map (simplify ctx) value in
+        SList (m, SAtom (ml, "let*") :: name :: value)
     | SList
         ( m,
           SAtom (md, "defn")
@@ -312,6 +377,12 @@ end = struct
                   ] );
             ] )
         |> simplify ctx
+    | SList (m, SAtom (mfn, "fn") :: SList (ma, _ :: args) :: body) ->
+        SList
+          ( m,
+            SAtom (mfn, "fn*")
+            :: SList (ma, args)
+            :: List.map (simplify ctx) body )
     | SList (m, [ SAtom (dm, "def"); k; v ]) ->
         SList (m, [ SAtom (dm, "def*"); k; simplify ctx v ])
     (* Macro call *)
@@ -327,8 +398,9 @@ end = struct
         let args = args |> List.map sexp_to_obj in
         let result = f args in
         let result = Utils.obj_to_sexp result in
-        (* prerr_endline @@ "LOG1: " ^ debug_show_sexp [ result ]; *)
+        prerr_endline @@ "MACRO RESULT: " ^ debug_show_sexp [ result ];
         let result = simplify ctx result in
+        prerr_endline @@ "MACRO RESULT(SIMPLE): " ^ debug_show_sexp [ result ];
         (* prerr_endline @@ "LOG2: " ^ debug_show_sexp [ result ]; *)
         (* let result = Lib__.Stage_convert_if_to_statment.invoke result in *)
         (* prerr_endline @@ "LOG3: " ^ debug_show_sexp [ result ]; *)
@@ -347,11 +419,17 @@ end = struct
         SList
           (m, SAtom (meta_empty, ".") :: instance :: SAtom (mn, name) :: args)
         |> simplify ctx
+    (* Handle special forms *)
+    | SList (_, SAtom (_, n) :: _) as x
+      when n = "def*" || n = "do*" || n = "fn*" || n = "let*" ->
+        x
+    | SList (_, SAtom (_, name) :: _) when String.ends_with ~suffix:"*" name ->
+        failsexp __LOC__ [ sexp ]
     (* Function call *)
-    | SList (m, SAtom (mn, name) :: args) ->
+    | SList (m, fn :: args) ->
         let args = List.map (simplify ctx) args in
-        SList (m, SAtom (mn, name) :: args)
-    | sexp -> failsexp __LOC__ [ sexp ]
+        let fn = simplify ctx fn in
+        SList (m, fn :: args)
 
   let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
     if opt.log then prerr_endline @@ "SIMPLIFY(IN): " ^ debug_show_sexp [ node ];
@@ -360,7 +438,7 @@ end = struct
       |> simplify { macro = Eval.empty_eval_context }
     in
     simplify { macro = Eval.eval macro |> fst } node
-    |> Lib__.Stage_convert_if_to_statment.invoke
+    |> Lib__.Stage_convert_if_to_statment.invoke |> ResolveImport.do_resolve
 end
 
 module JavaCompiler : sig
@@ -377,6 +455,12 @@ end = struct
     | SAtom (_, x) when String.starts_with ~prefix:":" x ->
         "\"" ^ unpack_symbol x ^ "\""
     | SAtom (_, x) -> x
+    (* Operators *)
+    | SList (_, SAtom (_, op) :: args)
+      when op = "+" || op = "-" || op = "*" || op = "/" ->
+        List.map (compile ctx) args
+        |> List.map (Printf.sprintf "((int)%s)")
+        |> String.concat op |> Printf.sprintf "(%s)"
     | SList (_, SAtom (_, "do*") :: body) ->
         body |> List.map (compile ctx) |> String.concat ";\n"
     | SList (_, [ SAtom (_, "let*"); SAtom (_, name) ]) ->
@@ -426,22 +510,38 @@ end = struct
         let instance = compile ctx instance in
         let args = List.map (compile ctx) args |> String.concat "," in
         Printf.sprintf "%s.%s(%s)" instance method_ args
+    | SList (_, SAtom (_, name) :: _) as x
+      when String.ends_with ~suffix:"*" name ->
+        failsexp __LOC__ [ x ]
     (* Function call *)
-    | SList (_, SAtom (_, name) :: args)
-      when not (String.ends_with ~suffix:"*" name) ->
+    | SList (_, fn :: args) -> (
+        (* SAtom (_, name)  *)
         let args = List.map (compile ctx) args in
-        if String.contains name '.' then
-          Printf.sprintf "%s(%s)" name (String.concat "," args)
-        else if String.contains name '/' then
-          let name = String.map (fun x -> if x = '/' then '.' else x) name in
-          Printf.sprintf "%s(%s)" name (String.concat "," args)
-        else Printf.sprintf "y2k.RT.invoke(%s,%s)" name (String.concat "," args)
+        let args = String.concat "," args in
+        match fn with
+        | SAtom (_, name) ->
+            if String.contains name '.' then Printf.sprintf "%s(%s)" name args
+            else if String.contains name '/' then
+              let name =
+                String.map (fun x -> if x = '/' then '.' else x) name
+              in
+              Printf.sprintf "%s(%s)" name args
+            else Printf.sprintf "y2k.RT.invoke(%s,%s)" name args
+        | x ->
+            let fn = compile ctx x in
+            Printf.sprintf "y2k.RT.invoke(%s,%s)" fn args)
     | x -> failsexp __LOC__ [ x ]
 
   let do_compile (opt : compile_opt) sexp =
     prerr_endline @@ "COMPILE(IN): " ^ debug_show_sexp [ sexp ];
-    let _clazz = Printf.sprintf "public class %s {\n}" opt.filename in
-    compile () sexp
+    let clazz = Str.global_replace (Str.regexp "\\.clj") "" opt.filename in
+    let clazz =
+      Printf.sprintf "%s%s"
+        (String.capitalize_ascii (String.sub clazz 0 1))
+        (String.sub clazz 1 (String.length clazz - 1))
+    in
+    let body = compile () sexp in
+    Printf.sprintf "public class %s {\n%s;\n}" clazz body
 end
 
 let eval code =

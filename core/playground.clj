@@ -1,5 +1,19 @@
 ;;
 
+(defn run (vector)
+  (count (vector 10 20 30)))
+
+(def* run
+  (fn* ()
+       (do*
+        (let* p__1 (vector 10 20 30))
+        (if
+         (instance? java.util.Map p__1)
+          (. (cast java.util.Map p__1) size)
+          (. (cast java.util.Collection p__1) size)))))
+
+;;
+
 (ns _
   (:import [java.util Date]))
 

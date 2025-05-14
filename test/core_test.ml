@@ -15,7 +15,7 @@ end = struct
 public class App {
 %s;
 
-public static void main(String[] args) {System.exit((int) RT.invoke(run));}}%s|}
+public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}}%s|}
         code prelude
     in
     prerr_endline code;
@@ -26,16 +26,18 @@ public static void main(String[] args) {System.exit((int) RT.invoke(run));}}%s|}
 
   let create_tests tests =
     tests
-    |> List.map (fun (loc, i, e) ->
+    |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Quick (fun () ->
-               let code = Core.compile "user.clj" i in
-               let a = run code in
-               Alcotest.(check string) "" e a))
+               let actual = Core.compile "user.clj" input |> run in
+               Alcotest.(check string) "" expected actual))
 end
 
 let tests =
   [
-    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 2)))|}, {|999|});
+    (* *)
+    (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
+    (* *)
+    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
     (* *)
     (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
     (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});
