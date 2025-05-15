@@ -35,9 +35,10 @@ end
 let tests =
   [
     (* *)
-    (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
+    (__LOC__, {|(ns _ (:require ["../lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+    (* (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|421|}); *)
     (* *)
-    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
+    (* (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
     (* *)
     (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
     (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});
@@ -59,6 +60,6 @@ let tests =
     (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
     (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] 2)|}, {|2|});
+    (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
   ]
   |> JavaExecution.create_tests

@@ -273,6 +273,12 @@ end = struct
         let ctx, body =
           List.fold_left_map (fun ctx x -> resolve ctx x) ctx body
         in
+        let body =
+          body
+          |> List.filter_map (function
+               | SList (_, [ SAtom (_, "do*") ]) -> None
+               | x -> Some x)
+        in
         (ctx, SList (m, do_ :: body))
     | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
         let value = value |> List.map (fun x -> resolve ctx x |> snd) in
@@ -304,14 +310,15 @@ module Simplify : sig
   val do_simplify : simplify_opt -> sexp -> sexp
 end = struct
   type simplify_opt = { log : bool; prelude : string }
-  type simplify_ctx = { macro : Eval.eval_context }
+  type simplify_ctx = { log : bool; macro : Eval.eval_context }
 
   let sexp_to_obj = function
     | SAtom (m, _) as x -> OQuote (m, x)
     | SList (m, _) as x -> OQuote (m, x)
 
   let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
-    (* prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ]; *)
+    if ctx.log && false then
+      prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
     match sexp with
     | SAtom _ as x -> x
     | SList (_, []) as x -> x
@@ -319,6 +326,29 @@ end = struct
         let args =
           args
           |> List.concat_map (function
+               | SList (_, SAtom (_, ":require") :: imports) ->
+                   imports
+                   |> List.concat_map (function
+                        | SList (_, _ :: SAtom (_, pkg) :: classes) ->
+                            classes
+                            |> List.map (function
+                                 | SAtom (_, class_name) ->
+                                     SList
+                                       ( meta_empty,
+                                         [
+                                           SAtom (meta_empty, "def*");
+                                           SAtom (meta_empty, class_name);
+                                           SList
+                                             ( meta_empty,
+                                               [
+                                                 SAtom (meta_empty, "quote*");
+                                                 SAtom
+                                                   ( meta_empty,
+                                                     pkg ^ "." ^ class_name );
+                                               ] );
+                                         ] )
+                                 | x -> failsexp __LOC__ [ x ])
+                        | x -> failsexp __LOC__ [ x ])
                | SList (_, SAtom (_, ":import") :: imports) ->
                    imports
                    |> List.concat_map (function
@@ -431,14 +461,24 @@ end = struct
         let fn = simplify ctx fn in
         SList (m, fn :: args)
 
+  let log_stage (opt : simplify_opt) title node =
+    (if opt.log then
+       let padding = String.make (max 0 (25 - String.length title)) ' ' in
+       prerr_endline @@ "* " ^ title ^ " -> " ^ padding
+       ^ debug_show_sexp [ node ]);
+    node
+
   let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
-    if opt.log then prerr_endline @@ "SIMPLIFY(IN): " ^ debug_show_sexp [ node ];
     let macro =
       Parser.parse_text opt.prelude
-      |> simplify { macro = Eval.empty_eval_context }
+      |> simplify { macro = Eval.empty_eval_context; log = false }
     in
-    simplify { macro = Eval.eval macro |> fst } node
-    |> Lib__.Stage_convert_if_to_statment.invoke |> ResolveImport.do_resolve
+    node |> log_stage opt "Parse"
+    |> simplify { macro = Eval.eval macro |> fst; log = opt.log }
+    |> Lib__.Stage_convert_if_to_statment.invoke
+    |> log_stage opt "Convert if to statement"
+    |> ResolveImport.do_resolve
+    |> log_stage opt "Resolve import"
 end
 
 module JavaCompiler : sig
@@ -533,7 +573,6 @@ end = struct
     | x -> failsexp __LOC__ [ x ]
 
   let do_compile (opt : compile_opt) sexp =
-    prerr_endline @@ "COMPILE(IN): " ^ debug_show_sexp [ sexp ];
     let clazz = Str.global_replace (Str.regexp "\\.clj") "" opt.filename in
     let clazz =
       Printf.sprintf "%s%s"
