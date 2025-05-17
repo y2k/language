@@ -28,14 +28,14 @@ public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}
     tests
     |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Quick (fun () ->
-               let actual = Core.compile "user.clj" input |> run in
+               let actual = Core.compile "/app/src/core/ext/user.clj" "/app/src" input |> run in
                Alcotest.(check string) "" expected actual))
 end
 
 let tests =
   [
     (* *)
-    (__LOC__, {|(ns _ (:require ["../lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+    (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
     (* (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|421|}); *)
     (* *)
     (* (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});

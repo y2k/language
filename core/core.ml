@@ -243,9 +243,27 @@ end = struct
 end
 
 module ResolveImport : sig
-  val do_resolve : sexp -> sexp
+  val do_resolve : string -> string -> sexp -> sexp
 end = struct
-  type resolve_ctx = { links : (string * string) list }
+  type resolve_ctx = {
+    links : (string * string) list;
+    aliases : (string * string) list;
+    filename : string;
+    root_dir : string;
+  }
+
+  let mangle_name (ns : string) (name : string) : string =
+    Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
+
+  let path_to_namespace name path =
+    let path = unpack_string path in
+    prerr_endline @@ "LOG: path=" ^ path;
+    let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
+    prerr_endline @@ "LOG: path=" ^ path;
+    let path = String.map (fun x -> if x = '/' then '.' else x) path in
+    prerr_endline @@ "LOG: path=" ^ path;
+    let path = mangle_name path name in
+    path
 
   let rec resolve (ctx : resolve_ctx) node =
     match node with
@@ -255,12 +273,27 @@ end = struct
         | None -> (ctx, SAtom (m, name)))
     | SList
         ( _,
+          SAtom (_, "def*")
+          :: SAtom (_, "__ns_aliases")
+          :: SList (_, [ SAtom (_, "quote*"); SList (_, _ :: items) ])
+          :: _ ) ->
+        let items =
+          items
+          |> List.map (function
+               | SAtom (_, x) -> x
+               | x -> failsexp __LOC__ [ x ])
+          |> List.split_into_pairs
+        in
+        let ctx = { ctx with aliases = items } in
+        (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ]))
+    | SList
+        ( _,
           [
             SAtom (_, "def*");
             SAtom (_, name);
             SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]);
           ] ) ->
-        let ctx = { links = (name, value) :: ctx.links } in
+        let ctx = { ctx with links = (name, value) :: ctx.links } in
         let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
         (ctx, node)
     | SList (m, [ (SAtom (_, "def*") as def_); name; value ]) ->
@@ -292,6 +325,19 @@ end = struct
         let _, args =
           List.fold_left_map (fun ctx x -> resolve ctx x) ctx args
         in
+        let fun_name =
+          if String.contains fun_name '/' then
+            let alias_name = String.split_on_char '/' fun_name |> List.hd in
+            ctx.aliases |> List.assoc_opt alias_name
+            |> Option.map (fun x ->
+                   let fun_name =
+                     String.split_on_char '/' fun_name
+                     |> List.tl |> String.concat "/"
+                   in
+                   path_to_namespace fun_name x)
+            |> Option.value ~default:alias_name
+          else fun_name
+        in
         (ctx, SList (m, SAtom (m, fun_name) :: args))
     | SList (m, fn :: args) ->
         let _, fn = resolve ctx fn in
@@ -299,18 +345,33 @@ end = struct
         (ctx, SList (m, fn :: args))
     | x -> failsexp __LOC__ [ x ]
 
-  let do_resolve node =
-    let ctx = { links = [] } in
+  let do_resolve filename root_dir node =
+    let ctx = { links = []; aliases = []; filename; root_dir } in
     resolve ctx node |> snd
 end
 
 module Simplify : sig
-  type simplify_opt = { log : bool; prelude : string }
+  type simplify_opt = {
+    log : bool;
+    prelude : string;
+    filename : string;
+    root_dir : string;
+  }
 
   val do_simplify : simplify_opt -> sexp -> sexp
 end = struct
-  type simplify_opt = { log : bool; prelude : string }
-  type simplify_ctx = { log : bool; macro : Eval.eval_context }
+  type simplify_opt = {
+    log : bool;
+    prelude : string;
+    filename : string;
+    root_dir : string;
+  }
+
+  type simplify_ctx = {
+    otp : simplify_opt;
+    log : bool;
+    macro : Eval.eval_context;
+  }
 
   let sexp_to_obj = function
     | SAtom (m, _) as x -> OQuote (m, x)
@@ -326,29 +387,31 @@ end = struct
         let args =
           args
           |> List.concat_map (function
-               | SList (_, SAtom (_, ":require") :: imports) ->
-                   imports
-                   |> List.concat_map (function
-                        | SList (_, _ :: SAtom (_, pkg) :: classes) ->
-                            classes
-                            |> List.map (function
-                                 | SAtom (_, class_name) ->
-                                     SList
-                                       ( meta_empty,
-                                         [
-                                           SAtom (meta_empty, "def*");
-                                           SAtom (meta_empty, class_name);
-                                           SList
-                                             ( meta_empty,
-                                               [
-                                                 SAtom (meta_empty, "quote*");
-                                                 SAtom
-                                                   ( meta_empty,
-                                                     pkg ^ "." ^ class_name );
-                                               ] );
-                                         ] )
-                                 | x -> failsexp __LOC__ [ x ])
-                        | x -> failsexp __LOC__ [ x ])
+               | SList (_, SAtom (_, ":require") :: requires) ->
+                   let aliases =
+                     requires
+                     |> List.concat_map (function
+                          | SList (_, [ _; path; _; SAtom (_, alias) ]) ->
+                              [ SAtom (meta_empty, alias); path ]
+                          | x -> failsexp __LOC__ [ x ])
+                   in
+                   [
+                     SList
+                       ( meta_empty,
+                         [
+                           SAtom (meta_empty, "def");
+                           SAtom (meta_empty, "__ns_aliases");
+                           SList
+                             ( meta_empty,
+                               [
+                                 SAtom (meta_empty, "quote");
+                                 SList
+                                   ( meta_empty,
+                                     SAtom (meta_empty, "hash-map") :: aliases
+                                   );
+                               ] );
+                         ] );
+                   ]
                | SList (_, SAtom (_, ":import") :: imports) ->
                    imports
                    |> List.concat_map (function
@@ -374,7 +437,7 @@ end = struct
                         | x -> failsexp __LOC__ [ x ])
                | x -> failsexp __LOC__ [ x ])
         in
-        SList (m, SAtom (meta_empty, "do*") :: args)
+        SList (m, SAtom (meta_empty, "do") :: args) |> simplify ctx
     | SList (m, SAtom (mif, "if") :: if_args) ->
         SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
     | SList (m, SAtom (mdo, "do") :: body) ->
@@ -382,6 +445,7 @@ end = struct
     | SList (m, SAtom (ml, "let") :: name :: value) ->
         let value = List.map (simplify ctx) value in
         SList (m, SAtom (ml, "let*") :: name :: value)
+    | SList (m, SAtom (mq, "quote") :: x) -> SList (m, SAtom (mq, "quote*") :: x)
     | SList
         ( m,
           SAtom (md, "defn")
@@ -471,23 +535,31 @@ end = struct
   let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
     let macro =
       Parser.parse_text opt.prelude
-      |> simplify { macro = Eval.empty_eval_context; log = false }
+      |> simplify { macro = Eval.empty_eval_context; log = false; otp = opt }
     in
     node |> log_stage opt "Parse"
-    |> simplify { macro = Eval.eval macro |> fst; log = opt.log }
+    |> simplify { macro = Eval.eval macro |> fst; log = opt.log; otp = opt }
     |> Lib__.Stage_convert_if_to_statment.invoke
     |> log_stage opt "Convert if to statement"
-    |> ResolveImport.do_resolve
+    |> ResolveImport.do_resolve opt.filename opt.root_dir
     |> log_stage opt "Resolve import"
 end
 
 module JavaCompiler : sig
-  type compile_opt = { filename : string }
+  type compile_opt = { filename : string; root_page : string }
 
   val do_compile : compile_opt -> sexp -> string
 end = struct
-  type compile_opt = { filename : string }
+  type compile_opt = { filename : string; root_page : string }
   type complie_context = unit
+
+  let unmangle_symbol x =
+    if String.starts_with ~prefix:"G" x then
+      let l1 = String.get x 1 |> String.make 1 |> int_of_string in
+      let ns = String.sub x 2 l1 in
+      let name = String.sub x (l1 + 3) (String.length x - l1 - 3) in
+      (ns, name)
+    else ("", x)
 
   let rec compile (ctx : complie_context) sexp =
     (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
@@ -555,12 +627,15 @@ end = struct
         failsexp __LOC__ [ x ]
     (* Function call *)
     | SList (_, fn :: args) -> (
-        (* SAtom (_, name)  *)
         let args = List.map (compile ctx) args in
         let args = String.concat "," args in
         match fn with
         | SAtom (_, name) ->
-            if String.contains name '.' then Printf.sprintf "%s(%s)" name args
+            if String.starts_with ~prefix:"G" name then
+              let ns, name = unmangle_symbol name in
+              Printf.sprintf "y2k.RT.invoke(%s.%s,%s)" ns name args
+            else if String.contains name '.' then
+              Printf.sprintf "%s(%s)" name args
             else if String.contains name '/' then
               let name =
                 String.map (fun x -> if x = '/' then '.' else x) name
@@ -573,14 +648,20 @@ end = struct
     | x -> failsexp __LOC__ [ x ]
 
   let do_compile (opt : compile_opt) sexp =
-    let clazz = Str.global_replace (Str.regexp "\\.clj") "" opt.filename in
+    let pkg =
+      let n = String.length opt.root_page + 1 in
+      String.sub opt.filename n (String.length opt.filename - n)
+      |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
+      |> Str.global_replace (Str.regexp "/") "."
+    in
     let clazz =
-      Printf.sprintf "%s%s"
-        (String.capitalize_ascii (String.sub clazz 0 1))
-        (String.sub clazz 1 (String.length clazz - 1))
+      opt.filename
+      |> Str.global_replace (Str.regexp "\\.clj") ""
+      |> Str.global_replace (Str.regexp ".+/") ""
+      |> String.capitalize_ascii
     in
     let body = compile () sexp in
-    Printf.sprintf "public class %s {\n%s;\n}" clazz body
+    Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
 end
 
 let eval code =
@@ -592,10 +673,14 @@ let eval code =
   |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_eval }
   |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string
 
-let compile (filename : string) code =
+let compile (filename : string) (root_page : string) code =
+  let log x =
+    prerr_endline x;
+    x
+  in
   Lib__.Common.NameGenerator.with_scope (fun () ->
       Parser.parse_text code
       (* *)
       |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_java }
-      (* |> Lib__.Stage_convert_if_to_statment.invoke *)
-      |> JavaCompiler.do_compile { filename })
+      |> JavaCompiler.do_compile { filename; root_page }
+      |> log)
