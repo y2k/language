@@ -242,28 +242,74 @@ end = struct
     node |> eval_ ctx
 end
 
+module NamespaceUtils = struct
+  let mangle_name (ns : string) (name : string) : string =
+    Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
+
+  let unmangle_symbol x =
+    if String.starts_with ~prefix:"G" x then
+      let nstr =
+        Str.string_match (Str.regexp "G[0-9]+") x 0 |> ignore;
+        let s = Str.matched_string x in
+        String.sub s 1 (String.length s - 1)
+      in
+      (* prerr_endline @@ "LOG: '" ^ x ^ "' -> '" ^ a ^ "'"; *)
+      let l1 = int_of_string nstr in
+      (* let l1 = String.get x 1 |> String.make 1 |> int_of_string in *)
+      let ns = String.sub x (1 + String.length nstr) l1 in
+      (* let ns = "|" ^ ns ^ "|" in *)
+      let name =
+        let n = String.length nstr in
+        String.sub x (l1 + 2 + n) (String.length x - l1 - 2 - n)
+      in
+      (* let name = "|" ^ name ^ "|" in *)
+      (ns, name)
+    else ("", x)
+
+  let path_to_namespace name path =
+    let path = unpack_string path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = String.map (fun x -> if x = '/' then '.' else x) path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = mangle_name path name in
+    path
+
+  let convert_path_to_ns _base_path _filename _path =
+    let merge_path base_path rel_path =
+      let rec loop xs ps =
+        match (xs, ps) with
+        | _ :: xs, ".." :: ps -> loop xs ps
+        | xs, "." :: ps -> loop xs ps
+        | xs, ps -> List.rev xs @ ps
+      in
+      loop
+        (String.split_on_char '/' base_path |> List.rev |> List.tl)
+        (String.split_on_char '/' rel_path)
+      |> String.concat "/"
+    in
+    (* prerr_endline @@ "LOG1:_base_path: " ^ _base_path;
+    prerr_endline @@ "LOG2:_filename: " ^ _filename;
+    prerr_endline @@ "LOG3:_path: " ^ _path; *)
+    let path = merge_path _filename _path in
+    (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
+    let path =
+      let n = String.length _base_path + 1 in
+      String.sub path n (String.length path - n)
+    in
+    let path = Str.global_replace (Str.regexp "/") "." path in
+    (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
+    path
+end
+
 module ResolveImport : sig
   val do_resolve : string -> string -> sexp -> sexp
 end = struct
   type resolve_ctx = {
     links : (string * string) list;
-    aliases : (string * string) list;
-    filename : string;
-    root_dir : string;
+    aliases : (string * string) list; (* filename : string; *)
   }
-
-  let mangle_name (ns : string) (name : string) : string =
-    Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
-
-  let path_to_namespace name path =
-    let path = unpack_string path in
-    prerr_endline @@ "LOG: path=" ^ path;
-    let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
-    prerr_endline @@ "LOG: path=" ^ path;
-    let path = String.map (fun x -> if x = '/' then '.' else x) path in
-    prerr_endline @@ "LOG: path=" ^ path;
-    let path = mangle_name path name in
-    path
 
   let rec resolve (ctx : resolve_ctx) node =
     match node with
@@ -334,8 +380,8 @@ end = struct
                      String.split_on_char '/' fun_name
                      |> List.tl |> String.concat "/"
                    in
-                   path_to_namespace fun_name x)
-            |> Option.value ~default:alias_name
+                   NamespaceUtils.path_to_namespace fun_name x)
+            |> Option.value ~default:fun_name
           else fun_name
         in
         (ctx, SList (m, SAtom (m, fun_name) :: args))
@@ -345,8 +391,8 @@ end = struct
         (ctx, SList (m, fn :: args))
     | x -> failsexp __LOC__ [ x ]
 
-  let do_resolve filename root_dir node =
-    let ctx = { links = []; aliases = []; filename; root_dir } in
+  let do_resolve _filename _root_dir node =
+    let ctx = { links = []; aliases = [] } in
     resolve ctx node |> snd
 end
 
@@ -377,6 +423,27 @@ end = struct
     | SAtom (m, _) as x -> OQuote (m, x)
     | SList (m, _) as x -> OQuote (m, x)
 
+  (* let convert_path_to_ns _root_dir _filename path =
+    let load_file base_path mod_path =
+      let mod_path = unpack_string mod_path ^ ".clj" in
+      let merge_path () =
+        let rec loop xs ps =
+          match (xs, ps) with
+          | _ :: xs, ".." :: ps -> loop xs ps
+          | xs, "." :: ps -> loop xs ps
+          | xs, ps -> List.rev xs @ ps
+        in
+        loop
+          (String.split_on_char '/' base_path |> List.rev |> List.tl)
+          (String.split_on_char '/' mod_path)
+        |> String.concat "/"
+      in
+      let path = merge_path () in
+      path
+    in
+    let path = String.sub path 0 (String.length path - 4) in
+    load_file _root_dir path *)
+
   let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
     if ctx.log && false then
       prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
@@ -391,8 +458,17 @@ end = struct
                    let aliases =
                      requires
                      |> List.concat_map (function
-                          | SList (_, [ _; path; _; SAtom (_, alias) ]) ->
-                              [ SAtom (meta_empty, alias); path ]
+                          | SList
+                              (_, [ _; SAtom (_, path); _; SAtom (ma, alias) ])
+                            ->
+                              [
+                                SAtom (meta_empty, alias);
+                                SAtom
+                                  ( ma,
+                                    NamespaceUtils.convert_path_to_ns
+                                      ctx.otp.root_dir ctx.otp.filename
+                                      (unpack_string path) );
+                              ]
                           | x -> failsexp __LOC__ [ x ])
                    in
                    [
@@ -546,20 +622,18 @@ end = struct
 end
 
 module JavaCompiler : sig
-  type compile_opt = { filename : string; root_page : string }
+  type compile_opt = { filename : string; root_dir : string }
 
   val do_compile : compile_opt -> sexp -> string
 end = struct
-  type compile_opt = { filename : string; root_page : string }
+  type compile_opt = { filename : string; root_dir : string }
   type complie_context = unit
 
-  let unmangle_symbol x =
-    if String.starts_with ~prefix:"G" x then
-      let l1 = String.get x 1 |> String.make 1 |> int_of_string in
-      let ns = String.sub x 2 l1 in
-      let name = String.sub x (l1 + 3) (String.length x - l1 - 3) in
-      (ns, name)
-    else ("", x)
+  let convert_namespace_to_class_name (ns : string) =
+    let parts = String.split_on_char '.' ns in
+    let pkg = parts |> List.rev |> List.tl |> List.rev in
+    let cls = parts |> List.rev |> List.hd |> String.capitalize_ascii in
+    String.concat "." (pkg @ [ cls ])
 
   let rec compile (ctx : complie_context) sexp =
     (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
@@ -632,8 +706,9 @@ end = struct
         match fn with
         | SAtom (_, name) ->
             if String.starts_with ~prefix:"G" name then
-              let ns, name = unmangle_symbol name in
-              Printf.sprintf "y2k.RT.invoke(%s.%s,%s)" ns name args
+              let ns, name = NamespaceUtils.unmangle_symbol name in
+              let cls = convert_namespace_to_class_name ns in
+              Printf.sprintf "y2k.RT.invoke(%s.%s,%s)" cls name args
             else if String.contains name '.' then
               Printf.sprintf "%s(%s)" name args
             else if String.contains name '/' then
@@ -649,7 +724,7 @@ end = struct
 
   let do_compile (opt : compile_opt) sexp =
     let pkg =
-      let n = String.length opt.root_page + 1 in
+      let n = String.length opt.root_dir + 1 in
       String.sub opt.filename n (String.length opt.filename - n)
       |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
       |> Str.global_replace (Str.regexp "/") "."
@@ -670,17 +745,19 @@ let eval code =
     | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
   in
   Parser.parse_text (Prelude.prelude_eval ^ code)
-  |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_eval }
+  |> Simplify.do_simplify
+       {
+         log = true;
+         prelude = Prelude.prelude_eval;
+         filename = "";
+         root_dir = "";
+       }
   |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string
 
-let compile (filename : string) (root_page : string) code =
-  let log x =
-    prerr_endline x;
-    x
-  in
+let compile (log : bool) (filename : string) (root_dir : string) code =
   Lib__.Common.NameGenerator.with_scope (fun () ->
       Parser.parse_text code
       (* *)
-      |> Simplify.do_simplify { log = true; prelude = Prelude.prelude_java }
-      |> JavaCompiler.do_compile { filename; root_page }
-      |> log)
+      |> Simplify.do_simplify
+           { log; prelude = Prelude.prelude_java; filename; root_dir }
+      |> JavaCompiler.do_compile { filename; root_dir })

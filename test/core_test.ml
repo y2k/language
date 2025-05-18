@@ -9,6 +9,11 @@ end = struct
       |> Str.global_replace (Str.regexp "public class RT") "class RT"
     in
     let code =
+      code
+      |> Str.global_replace (Str.regexp "package .+;\n") ""
+      |> Str.global_replace (Str.regexp "core\\.ext\\.lib\\.") ""
+    in
+    let code =
       Printf.sprintf
         {|package y2k;
 
@@ -28,7 +33,11 @@ public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}
     tests
     |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Quick (fun () ->
-               let actual = Core.compile "/app/src/core/ext/user.clj" "/app/src" input |> run in
+               let ext_module =
+                 {|(ns _) (defn foo [x] x)|} |> Core.compile false "/app/src/core/ext/lib/eff.clj" "/app/src"
+               in
+               let code = Core.compile true "/app/src/core/ext/user.clj" "/app/src" input in
+               let actual = ext_module ^ "\n" ^ code |> run in
                Alcotest.(check string) "" expected actual))
 end
 
@@ -36,9 +45,9 @@ let tests =
   [
     (* *)
     (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
-    (* (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|421|}); *)
+    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
     (* *)
-    (* (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
+    (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
     (* *)
     (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
     (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});
@@ -60,6 +69,6 @@ let tests =
     (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
     (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
+    (__LOC__, {|(defn run [] 2)|}, {|2|});
   ]
   |> JavaExecution.create_tests
