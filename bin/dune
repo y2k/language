@@ -1,4 +1,4 @@
 (executable
  (public_name clj2js)
  (name main)
- (libraries lib nrepl str))
+ (libraries lib core nrepl str))

@@ -33,7 +33,7 @@ let get_namespace filename : string =
   | (RBList (_, Atom (_, "ns") :: _) as ns) :: _ -> show_sexp ns
   | n -> failnode __LOC__ n
 
-let main () =
+let _main () =
   let target = ref "" in
   let src = ref "" in
   let command = ref "" in
@@ -46,12 +46,12 @@ let main () =
       ("-target", Arg.Set_string target, "Target: js, java, repl, bytecode");
       ("-src", Arg.Set_string src, "Source file (use @stdin for standard input)");
       ("-root_ns", Arg.Set_string root_ns, "Root namespace");
-      ("-lang", Arg.String ignore, "Deprecated");
-      ("-lib", Arg.String ignore, "Deprecated");
-      ("-path", Arg.String ignore, "Deprecated");
       ("-no_lint", Arg.Bool (( := ) no_lint), "Disable linting");
       ("-virtual_src", Arg.Set_string virtual_src, "Virtual source");
       ("-host", Arg.Set_string client_host, "Client host");
+      ("-lang", Arg.String ignore, "Deprecated");
+      ("-lib", Arg.String ignore, "Deprecated");
+      ("-path", Arg.String ignore, "Deprecated");
     ]
     (( := ) command) "clj2js";
   match !command with
@@ -61,4 +61,4 @@ let main () =
   | "compile" -> compile_file !src !target !root_ns !no_lint !virtual_src
   | n -> failwith ("Invalid command '" ^ n ^ "' (" ^ Sys.getcwd () ^ ")")
 
-let () = main ()
+let () = Main2.main ()

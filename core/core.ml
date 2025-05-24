@@ -5,6 +5,10 @@ module Prelude = struct
     {|
 (defn list [& xs] xs)
 
+(defn macro_gen-class [& xs]
+  (let [opt (apply hash-map xs)]
+    (str otp)))
+
 (defn macro_= [x y]
   (list 'java.util.Objects.equals x y))
 
@@ -277,6 +281,8 @@ module NamespaceUtils = struct
     path
 
   let convert_path_to_ns _base_path _filename _path =
+    prerr_endline @@ "Convert path to ns: (" ^ _base_path ^ ") " ^ _filename
+    ^ " -> " ^ _path;
     let merge_path base_path rel_path =
       let rec loop xs ps =
         match (xs, ps) with
@@ -423,27 +429,6 @@ end = struct
     | SAtom (m, _) as x -> OQuote (m, x)
     | SList (m, _) as x -> OQuote (m, x)
 
-  (* let convert_path_to_ns _root_dir _filename path =
-    let load_file base_path mod_path =
-      let mod_path = unpack_string mod_path ^ ".clj" in
-      let merge_path () =
-        let rec loop xs ps =
-          match (xs, ps) with
-          | _ :: xs, ".." :: ps -> loop xs ps
-          | xs, "." :: ps -> loop xs ps
-          | xs, ps -> List.rev xs @ ps
-        in
-        loop
-          (String.split_on_char '/' base_path |> List.rev |> List.tl)
-          (String.split_on_char '/' mod_path)
-        |> String.concat "/"
-      in
-      let path = merge_path () in
-      path
-    in
-    let path = String.sub path 0 (String.length path - 4) in
-    load_file _root_dir path *)
-
   let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
     if ctx.log && false then
       prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
@@ -518,6 +503,8 @@ end = struct
         SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
     | SList (m, SAtom (mdo, "do") :: body) ->
         SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)
+    | SList (_, SAtom (_, "let") :: SList (_, SAtom (_, "vector") :: _) :: _) ->
+        Macro_let.invoke (simplify ctx) ctx sexp
     | SList (m, SAtom (ml, "let") :: name :: value) ->
         let value = List.map (simplify ctx) value in
         SList (m, SAtom (ml, "let*") :: name :: value)
@@ -613,12 +600,18 @@ end = struct
       Parser.parse_text opt.prelude
       |> simplify { macro = Eval.empty_eval_context; log = false; otp = opt }
     in
-    node |> log_stage opt "Parse"
-    |> simplify { macro = Eval.eval macro |> fst; log = opt.log; otp = opt }
-    |> Lib__.Stage_convert_if_to_statment.invoke
-    |> log_stage opt "Convert if to statement"
-    |> ResolveImport.do_resolve opt.filename opt.root_dir
-    |> log_stage opt "Resolve import"
+    let do_simple type_ macro node =
+      node
+      |> log_stage opt (type_ ^ "Parse ")
+      |> simplify { macro; log = opt.log; otp = opt }
+      |> Lib__.Stage_convert_if_to_statment.invoke
+      |> log_stage opt (type_ ^ "Convert if to statement ")
+      |> ResolveImport.do_resolve opt.filename opt.root_dir
+      |> log_stage opt (type_ ^ "Resolve import")
+    in
+    node
+    |> do_simple "[CODE]"
+         (Eval.eval (do_simple "[MACRO]" Eval.empty_eval_context macro) |> fst)
 end
 
 module JavaCompiler : sig

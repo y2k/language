@@ -43,6 +43,24 @@ end
 
 let tests =
   [
+    (__LOC__, {|(defn run [] (let [[_ a] [1 40 3] b 2] (+ a b)))|}, {|42|});
+    (__LOC__, {|(defn run [] (let [a 40 b 2] (+ a b)))|}, {|42|});
+    (* *)
+    (* ( __LOC__,
+      {|
+(gen-class
+ :name MyClass
+ :extends java.lang.Thread
+ :prefix "sample_"
+ :methods [[add [int int] int]])
+
+(defn sample_add [self a b]
+  (+ a b))
+
+(defn run []
+  (.add (MyClass.) 40 2))
+|},
+      {|42|} ); *)
     (* *)
     (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
     (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
