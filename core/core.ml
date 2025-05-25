@@ -5,10 +5,6 @@ module Prelude = struct
     {|
 (defn list [& xs] xs)
 
-(defn macro_gen-class [& xs]
-  (let [opt (apply hash-map xs)]
-    (str otp)))
-
 (defn macro_= [x y]
   (list 'java.util.Objects.equals x y))
 
@@ -582,6 +578,8 @@ end = struct
         x
     | SList (_, SAtom (_, name) :: _) when String.ends_with ~suffix:"*" name ->
         failsexp __LOC__ [ sexp ]
+    (*  *)
+    | SList (_, SAtom (_, "gen-class") :: args) -> Macro_gen_class.invoke args
     (* Function call *)
     | SList (m, fn :: args) ->
         let args = List.map (simplify ctx) args in
@@ -668,6 +666,8 @@ end = struct
         Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body
           last_body
     | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
+    | SList (_, [ SAtom (_, "__compiler_emit"); SAtom (_, value) ]) ->
+        unpack_string value
     | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
         let cond = compile ctx cond in
         let then_ = compile ctx then_ in
