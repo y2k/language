@@ -43,6 +43,12 @@ end
 
 let tests =
   [
+    (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});
+    (__LOC__, {|(defn- f [[_ x]] x) (defn run [] (f [3 2]))|}, {|2|});
+    (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
+    (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
+    (__LOC__, {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn run [] (f 2))|}, {|2|});
+    (* *)
     (__LOC__, {|(defn run [] (let [[_ a] [1 40 3] b 2] (+ a b)))|}, {|42|});
     (__LOC__, {|(defn run [] (let [a 40 b 2] (+ a b)))|}, {|42|});
     (* *)
@@ -72,9 +78,6 @@ let tests =
     (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
     (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
     (* *)
-    (__LOC__, {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn run [] (f 2))|}, {|2|});
-    (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
-    (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
     (__LOC__, {|(defn run [] (count [10 20 30]))|}, {|3|});
     (__LOC__, {|(defn run [] (count {:a 1 :b 2}))|}, {|2|});
     (__LOC__, {|(defn run [] (get [10 20 30] 1))|}, {|20|});

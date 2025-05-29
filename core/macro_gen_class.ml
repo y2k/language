@@ -50,10 +50,13 @@ let invoke (args : sexp list) : sexp =
   let cls_code =
     Printf.sprintf {|public static class %s extends %s {
 %s
-}|} (get_value "name" "")
-      (get_value "extends" "")
+}|}
+      (get_value "name" "") (get_value "extends" "")
       (List.assoc ":methods" args |> generate_methods (get_value "prefix" "_"))
   in
   SList
     ( meta_empty,
-      [ SAtom (meta_empty, "__compiler_emit"); SAtom (meta_empty, cls_code) ] )
+      [
+        SAtom (meta_empty, "__compiler_emit");
+        SAtom (meta_empty, "\"" ^ cls_code ^ "\"");
+      ] )

@@ -5,6 +5,9 @@ module Prelude = struct
     {|
 (defn list [& xs] xs)
 
+(defn macro_defn- [name args & body]
+  (concat (list 'defn name args) body))
+
 (defn macro_= [x y]
   (list 'java.util.Objects.equals x y))
 
@@ -144,41 +147,26 @@ end = struct
         | ctx, OBool (_, true) -> eval_ ctx then_
         | ctx, OBool (_, false) -> eval_ ctx else_
         | _ -> failsexp __LOC__ [ node ])
-    | SList
-        ( _,
-          [
-            SAtom (_, "fn*");
-            SList (_, [ SAtom (_, "&"); SAtom (_, args_name) ]);
-            body;
-          ] ) ->
-        let l =
-          OLambda
-            ( meta_empty,
-              fun args ->
-                let ctx =
-                  {
-                    ctx with
-                    scope = (args_name, OList (meta_empty, args)) :: ctx.scope;
-                  }
-                in
-                let _, result = eval_ ctx body in
-                result )
-        in
-        (ctx, l)
     | SList (_, [ SAtom (_, "fn*"); SList (_, args_names); body ]) ->
-        let args_names =
-          args_names
-          |> List.map (function
-               | SAtom (_, x) -> x
-               | x -> failsexp __LOC__ [ x ])
-        in
         let l =
           OLambda
             ( meta_empty,
               fun args ->
-                let ctx =
-                  { ctx with scope = List.combine args_names args @ ctx.scope }
+                let rec loop args_names args ctx =
+                  match (args_names, args) with
+                  | [ SAtom (_, "&"); SAtom (_, args_name) ], args ->
+                      {
+                        ctx with
+                        scope =
+                          (args_name, OList (meta_empty, args)) :: ctx.scope;
+                      }
+                  | SAtom (_, name) :: args_names, arg :: args ->
+                      loop args_names args
+                        { ctx with scope = (name, arg) :: ctx.scope }
+                  | [], [] -> ctx
+                  | names, _ -> failsexp __LOC__ names
                 in
+                let ctx = loop args_names args ctx in
                 let _, result = eval_ ctx body in
                 result )
         in
@@ -401,7 +389,7 @@ end
 module Simplify : sig
   type simplify_opt = {
     log : bool;
-    prelude : string;
+    macro : string;
     filename : string;
     root_dir : string;
   }
@@ -410,7 +398,7 @@ module Simplify : sig
 end = struct
   type simplify_opt = {
     log : bool;
-    prelude : string;
+    macro : string;
     filename : string;
     root_dir : string;
   }
@@ -424,6 +412,13 @@ end = struct
   let sexp_to_obj = function
     | SAtom (m, _) as x -> OQuote (m, x)
     | SList (m, _) as x -> OQuote (m, x)
+
+  let log_stage (opt : simplify_opt) title node =
+    (if opt.log then
+       let padding = String.make (max 0 (25 - String.length title)) ' ' in
+       prerr_endline @@ "* " ^ title ^ " -> " ^ padding
+       ^ debug_show_sexp [ node ] ^ "\n");
+    node
 
   let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
     if ctx.log && false then
@@ -505,12 +500,7 @@ end = struct
         let value = List.map (simplify ctx) value in
         SList (m, SAtom (ml, "let*") :: name :: value)
     | SList (m, SAtom (mq, "quote") :: x) -> SList (m, SAtom (mq, "quote*") :: x)
-    | SList
-        ( m,
-          SAtom (md, "defn")
-          :: name
-          :: SList (_, SAtom (_, "vector") :: args)
-          :: body ) ->
+    | SList (m, SAtom (md, "defn") :: name :: args :: body) ->
         let body =
           match body with
           | [ x ] -> x
@@ -519,23 +509,23 @@ end = struct
         SList
           ( m,
             [
-              SAtom (md, "def*");
+              SAtom (md, "def");
               name;
-              SList
-                ( m,
-                  [
-                    SAtom (md, "fn*");
-                    SList (meta_empty, args);
-                    simplify ctx body;
-                  ] );
+              SList (m, [ SAtom (md, "fn"); args; simplify ctx body ]);
             ] )
         |> simplify ctx
-    | SList (m, SAtom (mfn, "fn") :: SList (ma, _ :: args) :: body) ->
-        SList
-          ( m,
-            SAtom (mfn, "fn*")
-            :: SList (ma, args)
-            :: List.map (simplify ctx) body )
+    | SList (_, SAtom (_, "fn") :: _) as node ->
+        (* let body = List.map (simplify ctx) body in
+        let body =
+          match body with
+          | [ x ] -> x
+          | xs -> SList (meta_empty, SAtom (meta_empty, "do*") :: xs)
+        in
+        SList (m, [ SAtom (mfn, "fn*"); SList (ma, args); body ]) *)
+        node
+        |> log_stage ctx.otp "[Macro fn BEFORE]"
+        |> Macro_fn.invoke (simplify ctx)
+        |> log_stage ctx.otp "[Macro fn AFTER]"
     | SList (m, [ SAtom (dm, "def"); k; v ]) ->
         SList (m, [ SAtom (dm, "def*"); k; simplify ctx v ])
     (* Macro call *)
@@ -574,11 +564,11 @@ end = struct
         |> simplify ctx
     (* Handle special forms *)
     | SList (_, SAtom (_, n) :: _) as x
-      when n = "def*" || n = "do*" || n = "fn*" || n = "let*" ->
+      when n = "def*" || n = "do*" || n = "fn*" || n = "let*" || n = "if*" ->
         x
     | SList (_, SAtom (_, name) :: _) when String.ends_with ~suffix:"*" name ->
         failsexp __LOC__ [ sexp ]
-    (*  *)
+    (* *)
     | SList (_, SAtom (_, "gen-class") :: args) -> Macro_gen_class.invoke args
     (* Function call *)
     | SList (m, fn :: args) ->
@@ -586,16 +576,9 @@ end = struct
         let fn = simplify ctx fn in
         SList (m, fn :: args)
 
-  let log_stage (opt : simplify_opt) title node =
-    (if opt.log then
-       let padding = String.make (max 0 (25 - String.length title)) ' ' in
-       prerr_endline @@ "* " ^ title ^ " -> " ^ padding
-       ^ debug_show_sexp [ node ]);
-    node
-
   let do_simplify (opt : simplify_opt) (node : sexp) : sexp =
     let macro =
-      Parser.parse_text opt.prelude
+      Parser.parse_text opt.macro
       |> simplify { macro = Eval.empty_eval_context; log = false; otp = opt }
     in
     let do_simple type_ macro node =
@@ -737,20 +720,16 @@ let eval code =
     | SAtom (_, x) -> x
     | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
   in
-  Parser.parse_text (Prelude.prelude_eval ^ code)
-  |> Simplify.do_simplify
-       {
-         log = true;
-         prelude = Prelude.prelude_eval;
-         filename = "";
-         root_dir = "";
-       }
-  |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string
+  Lib__.Common.NameGenerator.with_scope (fun () ->
+      Parser.parse_text (Prelude.prelude_eval ^ code)
+      |> Simplify.do_simplify
+           { log = true; macro = ""; filename = ""; root_dir = "" }
+      |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string)
 
 let compile (log : bool) (filename : string) (root_dir : string) code =
   Lib__.Common.NameGenerator.with_scope (fun () ->
       Parser.parse_text code
       (* *)
       |> Simplify.do_simplify
-           { log; prelude = Prelude.prelude_java; filename; root_dir }
+           { log; macro = Prelude.prelude_java; filename; root_dir }
       |> JavaCompiler.do_compile { filename; root_dir })

@@ -7,8 +7,13 @@ deploy: test_e2e deploy_force
 
 .PHONY: deploy_force
 deploy_force: test
-	@ echo "\n>>> New clj2js version is deployed <<<\n"
-	@ cp -f _build/default/bin/main.exe ~/.local/bin/clj2js
+	@ echo "\n>>> New ly2k version is deployed <<<\n"
+	@ cp -f _build/default/bin/main.exe ~/.local/bin/ly2k
+
+.PHONY: ee_test
+ee_test:
+	@ dune build
+	@ cd ~/Projects/finance_tracker && ~/Projects/language/_build/default/bin/main.exe -target java -src /Users/igor/Projects/finance_tracker/app/main.clj
 
 .PHONY: restore
 restore:
