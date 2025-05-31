@@ -41,6 +41,42 @@ public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}
                Alcotest.(check string) "" expected actual))
 end
 
+(* let re_find pattern str =
+  let pattern = pattern |> Str.global_replace (Str.regexp "(") "\\(" |> Str.global_replace (Str.regexp ")") "\\)" in
+  let re = Str.regexp pattern in
+  try
+    let _result = Str.search_forward re str 0 in
+    (* prerr_endline @@ "LOG: " ^ string_of_int _result; *)
+
+    let groups =
+      Seq.unfold
+        (fun i ->
+          try
+            let r = Str.matched_group i str in
+            Some (r, i + 1)
+          with Invalid_argument _ -> None)
+        1
+      |> List.of_seq
+    in
+    Some (Str.matched_string str :: groups)
+  with Not_found -> None
+
+let () =
+  [
+    (Some [ "abcdxxx"; "bcdxx" ], re_find "a([a-z]+)x" "xabcdxxx");
+    (Some [ "abcdxxx"; "bcdxx" ], re_find "a(.+)x" "xabcdxxx");
+    (Some [ "abcdx" ], re_find "abcdx" "xabcdxxx");
+    (Some [ "abcdx" ], re_find "abcdx" "xabcdxxx");
+    (Some [ "abcd"; "bc" ], re_find "a(bc)d" "xabcd");
+    (Some [ "abcd"; "bc" ], re_find "a(bc)d" "xabcdxxx");
+    (Some [ "abcdx"; "bc"; "x" ], re_find "a(bc)d(x)" "xabcdxxx");
+    (Some [ "abcdxxx"; "bc"; "xxx" ], re_find "a(bc)d(x+)" "xabcdxxx");
+    (None, re_find "a(bc)d" "");
+  ]
+  |> List.map (fun (e, a) ->
+         Alcotest.test_case "Java" `Quick (fun () -> Alcotest.(check (option (list string))) "." e a))
+  |> fun x -> Alcotest.run "core" [ ("Java", x) ] *)
+
 let tests =
   [
     (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});

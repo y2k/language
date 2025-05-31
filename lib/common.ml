@@ -100,6 +100,21 @@ type obj =
   | OQuote of meta * sexp
 [@@deriving show]
 
+module Obj = struct
+  let failobj loc xs =
+    match xs with
+    | [ x ] -> Printf.sprintf "%s %s" loc (show_obj x) |> failwith
+    | xs -> Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs))) |> failwith
+
+  let equal a b =
+    match (a, b) with
+    | OInt (_, x), OInt (_, y) -> x = y
+    | OString (_, x), OString (_, y) -> x = y
+    | OBool (_, x), OBool (_, y) -> x = y
+    | ONil _, ONil _ -> true
+    | a, b -> failobj __LOC__ [ a; b ]
+end
+
 type context = {
   log : bool;
   filename : string;

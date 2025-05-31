@@ -13,7 +13,8 @@ deploy_force: test
 .PHONY: ee_test
 ee_test:
 	@ dune build
-	@ cd ~/Projects/finance_tracker && ~/Projects/language/_build/default/bin/main.exe -target java -src /Users/igor/Projects/finance_tracker/app/main.clj
+	@ rm -rf ~/Projects/finance_tracker/out
+	@ cd ~/Projects/finance_tracker && (find . -type f -name "*.clj") | ~/Projects/language/_build/default/bin/main.exe -target eval -src ~/Documents/temp/build.clj > ~/Projects/finance_tracker/Makefile
 
 .PHONY: restore
 restore:

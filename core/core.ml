@@ -53,6 +53,10 @@ module Prelude = struct
    xs))
     |}
 
+  let prelude_eval_macro = {|
+    (defn macro_comment [x] (list 'do))
+  |}
+
   let prelude_eval = {|
     (def* vector
       (fn* [& xs] xs))
@@ -82,7 +86,7 @@ module Eval : sig
 
   val empty_eval_context : eval_context
   val show_eval_context : eval_context -> string
-  val eval : sexp -> eval_context * obj
+  val eval : string -> sexp -> eval_context * obj
   val get_function : eval_context -> string -> (obj list -> obj) option
 end = struct
   module OUtils = Lib__.Backend_interpreter.Functions
@@ -117,7 +121,12 @@ end = struct
     | SAtom (m, x) when int_of_string_opt x <> None ->
         (ctx, OInt (m, int_of_string x))
     | SAtom (m, x) when String.starts_with ~prefix:"\"" x ->
-        (ctx, OString (m, unpack_string x))
+        ( ctx,
+          OString
+            ( m,
+              unpack_string x
+              |> Str.global_replace (Str.regexp "\\\\n") "\n"
+              |> Str.global_replace (Str.regexp "\\\\t") "\t" ) )
     | SAtom (m, x) when String.starts_with ~prefix:":" x ->
         (ctx, OString (m, unpack_symbol x))
     | SAtom (m, x) when String.starts_with ~prefix:"'" x ->
@@ -182,17 +191,105 @@ end = struct
         (ctx, f args)
     | x -> failsexp __LOC__ [ x ]
 
+  let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }
+
   let reg_fun name f ctx =
     {
       ctx with
       ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns;
     }
 
-  let eval node =
+  let re_find pattern str =
+    let pattern =
+      pattern
+      |> Str.global_replace (Str.regexp "(") "\\("
+      |> Str.global_replace (Str.regexp ")") "\\)"
+    in
+    let re = Str.regexp pattern in
+    try
+      let _result = Str.search_forward re str 0 in
+      (* prerr_endline @@ "LOG: " ^ string_of_int _result; *)
+
+      let groups =
+        Seq.unfold
+          (fun i ->
+            try
+              let r = Str.matched_group i str in
+              Some (r, i + 1)
+            with Invalid_argument _ -> None)
+          1
+        |> List.of_seq
+      in
+      Some (Str.matched_string str :: groups)
+    with Not_found -> None
+
+  let eval (stdin : string) node =
     (* prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ]; *)
     rec_level := 0;
     let ctx =
       empty_eval_context
+      |> reg_fun "list" (fun xs -> OList (meta_empty, xs))
+      |> reg_fun "string/starts-with?" (fun xs ->
+             match xs with
+             | [ OString (_, str); OString (_, prefix) ] ->
+                 OBool (meta_empty, String.starts_with ~prefix str)
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_fun "filter" (fun xs ->
+             match xs with
+             | [ OLambda (_, f); OList (_, xs) ] ->
+                 OList
+                   ( meta_empty,
+                     List.filter
+                       (fun x ->
+                         match f [ x ] with
+                         | OBool (_, true) -> true
+                         | _ -> false)
+                       xs )
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_fun "hash-map" (fun xs ->
+             OMap (meta_empty, List.split_into_pairs xs))
+      |> reg_fun "string/trim" (fun xs ->
+             match xs with
+             | [ OString (_, x) ] -> OString (meta_empty, String.trim x)
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_fun "re-find" (fun xs ->
+             match xs with
+             | [ OString (_, pattern); OString (_, str) ] -> (
+                 match re_find pattern str with
+                 | Some xs ->
+                     OList
+                       ( meta_empty,
+                         List.map
+                           (fun x -> OString (meta_empty, x))
+                           (List.tl xs) )
+                 | None -> ONil meta_empty)
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_fun "count" (fun xs ->
+             match xs with
+             | [ OList (_, xs) ] -> OInt (meta_empty, List.length xs)
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_fun "string/split" (fun xs ->
+             match xs with
+             | [ OString (_, x); OString (_, sep) ] ->
+                 (* FIXME: This is a hack *)
+                 (* let sep = Str.global_replace (Str.regexp "\\\\n") "\n" sep in *)
+                 (* prerr_endline @@ "|" ^ sep ^ "|"; *)
+                 OList
+                   ( meta_empty,
+                     List.map
+                       (fun x -> OString (meta_empty, x))
+                       (String.split_on_char (String.get sep 0) x) )
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_val "STDIN" (OString (meta_empty, stdin))
+      |> reg_fun "get" (fun xs ->
+             match xs with
+             | [ OMap (_, m); k ] ->
+                 List.find_opt (fun (k', _) -> Obj.equal k k') m
+                 |> Option.map snd
+                 |> Option.value ~default:(ONil meta_empty)
+             | [ OList (_, xs); OInt (_, i) ] -> List.nth xs i
+             | x -> Obj.failobj __LOC__ x)
+      |> reg_val "nil" (ONil meta_empty)
       |> reg_fun "vector" (fun xs -> OVector (meta_empty, xs))
       |> reg_fun "gensym" (fun _ ->
              OQuote
@@ -262,34 +359,6 @@ module NamespaceUtils = struct
     let path = String.map (fun x -> if x = '/' then '.' else x) path in
     (* prerr_endline @@ "LOG: path=" ^ path; *)
     let path = mangle_name path name in
-    path
-
-  let convert_path_to_ns _base_path _filename _path =
-    prerr_endline @@ "Convert path to ns: (" ^ _base_path ^ ") " ^ _filename
-    ^ " -> " ^ _path;
-    let merge_path base_path rel_path =
-      let rec loop xs ps =
-        match (xs, ps) with
-        | _ :: xs, ".." :: ps -> loop xs ps
-        | xs, "." :: ps -> loop xs ps
-        | xs, ps -> List.rev xs @ ps
-      in
-      loop
-        (String.split_on_char '/' base_path |> List.rev |> List.tl)
-        (String.split_on_char '/' rel_path)
-      |> String.concat "/"
-    in
-    (* prerr_endline @@ "LOG1:_base_path: " ^ _base_path;
-    prerr_endline @@ "LOG2:_filename: " ^ _filename;
-    prerr_endline @@ "LOG3:_path: " ^ _path; *)
-    let path = merge_path _filename _path in
-    (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
-    let path =
-      let n = String.length _base_path + 1 in
-      String.sub path n (String.length path - n)
-    in
-    let path = Str.global_replace (Str.regexp "/") "." path in
-    (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
     path
 end
 
@@ -427,69 +496,10 @@ end = struct
     | SAtom _ as x -> x
     | SList (_, []) as x -> x
     | SList (m, SAtom (_, "ns") :: _ :: args) ->
-        let args =
-          args
-          |> List.concat_map (function
-               | SList (_, SAtom (_, ":require") :: requires) ->
-                   let aliases =
-                     requires
-                     |> List.concat_map (function
-                          | SList
-                              (_, [ _; SAtom (_, path); _; SAtom (ma, alias) ])
-                            ->
-                              [
-                                SAtom (meta_empty, alias);
-                                SAtom
-                                  ( ma,
-                                    NamespaceUtils.convert_path_to_ns
-                                      ctx.otp.root_dir ctx.otp.filename
-                                      (unpack_string path) );
-                              ]
-                          | x -> failsexp __LOC__ [ x ])
-                   in
-                   [
-                     SList
-                       ( meta_empty,
-                         [
-                           SAtom (meta_empty, "def");
-                           SAtom (meta_empty, "__ns_aliases");
-                           SList
-                             ( meta_empty,
-                               [
-                                 SAtom (meta_empty, "quote");
-                                 SList
-                                   ( meta_empty,
-                                     SAtom (meta_empty, "hash-map") :: aliases
-                                   );
-                               ] );
-                         ] );
-                   ]
-               | SList (_, SAtom (_, ":import") :: imports) ->
-                   imports
-                   |> List.concat_map (function
-                        | SList (_, _ :: SAtom (_, pkg) :: classes) ->
-                            classes
-                            |> List.map (function
-                                 | SAtom (_, class_name) ->
-                                     SList
-                                       ( meta_empty,
-                                         [
-                                           SAtom (meta_empty, "def*");
-                                           SAtom (meta_empty, class_name);
-                                           SList
-                                             ( meta_empty,
-                                               [
-                                                 SAtom (meta_empty, "quote*");
-                                                 SAtom
-                                                   ( meta_empty,
-                                                     pkg ^ "." ^ class_name );
-                                               ] );
-                                         ] )
-                                 | x -> failsexp __LOC__ [ x ])
-                        | x -> failsexp __LOC__ [ x ])
-               | x -> failsexp __LOC__ [ x ])
-        in
-        SList (m, SAtom (meta_empty, "do") :: args) |> simplify ctx
+        args
+        |> Macro_ns.invoke m
+             { root_dir = ctx.otp.root_dir; filename = ctx.otp.filename }
+        |> simplify ctx
     | SList (m, SAtom (mif, "if") :: if_args) ->
         SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
     | SList (m, SAtom (mdo, "do") :: body) ->
@@ -499,6 +509,22 @@ end = struct
     | SList (m, SAtom (ml, "let") :: name :: value) ->
         let value = List.map (simplify ctx) value in
         SList (m, SAtom (ml, "let*") :: name :: value)
+    | SList (_, SAtom (_, "->") :: body) ->
+        body
+        |> List.reduce __LOC__ (fun acc x ->
+               match x with
+               | SAtom (l, z) -> SList (l, [ SAtom (l, z); acc ])
+               | SList (m, a :: bs) -> SList (m, a :: acc :: bs)
+               | xs -> failsexp __LOC__ [ xs ])
+        |> simplify ctx
+    | SList (_, SAtom (_, "->>") :: body) ->
+        body
+        |> List.reduce __LOC__ (fun acc x ->
+               match x with
+               | SAtom (l, z) -> SList (l, [ acc; SAtom (l, z) ])
+               | SList (m, a :: bs) -> SList (m, (a :: bs) @ [ acc ])
+               | xs -> failsexp __LOC__ [ xs ])
+        |> simplify ctx
     | SList (m, SAtom (mq, "quote") :: x) -> SList (m, SAtom (mq, "quote*") :: x)
     | SList (m, SAtom (md, "defn") :: name :: args :: body) ->
         let body =
@@ -570,6 +596,10 @@ end = struct
         failsexp __LOC__ [ sexp ]
     (* *)
     | SList (_, SAtom (_, "gen-class") :: args) -> Macro_gen_class.invoke args
+    (* Invoke keyword *)
+    | SList (m, [ (SAtom (_, name) as k); arg ])
+      when String.starts_with ~prefix:":" name ->
+        SList (m, [ SAtom (meta_empty, "get"); arg; k ])
     (* Function call *)
     | SList (m, fn :: args) ->
         let args = List.map (simplify ctx) args in
@@ -592,7 +622,8 @@ end = struct
     in
     node
     |> do_simple "[CODE]"
-         (Eval.eval (do_simple "[MACRO]" Eval.empty_eval_context macro) |> fst)
+         (Eval.eval "" (do_simple "[MACRO]" Eval.empty_eval_context macro)
+         |> fst)
 end
 
 module JavaCompiler : sig
@@ -715,7 +746,7 @@ end = struct
     Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
 end
 
-let eval code =
+let eval (stdin : string) code =
   let rec serialize_to_string = function
     | SAtom (_, x) -> x
     | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
@@ -723,8 +754,14 @@ let eval code =
   Lib__.Common.NameGenerator.with_scope (fun () ->
       Parser.parse_text (Prelude.prelude_eval ^ code)
       |> Simplify.do_simplify
-           { log = true; macro = ""; filename = ""; root_dir = "" }
-      |> Eval.eval |> snd |> Utils.obj_to_sexp |> serialize_to_string)
+           {
+             log = true;
+             macro = Prelude.prelude_eval_macro;
+             filename = "";
+             root_dir = "";
+           }
+      |> Eval.eval stdin |> snd |> Utils.obj_to_sexp |> serialize_to_string
+      |> unpack_string)
 
 let compile (log : bool) (filename : string) (root_dir : string) code =
   Lib__.Common.NameGenerator.with_scope (fun () ->

@@ -11,5 +11,5 @@ let main () =
   let code = In_channel.(with_open_bin !src input_all) in
   match !target with
   | "java" -> Core.compile false !src (Sys.getcwd ()) code |> print_endline
-  | "eval" -> Core.eval code |> print_endline
+  | "eval" -> Core.eval (In_channel.input_all stdin) code |> print_endline
   | t -> failwith @@ "Invalid target " ^ t
