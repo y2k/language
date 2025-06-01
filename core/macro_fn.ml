@@ -120,16 +120,16 @@ let invoke simplify_node (node : sexp) =
                 ] )
       in
       let expand_body body =
-        let body = List.map (fun x -> simplify_node x) body in
-        let body =
-          match body with
-          | [ x ] -> [ x ]
-          | xs -> [ SList (meta_empty, SAtom (meta_empty, "do*") :: xs) ]
-        in
-        body
+        (* prerr_endline @@ "LOG1: " ^ show_sexp2 (SList (meta_empty, body)); *)
+        let body = List.map simplify_node body in
+        (* prerr_endline @@ "LOG2: " ^ show_sexp2 (SList (meta_empty, body)); *)
+        match body with
+        | [ x ] -> [ x ]
+        | xs -> [ SList (meta_empty, SAtom (meta_empty, "do*") :: xs) ]
       in
       match result with
       | SList (m, [ fa; SList (m2, args) ]) ->
+          (* prerr_endline @@ "LOG: " ^ show_sexp2 (SList (meta_empty, body)); *)
           SList (m, fa :: SList (m2, args) :: expand_body body)
       | SList
           ( m,

@@ -5,8 +5,16 @@ public class RT {
         public Object invoke() throws Exception;
     }
 
-    interface Fn1 {
+    interface Fn1 extends java.util.function.UnaryOperator<Object> {
         public Object invoke(Object a) throws Exception;
+
+        public default Object apply(Object a) {
+            try {
+                return invoke(a);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     interface Fn2 {

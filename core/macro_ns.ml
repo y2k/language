@@ -1,9 +1,14 @@
 open Lib__.Common
 
 module NamespaceUtils = struct
-  let convert_path_to_ns _base_path _filename _path =
-    prerr_endline @@ "Convert path to ns: (" ^ _base_path ^ ") " ^ _filename
-    ^ " -> " ^ _path;
+  let convert_path_to_ns base_path filename path =
+    let parent_base_path =
+      let xs = String.split_on_char '/' base_path in
+      let xs = xs |> List.rev |> List.tl |> List.rev in
+      String.concat "/" xs
+    in
+    prerr_endline @@ "LOG[NS]: Convert path to ns: (" ^ base_path ^ "|"
+    ^ parent_base_path ^ ") " ^ filename ^ " -> " ^ path;
     let merge_path base_path rel_path =
       let rec loop xs ps =
         match (xs, ps) with
@@ -19,11 +24,16 @@ module NamespaceUtils = struct
     (* prerr_endline @@ "LOG1:_base_path: " ^ _base_path;
     prerr_endline @@ "LOG2:_filename: " ^ _filename;
     prerr_endline @@ "LOG3:_path: " ^ _path; *)
-    let path = merge_path _filename _path in
-    (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
+    let path = merge_path filename path in
+    prerr_endline @@ "LOG[NS]2: '" ^ path ^ "'";
     let path =
-      let n = String.length _base_path + 1 in
-      String.sub path n (String.length path - n)
+      if String.starts_with ~prefix:base_path path then
+        let n = String.length base_path + 1 in
+        String.sub path n (String.length path - n)
+      else if String.starts_with ~prefix:parent_base_path path then
+        let n = String.length parent_base_path + 1 in
+        String.sub path n (String.length path - n)
+      else path
     in
     let path = Str.global_replace (Str.regexp "/") "." path in
     (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)

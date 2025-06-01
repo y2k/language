@@ -11,10 +11,11 @@ deploy_force: test
 	@ cp -f _build/default/bin/main.exe ~/.local/bin/ly2k
 
 .PHONY: ee_test
-ee_test:
-	@ dune build
+ee_test: deploy_force
+# @ dune build
 	@ rm -rf ~/Projects/finance_tracker/out
-	@ cd ~/Projects/finance_tracker && (find . -type f -name "*.clj") | ~/Projects/language/_build/default/bin/main.exe -target eval -src ~/Documents/temp/build.clj > ~/Projects/finance_tracker/Makefile
+# @ cd ~/Projects/finance_tracker && (find . -type f -name "*.clj") | ~/Projects/language/_build/default/bin/main.exe -target eval -src ~/Documents/temp/build.clj > ~/Projects/finance_tracker/Makefile
+	@ cd ~/Projects/finance_tracker && ~/Projects/language/_build/default/bin/main.exe -target eval -src ~/Documents/temp/build.clj > ~/Projects/finance_tracker/Makefile
 
 .PHONY: restore
 restore:

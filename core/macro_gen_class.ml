@@ -18,11 +18,17 @@ let generate_methods prefix methods =
          ->
            let args = List.tl args in
            let body =
-             args
-             |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-             |> String.concat ","
-             |> Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this,%s)" ret_type
-                  prefix name
+             let args =
+               args
+               |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+               |> String.concat ","
+             in
+             match ret_type with
+             | "void" ->
+                 Printf.sprintf "y2k.RT.invoke(%s%s,this,%s)" prefix name args
+             | _ ->
+                 Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this,%s)"
+                   ret_type prefix name args
            in
            let args =
              args

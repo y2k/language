@@ -34,9 +34,9 @@ public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}
     |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Quick (fun () ->
                let ext_module =
-                 {|(ns _) (defn foo [x] x)|} |> Core.compile false "/app/src/core/ext/lib/eff.clj" "/app/src"
+                 {|(ns _) (defn foo [x] x)|} |> Core.compile "lib" false "/app/src/core/ext/lib/eff.clj" "/app/src"
                in
-               let code = Core.compile true "/app/src/core/ext/user.clj" "/app/src" input in
+               let code = Core.compile "user" true "/app/src/core/ext/user.clj" "/app/src" input in
                let actual = ext_module ^ "\n" ^ code |> run in
                Alcotest.(check string) "" expected actual))
 end
@@ -79,11 +79,15 @@ let () =
 
 let tests =
   [
+    (__LOC__, {|(defn f [] 3) (defn run [] (f))|}, {|3|});
+    (__LOC__, {|(def a (atom 1)) (defn run [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, {|3|});
     (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});
     (__LOC__, {|(defn- f [[_ x]] x) (defn run [] (f [3 2]))|}, {|2|});
     (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
     (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
     (__LOC__, {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn run [] (f 2))|}, {|2|});
+    (* *)
+    (__LOC__, {|(def- a 42) (defn run [] a)|}, {|42|});
     (* *)
     (__LOC__, {|(defn run [] (let [[_ a] [1 40 3] b 2] (+ a b)))|}, {|42|});
     (__LOC__, {|(defn run [] (let [a 40 b 2] (+ a b)))|}, {|42|});

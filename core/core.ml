@@ -1,9 +1,31 @@
 open Lib__.Common
 
 module Prelude = struct
-  let prelude_java =
+  let prelude_java_macro =
     {|
 (defn list [& xs] xs)
+
+(defn macro_atom [x]
+  (list 'java.util.concurrent.atomic.AtomicReference. x))
+
+(defn macro_reset! [a x]
+  (list
+    '.set
+    (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+    x))
+
+(defn macro_swap! [a f]
+  (list
+    '.getAndUpdate
+    (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+    (list 'cast 'java.util.function.UnaryOperator f)))
+
+(defn macro_deref [a]
+  (list
+    '.get
+    (list 'cast 'java.util.concurrent.atomic.AtomicReference a)))
+
+(defn macro_comment [x] (list 'do))
 
 (defn macro_defn- [name args & body]
   (concat (list 'defn name args) body))
@@ -344,8 +366,14 @@ module NamespaceUtils = struct
       let ns = String.sub x (1 + String.length nstr) l1 in
       (* let ns = "|" ^ ns ^ "|" in *)
       let name =
-        let n = String.length nstr in
-        String.sub x (l1 + 2 + n) (String.length x - l1 - 2 - n)
+        (* let n = String.length nstr in *)
+        if not (Str.string_match (Str.regexp "[0-9]+") x (l1 + 3)) then
+          failwith (x ^ "|" ^ string_of_int l1) |> ignore;
+        let l2str = Str.matched_string x in
+        (* let l2 = l2str |> int_of_string in *)
+        let start = l1 + 3 + String.length l2str in
+        (* String.sub x (l1 + 2 + n) (String.length x - l1 - 2 - n) *)
+        String.sub x start (String.length x - start)
       in
       (* let name = "|" ^ name ^ "|" in *)
       (ns, name)
@@ -509,6 +537,9 @@ end = struct
     | SList (m, SAtom (ml, "let") :: name :: value) ->
         let value = List.map (simplify ctx) value in
         SList (m, SAtom (ml, "let*") :: name :: value)
+    | SList (m, [ SAtom (md, "def-"); name; value ]) ->
+        SList (m, [ SAtom ({ md with symbol = "private" }, "def"); name; value ])
+        |> simplify ctx
     | SList (_, SAtom (_, "->") :: body) ->
         body
         |> List.reduce __LOC__ (fun acc x ->
@@ -527,27 +558,15 @@ end = struct
         |> simplify ctx
     | SList (m, SAtom (mq, "quote") :: x) -> SList (m, SAtom (mq, "quote*") :: x)
     | SList (m, SAtom (md, "defn") :: name :: args :: body) ->
-        let body =
-          match body with
-          | [ x ] -> x
-          | xs -> SList (meta_empty, SAtom (meta_empty, "do*") :: xs)
-        in
         SList
           ( m,
             [
               SAtom (md, "def");
               name;
-              SList (m, [ SAtom (md, "fn"); args; simplify ctx body ]);
+              SList (m, SAtom (md, "fn") :: args :: body);
             ] )
         |> simplify ctx
     | SList (_, SAtom (_, "fn") :: _) as node ->
-        (* let body = List.map (simplify ctx) body in
-        let body =
-          match body with
-          | [ x ] -> x
-          | xs -> SList (meta_empty, SAtom (meta_empty, "do*") :: xs)
-        in
-        SList (m, [ SAtom (mfn, "fn*"); SList (ma, args); body ]) *)
         node
         |> log_stage ctx.otp "[Macro fn BEFORE]"
         |> Macro_fn.invoke (simplify ctx)
@@ -627,11 +646,20 @@ end = struct
 end
 
 module JavaCompiler : sig
-  type compile_opt = { filename : string; root_dir : string }
+  type compile_opt = {
+    filename : string;
+    root_dir : string;
+    namespace : string;
+  }
 
   val do_compile : compile_opt -> sexp -> string
 end = struct
-  type compile_opt = { filename : string; root_dir : string }
+  type compile_opt = {
+    filename : string;
+    root_dir : string;
+    namespace : string;
+  }
+
   type complie_context = unit
 
   let convert_namespace_to_class_name (ns : string) =
@@ -660,8 +688,10 @@ end = struct
         Printf.sprintf "Object %s=%s" name (compile ctx value)
     | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
         Printf.sprintf "%s=%s" name (compile ctx value)
-    | SList (_, [ SAtom (_, "def*"); SAtom (_, name); value ]) ->
-        Printf.sprintf "public static Object %s=%s" name (compile ctx value)
+    | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
+        let visibility = if m.symbol = "private" then "private" else "public" in
+        Printf.sprintf "%s static Object %s=%s" visibility name
+          (compile ctx value)
     | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
         let args =
           List.map
@@ -711,9 +741,11 @@ end = struct
         let args = List.map (compile ctx) args in
         let args = String.concat "," args in
         match fn with
-        | SAtom (_, name) ->
+        | SAtom (_, name) -> (
             if String.starts_with ~prefix:"G" name then
+              (* prerr_endline @@ "LOG1: " ^ name; *)
               let ns, name = NamespaceUtils.unmangle_symbol name in
+              (* prerr_endline @@ "LOG2: " ^ ns ^ ", " ^ name; *)
               let cls = convert_namespace_to_class_name ns in
               Printf.sprintf "y2k.RT.invoke(%s.%s,%s)" cls name args
             else if String.contains name '.' then
@@ -723,18 +755,29 @@ end = struct
                 String.map (fun x -> if x = '/' then '.' else x) name
               in
               Printf.sprintf "%s(%s)" name args
-            else Printf.sprintf "y2k.RT.invoke(%s,%s)" name args
-        | x ->
+            else
+              match args with
+              | "" -> Printf.sprintf "y2k.RT.invoke(%s)" name
+              | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" name args)
+        | x -> (
             let fn = compile ctx x in
-            Printf.sprintf "y2k.RT.invoke(%s,%s)" fn args)
+            match args with
+            | "" -> Printf.sprintf "y2k.RT.invoke(%s)" fn
+            | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" fn args))
     | x -> failsexp __LOC__ [ x ]
 
   let do_compile (opt : compile_opt) sexp =
-    let pkg =
+    (* let pkg =
       let n = String.length opt.root_dir + 1 in
       String.sub opt.filename n (String.length opt.filename - n)
       |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
+      |> Str.global_replace (Str.regexp "/") "." *)
+    let pkg =
+      let n = String.length opt.root_dir in
+      String.sub opt.filename n (String.length opt.filename - n)
+      |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
       |> Str.global_replace (Str.regexp "/") "."
+      |> fun x -> if x = "" then opt.namespace else opt.namespace ^ x
     in
     let clazz =
       opt.filename
@@ -763,10 +806,11 @@ let eval (stdin : string) code =
       |> Eval.eval stdin |> snd |> Utils.obj_to_sexp |> serialize_to_string
       |> unpack_string)
 
-let compile (log : bool) (filename : string) (root_dir : string) code =
+let compile (namespace : string) (log : bool) (filename : string)
+    (root_dir : string) code =
   Lib__.Common.NameGenerator.with_scope (fun () ->
       Parser.parse_text code
       (* *)
       |> Simplify.do_simplify
-           { log; macro = Prelude.prelude_java; filename; root_dir }
-      |> JavaCompiler.do_compile { filename; root_dir })
+           { log; macro = Prelude.prelude_java_macro; filename; root_dir }
+      |> JavaCompiler.do_compile { filename; root_dir; namespace })
