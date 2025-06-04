@@ -50,6 +50,10 @@ type cljexp =
   | CBList of meta * cljexp list
 [@@deriving show]
 
+let trace prefix to_string x =
+  print_endline (Printf.sprintf "%s %s" prefix (to_string x));
+  x
+
 let unpack_string x = if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2) else x
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 let get_type meta = if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
