@@ -36,7 +36,11 @@ module NamespaceUtils = struct
       else path
     in
     (* prerr_endline @@ "LOG[NS]3: '" ^ path ^ "'"; *)
-    let path = Str.global_replace (Str.regexp "/") "." path in
+    let path =
+      path
+      (* |> Str.global_replace (Str.regexp "\\.") "_" *)
+      |> Str.global_replace (Str.regexp "/") "."
+    in
     (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
     path
 end
@@ -52,10 +56,15 @@ let handle_require ctx requires =
              (* prerr_endline @@ "LOG[NS]3: " ^ alias ^ " -> " ^ path; *)
              [
                SAtom (meta_empty, alias);
-               SAtom
-                 ( ma,
-                   NamespaceUtils.convert_path_to_ns ctx.root_dir ctx.filename
-                     path )
+               SList
+                 ( meta_empty,
+                   [
+                     SAtom
+                       ( ma,
+                         NamespaceUtils.convert_path_to_ns ctx.root_dir
+                           ctx.filename path );
+                     SAtom (ma, path);
+                   ] )
                (* |> trace __LOC__ show_sexp2 *);
              ]
          | x -> failsexp __LOC__ [ x ])
@@ -68,10 +77,7 @@ let handle_require ctx requires =
           SAtom (meta_empty, "__ns_aliases");
           SList
             ( meta_empty,
-              [
-                SAtom (meta_empty, "quote");
-                SList (meta_empty, SAtom (meta_empty, "hash-map") :: aliases);
-              ] );
+              [ SAtom (meta_empty, "quote"); SList (meta_empty, aliases) ] );
         ] );
   ]
 

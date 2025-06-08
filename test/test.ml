@@ -10,7 +10,7 @@ let _assert_bytecode_repl = Utils.assert_ (Lib.main_bytecode { config_default wi
 let () =
   Alcotest.run "Tests"
     [
-      ("Core", Core_test.tests);
+      ("V2", Core_test.tests);
       (* ( "Local",
         [
           _assert_java __POS__ {|(println (try (do (/ 2 0) (/ 1 0)) (catch Exception e (do (/ 3 0) nil))))|}

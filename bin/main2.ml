@@ -1,3 +1,5 @@
+open Lib__.Common
+
 let main () =
   let command = ref "" in
   let target = ref "" in
@@ -18,6 +20,9 @@ let main () =
   match !target with
   | "java" -> Core.compile !namespace false !src !root_dir code |> print_endline
   | "eval" | "repl" ->
-      let input = if !capture_stdin then In_channel.(with_open_bin !src input_all) else "" in
-      Core.eval !src input code |> print_endline
+      FileReader.with_scope
+        (fun () ->
+          let input = if !capture_stdin then In_channel.(with_open_bin !src input_all) else "" in
+          Core.eval !src input code |> print_endline)
+        ()
   | t -> failwith @@ "Invalid target " ^ t

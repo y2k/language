@@ -1,0 +1,63 @@
+open Lib__.Common
+
+module OUtils = struct
+  module F = Lib__.Backend_interpreter.Functions
+
+  let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith
+
+  let rec obj_to_sexp = function
+    (* *)
+    | OInt (m, x) -> SAtom (m, string_of_int x)
+    | OString (m, x) -> SAtom (m, "\"" ^ x ^ "\"")
+    | OList (m, xs) -> SList (m, List.map obj_to_sexp xs)
+    | OQuote (_, x) -> x
+    | ONil m -> SAtom (m, "nil")
+    | OVector (m, xs) ->
+        SList (m, SAtom (m, "vector") :: List.map obj_to_sexp xs)
+    | x -> failobj __LOC__ x
+end
+
+module NamespaceUtils = struct
+  let mangle_name (ns : string) (name : string) : string =
+    Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
+
+  let unmangle_symbol x =
+    if String.starts_with ~prefix:"G" x then
+      let nstr =
+        Str.string_match (Str.regexp "G[0-9]+") x 0 |> ignore;
+        let s = Str.matched_string x in
+        String.sub s 1 (String.length s - 1)
+      in
+      (* prerr_endline @@ "LOG: '" ^ x ^ "' -> '" ^ a ^ "'"; *)
+      let l1 = int_of_string nstr in
+      (* let l1 = String.get x 1 |> String.make 1 |> int_of_string in *)
+      let ns = String.sub x (1 + String.length nstr) l1 in
+      (* let ns = "|" ^ ns ^ "|" in *)
+      let name =
+        (* let n = String.length nstr in *)
+        if not (Str.string_match (Str.regexp "[0-9]+") x (l1 + 3)) then
+          failwith (x ^ "|" ^ string_of_int l1) |> ignore;
+        let l2str = Str.matched_string x in
+        (* let l2 = l2str |> int_of_string in *)
+        let start = l1 + 3 + String.length l2str in
+        (* String.sub x (l1 + 2 + n) (String.length x - l1 - 2 - n) *)
+        String.sub x start (String.length x - start)
+      in
+      (* let name = "|" ^ name ^ "|" in *)
+      (ns, name)
+    else ("", x)
+
+  let path_to_namespace name path =
+    let path = unpack_string path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = String.map (fun x -> if x = '/' then '.' else x) path in
+    (* prerr_endline @@ "LOG: path=" ^ path; *)
+    let path = mangle_name path name in
+    path
+end
+
+let get_dir filename =
+  filename |> String.split_on_char '/' |> List.rev |> List.tl |> List.rev
+  |> String.concat "/"

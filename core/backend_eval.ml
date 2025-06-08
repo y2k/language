@@ -1,9 +1,9 @@
 open Lib__.Common
-module OUtils = Lib__.Backend_interpreter.Functions
+open Common
+module F = Lib__.Backend_interpreter.Functions
 
 module Utils = struct
-  let failobj loc x =
-    Printf.sprintf "%s %s" loc (OUtils.obj_to_string x) |> failwith
+  let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith
 end
 
 type eval_context = {
@@ -210,9 +210,7 @@ let attach_functions stdin ctx =
          |> fun xs -> OList (meta_empty, xs))
   |> reg_fun "str" (fun xs ->
          xs
-         |> List.map (function
-              | OString (_, x) -> x
-              | x -> OUtils.obj_to_string x)
+         |> List.map (function OString (_, x) -> x | x -> F.obj_to_string x)
          |> String.concat ""
          |> fun xs -> OString (meta_empty, xs))
   |> reg_fun "+" (function
@@ -237,19 +235,27 @@ let eval1 (stdin : string) node =
   let ctx = attach_functions stdin empty_eval_context in
   node |> eval_ ctx
 
-open Core_base
-
-let eval code filename stdin =
-  let get_macro node =
-    let ctx = eval1 "" node |> fst in
-    get_all_functions ctx
+let eval2 (filename : string) (stdin : string) code =
+  let get_macro node = eval1 "" node |> fst |> get_all_functions in
+  let rec serialize_to_string = function
+    | SAtom (_, x) -> x
+    | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
   in
-  Parser.parse_text (Prelude.prelude_eval ^ code)
-  |> Simplify.do_simplify get_macro
-       {
-         log = true;
-         macro = Prelude.prelude_eval_macro;
-         filename;
-         root_dir = get_dir filename;
-       }
-  |> eval1 stdin
+  let rec eval3 code =
+    code
+    |> Frontent_simplify.do_simplify get_macro
+         {
+           log = true;
+           macro = Prelude.prelude_eval_macro;
+           filename;
+           root_dir = get_dir filename;
+           compile =
+             (fun path ->
+               let code = FileReader.read path in
+               eval3 code);
+         }
+  in
+  NameGenerator.with_scope (fun () ->
+      Prelude.prelude_eval ^ code
+      |> eval3 |> eval1 stdin |> snd |> OUtils.obj_to_sexp
+      |> serialize_to_string |> unpack_string)

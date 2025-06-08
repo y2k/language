@@ -41,44 +41,33 @@ public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}
                Alcotest.(check string) "" expected actual))
 end
 
-(* let re_find pattern str =
-  let pattern = pattern |> Str.global_replace (Str.regexp "(") "\\(" |> Str.global_replace (Str.regexp ")") "\\)" in
-  let re = Str.regexp pattern in
-  try
-    let _result = Str.search_forward re str 0 in
-    (* prerr_endline @@ "LOG: " ^ string_of_int _result; *)
+module EvalExecution : sig
+  val create_tests : (string * string * string) list -> unit Alcotest.test_case list
+end = struct
+  open Lib__.Common
 
-    let groups =
-      Seq.unfold
-        (fun i ->
-          try
-            let r = Str.matched_group i str in
-            Some (r, i + 1)
-          with Invalid_argument _ -> None)
-        1
-      |> List.of_seq
-    in
-    Some (Str.matched_string str :: groups)
-  with Not_found -> None
-
-let () =
-  [
-    (Some [ "abcdxxx"; "bcdxx" ], re_find "a([a-z]+)x" "xabcdxxx");
-    (Some [ "abcdxxx"; "bcdxx" ], re_find "a(.+)x" "xabcdxxx");
-    (Some [ "abcdx" ], re_find "abcdx" "xabcdxxx");
-    (Some [ "abcdx" ], re_find "abcdx" "xabcdxxx");
-    (Some [ "abcd"; "bc" ], re_find "a(bc)d" "xabcd");
-    (Some [ "abcd"; "bc" ], re_find "a(bc)d" "xabcdxxx");
-    (Some [ "abcdx"; "bc"; "x" ], re_find "a(bc)d(x)" "xabcdxxx");
-    (Some [ "abcdxxx"; "bc"; "xxx" ], re_find "a(bc)d(x+)" "xabcdxxx");
-    (None, re_find "a(bc)d" "");
-  ]
-  |> List.map (fun (e, a) ->
-         Alcotest.test_case "Java" `Quick (fun () -> Alcotest.(check (option (list string))) "." e a))
-  |> fun x -> Alcotest.run "core" [ ("Java", x) ] *)
+  let create_tests tests =
+    tests
+    |> List.map (fun (loc, input, expected) ->
+           Alcotest.test_case loc `Quick (fun () ->
+               let actual =
+                 FileReader.with_stub_scope "(defn foo [x] x)" (Core.eval "/app/src/core/ext/user.clj" "") input
+               in
+               Alcotest.(check string) "" expected actual))
+end
 
 let tests =
   [
+    [
+      (__LOC__, {|(defn f [x] x) (f 4)|}, "4");
+      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (e/foo 4)|}, "4"); *)
+      (* (__LOC__, {|(+ 2 2)|}, "4"); *)
+    ]
+    |> EvalExecution.create_tests;
+    [ (* *)
+      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
+      (* (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
+    (* *)
     (__LOC__, {|(defn f [] 3) (defn run [] (f))|}, {|3|});
     (__LOC__, {|(def a (atom 1)) (defn run [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, {|3|});
     (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});
@@ -106,9 +95,6 @@ let tests =
   (.add (MyClass.) 40 2))|},
       {|42|} );
     (* *)
-    (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
-    (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
-    (* *)
     (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
     (* *)
     (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
@@ -128,6 +114,7 @@ let tests =
     (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
     (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] 2)|}, {|2|});
+    (__LOC__, {|(defn run [] 2)|}, {|2|}); *) ]
+    |> JavaExecution.create_tests;
   ]
-  |> JavaExecution.create_tests
+  |> List.concat
