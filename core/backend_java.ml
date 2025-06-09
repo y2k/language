@@ -79,16 +79,14 @@ let rec compile (ctx : complie_context) sexp =
       failsexp __LOC__ [ x ]
   (* Function call *)
   | SList (_, fn :: args) -> (
-      let args = List.map (compile ctx) args in
-      let args = String.concat "," args in
+      let args = List.map (compile ctx) args |> String.concat "," in
       match fn with
       | SAtom (_, name) -> (
-          if String.starts_with ~prefix:"G" name then (
-            (* prerr_endline @@ "LOG1: " ^ name; *)
-            let ns, name = NamespaceUtils.unmangle_symbol name in
-            prerr_endline @@ "LOG2: " ^ ns ^ ", " ^ name;
-            let cls = convert_namespace_to_class_name ns in
-            Printf.sprintf "y2k.RT.invoke(%s.%s,%s)" cls name args)
+          if String.contains name '#' then
+            let name = String.map (fun x -> if x = '#' then '.' else x) name in
+            match args with
+            | "" -> Printf.sprintf "y2k.RT.invoke(%s)" name
+            | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" name args
           else if String.contains name '.' then
             Printf.sprintf "%s(%s)" name args
           else if String.contains name '/' then
@@ -144,4 +142,8 @@ let compile (namespace : string) (log : bool) (filename : string)
              compile =
                (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
            }
+      |> Stage_resolve_import.do_resolve filename root_dir
+      |> log_stage log "Stage_resolve_import"
+      |> Stage_alias_to_class.do_invoke
+      |> log_stage log "Stage_alias_to_class"
       |> do_compile { filename; root_dir; namespace })

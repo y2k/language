@@ -1,11 +1,13 @@
 open Lib__.Common
 open Common
+module StringSet = Set.Make (String)
 
 type resolve_ctx = {
   links : (string * string) list;
   aliases : (string * string) list;
   filename : string;
   root_dir : string;
+  prelude_fns : StringSet.t;
 }
 
 let rec resolve (ctx : resolve_ctx) node =
@@ -41,10 +43,14 @@ let rec resolve (ctx : resolve_ctx) node =
       let ctx = { ctx with links = (name, value) :: ctx.links } in
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
-  | SList (m, [ (SAtom (_, "def*") as def_); name; value ]) ->
-      (* failwith @@ __LOC__ ^ " " ^ ctx.filename ^ " " ^ ctx.root_dir |> ignore; *)
+  | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
+      let name =
+        NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
+      in
+      prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
+      ^ " -> " ^ name;
       let _, value = resolve ctx value in
-      (ctx, SList (m, [ def_; name; value ]))
+      (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; args; body ]))
@@ -70,7 +76,12 @@ let rec resolve (ctx : resolve_ctx) node =
     when not (String.ends_with ~suffix:"*" fun_name) ->
       let _, args = List.fold_left_map (fun ctx x -> resolve ctx x) ctx args in
       let fun_name =
-        if String.contains fun_name '/' then
+        if
+          String.get fun_name 0 < 'a'
+          || String.get fun_name 0 > 'z'
+          || StringSet.mem fun_name ctx.prelude_fns
+        then fun_name
+        else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
           ctx.aliases |> List.assoc_opt alias_name
           |> Option.map (fun x ->
@@ -80,7 +91,7 @@ let rec resolve (ctx : resolve_ctx) node =
                  in
                  NamespaceUtils.path_to_namespace fun_name x)
           |> Option.value ~default:fun_name
-        else fun_name
+        else NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename fun_name
       in
       (ctx, SList (m, SAtom (m, fun_name) :: args))
   | SList (m, fn :: args) ->
@@ -90,5 +101,28 @@ let rec resolve (ctx : resolve_ctx) node =
   | x -> failsexp __LOC__ [ x ]
 
 let do_resolve filename root_dir node =
-  let ctx = { links = []; aliases = []; filename; root_dir } in
+  let ctx =
+    {
+      links = [];
+      aliases = [];
+      filename;
+      root_dir;
+      prelude_fns =
+        StringSet.of_list
+          [
+            "vendor";
+            "hash-map";
+            "reduce";
+            "map";
+            "str";
+            "get";
+            "vector";
+            "set!";
+            "drop";
+            "count";
+            "vector?";
+            "map?";
+          ];
+    }
+  in
   resolve ctx node |> snd

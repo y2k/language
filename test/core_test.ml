@@ -59,30 +59,33 @@ end
 let tests =
   [
     [
-      (__LOC__, {|(defn f [x] x) (f 4)|}, "4");
-      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (e/foo 4)|}, "4"); *)
-      (* (__LOC__, {|(+ 2 2)|}, "4"); *)
+      (__LOC__, {|(defn- f [x] x) (f 4)|}, "4");
+      (__LOC__, {|(+ 2 2)|}, "4");
+      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (e/foo 4)|}, "4");
     ]
     |> EvalExecution.create_tests;
-    [ (* *)
-      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
-      (* (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
-    (* *)
-    (__LOC__, {|(defn f [] 3) (defn run [] (f))|}, {|3|});
-    (__LOC__, {|(def a (atom 1)) (defn run [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, {|3|});
-    (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});
-    (__LOC__, {|(defn- f [[_ x]] x) (defn run [] (f [3 2]))|}, {|2|});
-    (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
-    (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
-    (__LOC__, {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn run [] (f 2))|}, {|2|});
-    (* *)
-    (__LOC__, {|(def- a 42) (defn run [] a)|}, {|42|});
-    (* *)
-    (__LOC__, {|(defn run [] (let [[_ a] [1 40 3] b 2] (+ a b)))|}, {|42|});
-    (__LOC__, {|(defn run [] (let [a 40 b 2] (+ a b)))|}, {|42|});
-    (* *)
-    ( __LOC__,
-      {|(gen-class
+    (* [
+      (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
+      (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
+      (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
+      (* *)
+      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+      (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
+      (__LOC__, {|(def- a 42) (defn run [] a)|}, {|42|});
+      (* *)
+      (__LOC__, {|(defn f [] 3) (defn run [] (f))|}, {|3|});
+      (__LOC__, {|(def a (atom 1)) (defn run [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, {|3|});
+      (__LOC__, {|(defn- f [{x :a}] x) (defn run [] (f {:a 2}))|}, {|2|});
+      (__LOC__, {|(defn- f [[_ x]] x) (defn run [] (f [3 2]))|}, {|2|});
+      (__LOC__, {|(defn f [x] x) (defn run [] (f 2))|}, {|2|});
+      (__LOC__, {|(defn f [x] x) (defn run [] (f 3) (f 2))|}, {|2|});
+      (__LOC__, {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn run [] (f 2))|}, {|2|});
+      (* *)
+      (__LOC__, {|(defn run [] (let [[_ a] [1 40 3] b 2] (+ a b)))|}, {|42|});
+      (__LOC__, {|(defn run [] (let [a 40 b 2] (+ a b)))|}, {|42|});
+      (* *)
+      ( __LOC__,
+        {|(gen-class
  :name MyClass
  :extends Thread
  :prefix "sample_"
@@ -93,28 +96,25 @@ let tests =
 
 (defn run []
   (.add (MyClass.) 40 2))|},
-      {|42|} );
-    (* *)
-    (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
-    (* *)
-    (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
-    (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});
-    (* *)
-    (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
-    (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
-    (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
-    (* *)
-    (__LOC__, {|(defn run [] (count [10 20 30]))|}, {|3|});
-    (__LOC__, {|(defn run [] (count {:a 1 :b 2}))|}, {|2|});
-    (__LOC__, {|(defn run [] (get [10 20 30] 1))|}, {|20|});
-    (__LOC__, {|(defn run [] (get {:a 2 :b 3} :b))|}, {|3|});
-    (__LOC__, {|(defn run [] (if (= (str "1" "2" "3") "123") 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] (if (= (str 1 "2" 3) "123") 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
-    (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
-    (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] 2)|}, {|2|}); *) ]
-    |> JavaExecution.create_tests;
+        {|42|} );
+      (* *)
+      (__LOC__, {|(defn run [] ((fn [x] (+ x x)) 21))|}, {|42|});
+      (* *)
+      (__LOC__, {|(defn run [] (.hashCode (new String "2")))|}, {|50|});
+      (__LOC__, {|(defn run [] (.hashCode (String. "2")))|}, {|50|});
+      (* *)
+      (__LOC__, {|(defn run [] (count [10 20 30]))|}, {|3|});
+      (__LOC__, {|(defn run [] (count {:a 1 :b 2}))|}, {|2|});
+      (__LOC__, {|(defn run [] (get [10 20 30] 1))|}, {|20|});
+      (__LOC__, {|(defn run [] (get {:a 2 :b 3} :b))|}, {|3|});
+      (__LOC__, {|(defn run [] (if (= (str "1" "2" "3") "123") 2 3))|}, {|2|});
+      (__LOC__, {|(defn run [] (if (= (str 1 "2" 3) "123") 2 3))|}, {|2|});
+      (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
+      (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
+      (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
+      (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
+      (__LOC__, {|(defn run [] 2)|}, {|2|});
+    ]
+    |> JavaExecution.create_tests; *)
   ]
   |> List.concat

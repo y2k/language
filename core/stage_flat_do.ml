@@ -2,6 +2,7 @@ open Lib__.Common
 
 let rec invoke = function
   | SAtom _ as x -> x
+  | SList (_, [ SAtom (_, "quote*"); _ ]) as x -> x
   | SList (m, (SAtom (_, "do*") as do_) :: children) ->
       let children =
         children |> List.map invoke
