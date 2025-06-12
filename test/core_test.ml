@@ -64,7 +64,7 @@ let tests =
       (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (e/foo 4)|}, "4");
     ]
     |> EvalExecution.create_tests;
-    (* [
+    [
       (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
       (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
       (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
@@ -115,6 +115,6 @@ let tests =
       (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
       (__LOC__, {|(defn run [] 2)|}, {|2|});
     ]
-    |> JavaExecution.create_tests; *)
+    |> JavaExecution.create_tests;
   ]
   |> List.concat

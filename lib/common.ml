@@ -4,8 +4,10 @@ let config_default = { no_lint = false; virtual_src = ""; log = false; no_deps =
 
 module FileReader = struct
   type _ Effect.t += Load : string -> string Effect.t
+  type _ Effect.t += Realpath : string -> string Effect.t
 
   let read filename = Effect.perform (Load filename)
+  let realpath path = Effect.perform (Realpath path)
 
   let with_stub_scope (content : string) f arg =
     let open Effect.Deep in
@@ -15,7 +17,10 @@ module FileReader = struct
         exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
-            match eff with Load _ -> Some (fun (k : (a, _) continuation) -> continue k content) | _ -> None);
+            match eff with
+            | Load _ -> Some (fun (k : (a, _) continuation) -> continue k content)
+            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k path)
+            | _ -> None);
       }
 
   let with_scope f arg =
@@ -28,6 +33,7 @@ module FileReader = struct
           (fun (type a) (eff : a Effect.t) ->
             match eff with
             | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
+            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k (Unix.realpath path))
             | _ -> None);
       }
 end
@@ -51,10 +57,11 @@ type cljexp =
 [@@deriving show]
 
 let trace prefix to_string x =
-  print_endline (Printf.sprintf "%s %s" prefix (to_string x));
+  prerr_endline @@ "LOG " ^ Printf.sprintf "%s %s" prefix (to_string x);
   x
 
 let unpack_string x = if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2) else x
+let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 let get_type meta = if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
 let get_type_or_var meta = if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol

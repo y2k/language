@@ -28,9 +28,19 @@ let rec resolve (ctx : resolve_ctx) node =
       in
       let _, value = resolve ctx value in
       (ctx, SList (m, [ def_; SAtom (mn, name); value ])) *)
-  | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
+  | SList (m, [ (SAtom (_, "fn*") as fn_); SList (ma, args); body ]) ->
+      (* let args =
+        args
+        |> List.map (function
+             | SAtom (m, name) -> (
+                 let className = ctx.links |> List.assoc_opt m.symbol in
+                 match className with
+                 | Some x -> SAtom ({ m with symbol = x }, name)
+                 | None -> SAtom (m, name))
+             | x -> failsexp __LOC__ [ x ])
+      in *)
       let _, body = resolve ctx body in
-      (ctx, SList (m, [ fn_; args; body ]))
+      (ctx, SList (m, [ fn_; SList (ma, args); body ]))
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->
       let ctx, body =
         List.fold_left_map (fun ctx x -> resolve ctx x) ctx body
@@ -48,6 +58,14 @@ let rec resolve (ctx : resolve_ctx) node =
   | SList (m, (SAtom (_, "if*") as if_) :: args) ->
       let args = args |> List.map (fun x -> resolve ctx x |> snd) in
       (ctx, SList (m, if_ :: args))
+  | SList (m, [ SAtom (_, "__compiler_resolve_type"); SAtom (_, name) ]) ->
+      let result =
+        let name = unpack_string name in
+        ctx.links |> List.assoc_opt name |> Option.value ~default:name
+      in
+      (* prerr_endline @@ "LOG[__resolve_type]: " ^ name ^ " -> " ^ result; *)
+      (ctx, SAtom (m, "\"" ^ result ^ "\""))
+  (* Function call *)
   | SList (m, fn :: args) ->
       let _, fn = resolve ctx fn in
       let args = List.map (fun x -> resolve ctx x |> snd) args in

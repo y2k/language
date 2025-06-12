@@ -18,8 +18,10 @@ module OUtils = struct
 end
 
 module NamespaceUtils = struct
-  let get_ns_from_path root path =
-    let path =
+  let get_ns_from_path _ path =
+    (* prerr_endline @@ "LOG[get_ns_from_path] " ^ " | " ^ path; *)
+    "m" ^ string_of_int (String.hash path)
+  (* let path =
       String.sub path (String.length root)
         (String.length path - String.length root)
     in
@@ -28,20 +30,20 @@ module NamespaceUtils = struct
     if String.starts_with ~prefix:"/" x then String.sub x 1 (String.length x - 1)
     else x)
     |> Str.global_replace (Str.regexp "\\.clj") ""
-    |> Str.global_replace (Str.regexp "/") "."
+    |> Str.global_replace (Str.regexp "/") "." *)
 
   let mangle_name (ns : string) (name : string) : string =
     let result =
       Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
     in
-    prerr_endline @@ "LOG[mangle_name] " ^ ns ^ " | " ^ name ^ " -> " ^ result;
+    (* prerr_endline @@ "LOG[mangle_name] " ^ ns ^ " | " ^ name ^ " -> " ^ result; *)
     result
 
   let mangle_from_path root path name =
     let ns = get_ns_from_path root path in
     let result = mangle_name ns name in
-    prerr_endline @@ "LOG[mangle_from_path] (" ^ ns ^ ") " ^ root ^ " | " ^ path
-    ^ " | " ^ name ^ " -> " ^ result;
+    (* prerr_endline @@ "LOG[mangle_from_path] (" ^ ns ^ ") " ^ root ^ " | " ^ path
+    ^ " | " ^ name ^ " -> " ^ result; *)
     result
 
   let unmangle_symbol x =
@@ -84,7 +86,8 @@ end
 let log_stage log_enabled title node =
   (if log_enabled then
      let padding = String.make (max 0 (30 - String.length title)) ' ' in
-     prerr_endline @@ "* " ^ title ^ padding ^ " -> " ^ debug_show_sexp [ node ]);
+     prerr_endline @@ "* " ^ title ^ padding ^ " -> " ^ debug_show_sexp [ node ]
+     ^ "\n");
   node
 
 let get_dir filename =

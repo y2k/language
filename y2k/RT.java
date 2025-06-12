@@ -1,11 +1,11 @@
 package y2k;
 
 public class RT {
-    interface Fn0 {
+    public interface Fn0 {
         public Object invoke() throws Exception;
     }
 
-    interface Fn1 extends java.util.function.UnaryOperator<Object> {
+    public interface Fn1 extends java.util.function.UnaryOperator<Object> {
         public Object invoke(Object a) throws Exception;
 
         public default Object apply(Object a) {
@@ -17,12 +17,16 @@ public class RT {
         }
     }
 
-    interface Fn2 {
+    public interface Fn2 {
         public Object invoke(Object a, Object b) throws Exception;
     }
 
-    interface Fn3 {
+    public interface Fn3 {
         public Object invoke(Object a, Object b, Object c) throws Exception;
+    }
+
+    public interface Fn4 {
+        public Object invoke(Object a, Object b, Object c, Object d) throws Exception;
     }
 
     public static Object fn(Fn0 f) {
@@ -38,6 +42,10 @@ public class RT {
     }
 
     public static Object fn(Fn3 f) {
+        return f;
+    }
+
+    public static Object fn(Fn4 f) {
         return f;
     }
 
@@ -68,6 +76,14 @@ public class RT {
     public static Object invoke(Object f, Object a, Object b, Object c) {
         try {
             return ((Fn3) f).invoke(a, b, c);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object invoke(Object f, Object a, Object b, Object c, Object d) {
+        try {
+            return ((Fn4) f).invoke(a, b, c, d);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

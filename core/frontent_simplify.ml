@@ -145,8 +145,6 @@ let do_simplify eval_macro (opt : simplify_opt) (code : string) : sexp =
     |> log_stage (type_ ^ "Parse ")
     |> simplify { log = opt.log; otp = opt; get_macro = macro }
     |> log_stage (type_ ^ "Simplify ")
-    |> Lib__.Stage_convert_if_to_statment.invoke
-    |> log_stage (type_ ^ "if_to_statement ")
     (* |> Stage_resolve_ns.do_resolve opt.filename opt.root_dir
     |> log_stage opt (type_ ^ "Stage_resolve_ns") *)
     (* |> Stage_load_require.do_invoke (fun x ->

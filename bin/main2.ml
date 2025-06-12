@@ -7,6 +7,7 @@ let main () =
   let capture_stdin = ref false in
   let namespace = ref "" in
   let root_dir = ref "" in
+  let log = ref false in
   Arg.parse
     [
       ("-target", Arg.Set_string target, "Target: js, java, eval, bytecode");
@@ -14,11 +15,12 @@ let main () =
       ("-capture_stdin", Arg.Bool (( := ) capture_stdin), "Capute stdin");
       ("-namespace", Arg.Set_string namespace, "Namespace");
       ("-root", Arg.Set_string root_dir, "Root directory");
+      ("-log", Arg.Bool (( := ) log), "Show log");
     ]
     (( := ) command) "ly2k";
   let code = In_channel.(with_open_bin !src input_all) in
   match !target with
-  | "java" -> Core.compile !namespace false !src !root_dir code |> print_endline
+  | "java" -> FileReader.with_scope (fun _ -> Core.compile !namespace !log !src !root_dir code |> print_endline) ()
   | "eval" | "repl" ->
       FileReader.with_scope
         (fun () ->

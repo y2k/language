@@ -1,8 +1,18 @@
 open Lib__.Common
 
 module NamespaceUtils = struct
-  let convert_path_to_ns base_path filename path =
-    let parent_base_path =
+  let convert_path_to_ns _ filename path =
+    prerr_endline @@ "LOG[NS]: base_path: '" ^ "???" ^ "'"
+    ^ " | filename: '" ^ filename ^ "'" ^ " | path: '" ^ path ^ "'\n";
+    Filename.concat (Filename.dirname filename) (path ^ ".clj")
+    |> trace __LOC__ Fun.id
+    |> FileReader.realpath
+    |> trace __LOC__ Fun.id
+    |> String.hash
+    |> Printf.sprintf "m%i"
+    |> trace __LOC__ Fun.id
+
+  (* let parent_base_path =
       let xs = String.split_on_char '/' base_path in
       let xs = xs |> List.rev |> List.tl |> List.rev in
       String.concat "/" xs
@@ -42,7 +52,7 @@ module NamespaceUtils = struct
       |> Str.global_replace (Str.regexp "/") "."
     in
     (* prerr_endline @@ "LOG4:RESULT: " ^ path; *)
-    path
+    path *)
 end
 
 type ns_opt = { root_dir : string; filename : string }

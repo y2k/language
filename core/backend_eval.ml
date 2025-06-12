@@ -100,6 +100,10 @@ let rec eval_ (ctx : eval_context) node =
               result )
       in
       (ctx, l)
+  | SList (_, SAtom (_, fname) :: _)
+    when String.ends_with ~suffix:"*" fname && fname <> "*" ->
+      failsexp __LOC__ [ node ]
+  (* Function call *)
   | SList (_, SAtom (_, fname) :: args) ->
       let f = resolve_value ctx fname in
       let f =
@@ -141,6 +145,25 @@ let re_find pattern str =
 
 let attach_functions stdin ctx =
   ctx
+  |> reg_fun "drop" (fun xs ->
+         match xs with
+         | [ OInt (_, n); OList (_, xs) ] ->
+             OList (meta_empty, List.filteri (fun i _ -> i >= n) xs)
+         | [ OInt (_, n); OVector (_, xs) ] ->
+             OVector (meta_empty, List.filteri (fun i _ -> i >= n) xs)
+         | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "map?" (fun xs ->
+         match xs with
+         | [ OMap _ ] -> OBool (meta_empty, true)
+         | _ -> OBool (meta_empty, false))
+  |> reg_fun "=" (fun xs ->
+         match xs with
+         | [ x; y ] -> OBool (meta_empty, Obj.equal x y)
+         | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "vector?" (fun xs ->
+         match xs with
+         | [ OVector _ ] -> OBool (meta_empty, true)
+         | _ -> OBool (meta_empty, false))
   |> reg_fun "list" (fun xs -> OList (meta_empty, xs))
   |> reg_fun "string/starts-with?" (fun xs ->
          match xs with
@@ -175,6 +198,7 @@ let attach_functions stdin ctx =
   |> reg_fun "count" (fun xs ->
          match xs with
          | [ OList (_, xs) ] -> OInt (meta_empty, List.length xs)
+         | [ OVector (_, xs) ] -> OInt (meta_empty, List.length xs)
          | x -> Obj.failobj __LOC__ x)
   |> reg_fun "string/split" (fun xs ->
          match xs with
@@ -196,6 +220,7 @@ let attach_functions stdin ctx =
              |> Option.map snd
              |> Option.value ~default:(ONil meta_empty)
          | [ OList (_, xs); OInt (_, i) ] -> List.nth xs i
+         | [ OVector (_, xs); OInt (_, i) ] -> List.nth xs i
          | x -> Obj.failobj __LOC__ x)
   |> reg_val "nil" (ONil meta_empty)
   |> reg_fun "vector" (fun xs -> OVector (meta_empty, xs))
@@ -219,15 +244,23 @@ let attach_functions stdin ctx =
   |> reg_fun "reduce" (function
        | [ OLambda (_, f); init; OList (_, xs) ] ->
            List.fold_left (fun acc x -> f [ acc; x ]) init xs
+       | [ OLambda (_, f); init; OVector (_, xs) ] ->
+           List.fold_left (fun acc x -> f [ acc; x ]) init xs
+       | [ OLambda (_, f); init; OMap (_, xs) ] ->
+           List.fold_left
+             (fun acc (k, v) -> f [ acc; OVector (meta_empty, [ k; v ]) ])
+             init xs
        | [ OLambda (_, f); OList (_, xs) ] ->
            let init = List.hd xs in
            let xs = List.tl xs in
            List.fold_left (fun acc x -> f [ acc; x ]) init xs
-       | _ -> failwith __LOC__)
+       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "map" (function
        | [ OLambda (_, f); OList (_, xs) ] ->
            OList (meta_empty, List.map (fun x -> f [ x ]) xs)
-       | _ -> failwith __LOC__)
+       | [ OLambda (_, f); OVector (_, xs) ] ->
+           OVector (meta_empty, List.map (fun x -> f [ x ]) xs)
+       | x -> Obj.failobj __LOC__ x)
 
 let eval1 (stdin : string) node =
   (* prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ]; *)
@@ -266,9 +299,10 @@ let eval2 (filename : string) (stdin : string) code =
     |> Stage_load_require.do_invoke (fun path ->
            let path2 =
              Filename.concat (Filename.dirname _origin_filename) (path ^ ".clj")
+             |> FileReader.realpath
            in
            let code = FileReader.read path2 in
-           eval3 "  [REQ]" "" path code)
+           eval3 "  [REQ]" "" path2 code)
     |> log_stage true (type_ ^ " Stage_load_require")
     |> Stage_flat_do.invoke
     |> log_stage true (type_ ^ " Stage_flat_do")

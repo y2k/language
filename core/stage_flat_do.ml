@@ -17,6 +17,12 @@ let rec invoke = function
   | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
       let value = List.map invoke value in
       SList (m, let_ :: name :: value)
+  (* if* *)
+  | SList (m, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
+      let cond = invoke cond in
+      let then_ = invoke then_ in
+      let else_ = invoke else_ in
+      SList (m, [ if_; cond; then_; else_ ])
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
       let body = List.map invoke body in
       SList (m, fn_ :: args :: body)

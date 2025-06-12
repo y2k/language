@@ -10,6 +10,14 @@ let _assert_bytecode_repl = Utils.assert_ (Lib.main_bytecode { config_default wi
 let () =
   Alcotest.run "Tests"
     [
+      (* ( "Unix",
+        [
+          Alcotest.test_case __LOC__ `Quick (fun _ ->
+              Unix.realpath
+                "/Users/igor/Projects/finance_tracker/app/../vendor/android_gallery/0.1.0/android_gallery.clj"
+              |> ignore;
+              ());
+        ] ); *)
       ("V2", Core_test.tests);
       (* ( "Local",
         [

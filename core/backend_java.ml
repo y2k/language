@@ -13,6 +13,7 @@ let convert_namespace_to_class_name (ns : string) =
 let rec compile (ctx : complie_context) sexp =
   (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
   match sexp with
+  | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
   | SAtom (_, x) -> x
@@ -51,7 +52,11 @@ let rec compile (ctx : complie_context) sexp =
       let sargs = String.concat "," args in
       Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body last_body
   | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
-  | SList (_, [ SAtom (_, "__compiler_emit"); SAtom (_, value) ]) ->
+  | SList (_, SAtom (_, "__compiler_emit") :: args) ->
+      let value =
+        List.map (compile ctx) args
+        |> List.map unpack_string |> String.concat ""
+      in
       unpack_string value
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       let cond = compile ctx cond in
@@ -120,7 +125,7 @@ let do_compile (opt : compile_opt) sexp =
     opt.filename
     |> Str.global_replace (Str.regexp "\\.clj") ""
     |> Str.global_replace (Str.regexp ".+/") ""
-    |> String.capitalize_ascii
+    (* |> String.capitalize_ascii *)
   in
   let body = compile () sexp in
   Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
@@ -142,6 +147,8 @@ let compile (namespace : string) (log : bool) (filename : string)
              compile =
                (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
            }
+      |> Lib__.Stage_convert_if_to_statment.invoke
+      |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve filename root_dir
       |> log_stage log "Stage_resolve_import"
       |> Stage_alias_to_class.do_invoke
