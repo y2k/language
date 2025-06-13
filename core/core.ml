@@ -1,5 +1,5 @@
-let eval (filename : string) (stdin : string) code =
-  Backend_eval.eval2 filename stdin code
+let eval (log : bool) (filename : string) (stdin : string) code =
+  Backend_eval.eval2 log filename stdin code
 
 let compile (namespace : string) (log : bool) (filename : string)
     (root_dir : string) code =

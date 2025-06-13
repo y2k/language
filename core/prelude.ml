@@ -2,6 +2,9 @@ let prelude_java_macro =
   {|
 (defn list [& xs] xs)
 
+(defn macro_assoc [xs k v]
+  (list 'y2k.RT.assoc xs k v))
+
 (defn macro_atom [x]
   (list 'java.util.concurrent.atomic.AtomicReference. x))
 

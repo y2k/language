@@ -8,9 +8,17 @@ type resolve_ctx = {
 
 let rec resolve (ctx : resolve_ctx) node =
   match node with
+  | SAtom (m, name) when String.contains name '/' -> (
+      let parts = String.split_on_char '/' name in
+      let clazz = List.hd parts in
+      let method_ = List.tl parts |> String.concat "." in
+      match List.assoc_opt clazz ctx.links with
+      | Some x -> (ctx, SAtom (m, x ^ "." ^ method_))
+      | None -> (ctx, SAtom (m, clazz ^ "." ^ method_)))
   | SAtom (m, name) -> (
       match ctx.links |> List.assoc_opt name with
-      | Some x -> (ctx, SAtom (m, x))
+      | Some x -> (ctx, SAtom (m, x ^ ".class"))
+      (* | Some _ -> (ctx, SAtom (m, name)) *)
       | None -> (ctx, SAtom (m, name)))
   | SList
       ( _,
@@ -73,5 +81,5 @@ let rec resolve (ctx : resolve_ctx) node =
   | x -> failsexp __LOC__ [ x ]
 
 let do_resolve filename root_dir node =
-  let ctx = { links = []; filename; root_dir } in
+  let ctx = { links = [ ("String", "String") ]; filename; root_dir } in
   resolve ctx node |> snd

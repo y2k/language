@@ -1,6 +1,17 @@
 package y2k;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class RT {
+
+    public static Object assoc(Object xs, Object k, Object v) {
+        var col = (Map<Object, Object>) xs;
+        var result = new HashMap<>(col);
+        result.put(k, v);
+        return result;
+    }
+
     public interface Fn0 {
         public Object invoke() throws Exception;
     }

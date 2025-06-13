@@ -273,7 +273,7 @@ let convert_to_ns path =
   |> List.filter (fun x -> x <> "" && x <> ".")
   |> String.concat "."
 
-let eval2 (filename : string) (stdin : string) code =
+let eval2 (log : bool) (filename : string) (stdin : string) code =
   let _origin_filename = filename in
   let get_macro node = eval1 "" node |> fst |> get_all_functions in
   let rec serialize_to_string = function
@@ -284,7 +284,7 @@ let eval2 (filename : string) (stdin : string) code =
     code
     |> Frontent_simplify.do_simplify get_macro
          {
-           log = true;
+           log;
            macro = Prelude.prelude_eval_macro;
            filename;
            root_dir;
@@ -295,7 +295,7 @@ let eval2 (filename : string) (stdin : string) code =
                eval3 "  [COMPILE2]" (get_dir filename) filename code);
          }
     |> Stage_resolve_ns.do_resolve filename root_dir
-    |> log_stage true (type_ ^ " Stage_resolve_ns")
+    |> log_stage log (type_ ^ " Stage_resolve_ns")
     |> Stage_load_require.do_invoke (fun path ->
            let path2 =
              Filename.concat (Filename.dirname _origin_filename) (path ^ ".clj")
@@ -303,9 +303,9 @@ let eval2 (filename : string) (stdin : string) code =
            in
            let code = FileReader.read path2 in
            eval3 "  [REQ]" "" path2 code)
-    |> log_stage true (type_ ^ " Stage_load_require")
+    |> log_stage log (type_ ^ " Stage_load_require")
     |> Stage_flat_do.invoke
-    |> log_stage true (type_ ^ " Stage_flat_do")
+    |> log_stage log (type_ ^ " Stage_flat_do")
   in
   NameGenerator.with_scope (fun () ->
       Prelude.prelude_eval ^ code

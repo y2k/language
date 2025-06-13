@@ -10,13 +10,18 @@ let convert_namespace_to_class_name (ns : string) =
   let cls = parts |> List.rev |> List.hd |> String.capitalize_ascii in
   String.concat "." (pkg @ [ cls ])
 
+let fix_class_name clazz =
+  if String.ends_with ~suffix:".class" clazz then
+    String.sub clazz 0 (String.length clazz - 6)
+  else clazz
+
 let rec compile (ctx : complie_context) sexp =
   (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
   match sexp with
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
-  | SAtom (_, x) -> x
+  | SAtom (_, x) -> x |> String.map (fun x -> if x = '/' then '.' else x)
   (* Operators *)
   | SList (_, SAtom (_, op) :: args)
     when op = "+" || op = "-" || op = "*" || op = "/" ->
@@ -64,6 +69,7 @@ let rec compile (ctx : complie_context) sexp =
       let else_ = compile ctx else_ in
       Printf.sprintf "if (%s) {\n%s;\n} else {\n%s;\n}" cond then_ else_
   | SList (_, [ SAtom (_, "cast"); SAtom (_, type_); value ]) ->
+      let type_ = fix_class_name type_ in
       let value = compile ctx value in
       Printf.sprintf "((%s)%s)" type_ value
   (* instanceof *)
@@ -72,6 +78,7 @@ let rec compile (ctx : complie_context) sexp =
       Printf.sprintf "(%s instanceof %s)" instance type_
   (* Constructor *)
   | SList (_, SAtom (_, "new") :: SAtom (_, clazz) :: args) ->
+      let clazz = fix_class_name clazz in
       let args = List.map (compile ctx) args in
       Printf.sprintf "new %s(%s)" clazz (String.concat "," args)
   (* Interop call *)
@@ -108,19 +115,17 @@ let rec compile (ctx : complie_context) sexp =
           | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" fn args))
   | x -> failsexp __LOC__ [ x ]
 
+let compute_package opt =
+  (* prerr_endline @@ "LOG[compute_packate]\n- " ^ opt.root_dir ^ "\n- "
+  ^ opt.filename ^ "\n- " ^ opt.namespace ^ "\n"; *)
+  let n = String.length opt.root_dir in
+  String.sub opt.filename n (String.length opt.filename - n)
+  |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
+  |> Str.global_replace (Str.regexp "/") "."
+  |> fun x -> if x = "" then opt.namespace else opt.namespace ^ x
+
 let do_compile (opt : compile_opt) sexp =
-  (* let pkg =
-      let n = String.length opt.root_dir + 1 in
-      String.sub opt.filename n (String.length opt.filename - n)
-      |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
-      |> Str.global_replace (Str.regexp "/") "." *)
-  let pkg =
-    let n = String.length opt.root_dir in
-    String.sub opt.filename n (String.length opt.filename - n)
-    |> Str.global_replace (Str.regexp "/[^/]+\\.clj") ""
-    |> Str.global_replace (Str.regexp "/") "."
-    |> fun x -> if x = "" then opt.namespace else opt.namespace ^ x
-  in
+  let pkg = compute_package opt in
   let clazz =
     opt.filename
     |> Str.global_replace (Str.regexp "\\.clj") ""

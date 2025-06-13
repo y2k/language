@@ -5,12 +5,12 @@ module NamespaceUtils = struct
     prerr_endline @@ "LOG[NS]: base_path: '" ^ "???" ^ "'"
     ^ " | filename: '" ^ filename ^ "'" ^ " | path: '" ^ path ^ "'\n";
     Filename.concat (Filename.dirname filename) (path ^ ".clj")
-    |> trace __LOC__ Fun.id
+    (* |> trace __LOC__ Fun.id *)
     |> FileReader.realpath
-    |> trace __LOC__ Fun.id
+    (* |> trace __LOC__ Fun.id *)
     |> String.hash
     |> Printf.sprintf "m%i"
-    |> trace __LOC__ Fun.id
+    (* |> trace __LOC__ Fun.id *)
 
   (* let parent_base_path =
       let xs = String.split_on_char '/' base_path in
