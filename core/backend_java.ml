@@ -32,8 +32,11 @@ let rec compile (ctx : complie_context) sexp =
       body |> List.map (compile ctx) |> String.concat ";\n"
   | SList (_, [ SAtom (_, "let*"); SAtom (_, name) ]) ->
       Printf.sprintf "Object %s" name
-  | SList (_, [ SAtom (_, "let*"); SAtom (_, name); value ]) ->
-      Printf.sprintf "Object %s=%s" name (compile ctx value)
+  | SList (_, [ SAtom (_, "let*"); SAtom (mt, name); value ]) ->
+      let type_ =
+        if mt.symbol = "private" || mt.symbol = "" then "var" else mt.symbol
+      in
+      Printf.sprintf "%s %s=%s" type_ name (compile ctx value)
   | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
       Printf.sprintf "%s=%s" name (compile ctx value)
   | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
@@ -158,4 +161,8 @@ let compile (namespace : string) (log : bool) (filename : string)
       |> log_stage log "Stage_resolve_import"
       |> Stage_alias_to_class.do_invoke
       |> log_stage log "Stage_alias_to_class"
+      |> Stage_fun_args_type.invoke
+      |> log_stage log "Stage_fun_args_type"
+      |> Stage_flat_do.invoke
+      |> log_stage log "Stage_flat_do"
       |> do_compile { filename; root_dir; namespace })

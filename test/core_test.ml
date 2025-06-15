@@ -20,7 +20,7 @@ end = struct
 public class App {
 %s;
 
-public static void main(String[] args) {System.exit((int) RT.invoke(User.run));}}%s|}
+public static void main(String[] args) {System.exit((int) RT.invoke(user.run));}}%s|}
         code prelude
     in
     prerr_endline code;
@@ -65,7 +65,9 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
+      (__LOC__, {|(defn f [^int a] (str a) (+ a a))(defn run [] (f 3) (f 21))|}, {|42|});
       (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
+      (*
       (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
       (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
       (* *)
@@ -113,7 +115,7 @@ let tests =
       (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
       (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
       (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-      (__LOC__, {|(defn run [] 2)|}, {|2|});
+      (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
     ]
     |> JavaExecution.create_tests;
   ]

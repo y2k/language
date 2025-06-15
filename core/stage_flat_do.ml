@@ -3,14 +3,14 @@ open Lib__.Common
 let rec invoke = function
   | SAtom _ as x -> x
   | SList (_, [ SAtom (_, "quote*"); _ ]) as x -> x
-  | SList (m, (SAtom (_, "do*") as do_) :: children) ->
+  | SList (m, (SAtom (_, "do*") as do_) :: children) -> (
       let children =
         children |> List.map invoke
         |> List.concat_map (function
              | SList (_, SAtom (_, "do*") :: children) -> children
              | x -> [ x ])
       in
-      SList (m, do_ :: children)
+      match children with [ x ] -> x | children -> SList (m, do_ :: children))
   | SList (m, (SAtom (_, "def*") as def_) :: name :: value) ->
       let value = List.map invoke value in
       SList (m, def_ :: name :: value)

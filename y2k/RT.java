@@ -1,13 +1,10 @@
 package y2k;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class RT {
 
     public static Object assoc(Object xs, Object k, Object v) {
-        var col = (Map<Object, Object>) xs;
-        var result = new HashMap<>(col);
+        var col = (java.util.Map<Object, Object>) xs;
+        var result = new java.util.HashMap<>(col);
         result.put(k, v);
         return result;
     }
