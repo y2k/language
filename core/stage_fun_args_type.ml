@@ -6,7 +6,7 @@ let rec handle_args args body =
   | (SAtom (m, _) as x) :: tail ->
       if m.symbol <> "" then
         let nv = NameGenerator.get_new_var () in
-        let new_arg = SAtom (m, nv) in
+        let new_arg = SAtom (meta_empty, nv) in
         let body =
           SList
             ( meta_empty,

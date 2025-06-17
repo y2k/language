@@ -16,6 +16,7 @@ let rec resolve (ctx : resolve_ctx) node =
       | Some x -> (ctx, SAtom (m, x ^ "." ^ method_))
       | None -> (ctx, SAtom (m, clazz ^ "." ^ method_)))
   | SAtom (m, name) -> (
+      (* prerr_endline @@ "LOG[__resolve]: " ^ name; *)
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x ^ ".class"))
       (* | Some _ -> (ctx, SAtom (m, name)) *)
@@ -30,23 +31,19 @@ let rec resolve (ctx : resolve_ctx) node =
       let ctx = { ctx with links = (name, value) :: ctx.links } in
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
-  (* | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      let name =
-        NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
-      in
-      let _, value = resolve ctx value in
-      (ctx, SList (m, [ def_; SAtom (mn, name); value ])) *)
   | SList (m, [ (SAtom (_, "fn*") as fn_); SList (ma, args); body ]) ->
-      (* let args =
-        args
-        |> List.map (function
-             | SAtom (m, name) -> (
-                 let className = ctx.links |> List.assoc_opt m.symbol in
-                 match className with
-                 | Some x -> SAtom ({ m with symbol = x }, name)
-                 | None -> SAtom (m, name))
-             | x -> failsexp __LOC__ [ x ])
-      in *)
+      let args =
+        List.map
+          (function
+            | SAtom (m, n) when m.symbol <> "" ->
+                let className =
+                  ctx.links |> List.assoc_opt m.symbol
+                  |> Option.value ~default:m.symbol
+                in
+                SAtom ({ m with symbol = className }, n)
+            | x -> x)
+          args
+      in
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; SList (ma, args); body ]))
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->

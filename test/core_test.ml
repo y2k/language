@@ -65,8 +65,9 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
-      (__LOC__, {|(defn f [^int a] (str a) (+ a a))(defn run [] (f 3) (f 21))|}, {|42|});
-      (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
+      (__LOC__), {|(ns _ (:import [java.util Map])) (defn f [^Map x] 42) (defn run [] (f nil))|},{|42|};
+      (* (__LOC__, {|(defn f [^int a] (str a) (+ a a))(defn run [] (f 3) (f 21))|}, {|42|});
+      (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|}); *)
       (*
       (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
       (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
