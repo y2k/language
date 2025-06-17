@@ -1,19 +1,3 @@
-(* THIS FILE IS GENERATED *)
-
-let prelude_java_macro = {|
-;; Shared definitions for all targets
-
-;; (def false 0)
-;; (def hash-map 0)
-;; (def true 0)
-;; (def vector 0)
-
-;; (defmacro comment [& args] 'nil)
-;; (defmacro first [xs] (list 'get xs 0))
-;; (defmacro not= [a b] (list 'not (list '= a b)))
-
-;; Specific target prelude
-
 (defn list [& xs] xs)
 
 ;; into-array2
@@ -91,40 +75,3 @@ let prelude_java_macro = {|
   (concat
    (list 'java.util.Arrays.asList)
    xs))
-|}
-
-let prelude_eval_macro = {|
-;; Shared definitions for all targets
-
-;; (def false 0)
-;; (def hash-map 0)
-;; (def true 0)
-;; (def vector 0)
-
-;; (defmacro comment [& args] 'nil)
-;; (defmacro first [xs] (list 'get xs 0))
-;; (defmacro not= [a b] (list 'not (list '= a b)))
-
-;; Specific target prelude
-
-(defn macro_comment [x]
-  (list 'do))
-|}
-
-let prelude_eval = {|
-;; Shared definitions for all targets
-
-;; (def false 0)
-;; (def hash-map 0)
-;; (def true 0)
-;; (def vector 0)
-
-;; (defmacro comment [& args] 'nil)
-;; (defmacro first [xs] (list 'get xs 0))
-;; (defmacro not= [a b] (list 'not (list '= a b)))
-
-;; Specific target prelude
-
-(def* vector
-  (fn* [& xs] xs))
-|}

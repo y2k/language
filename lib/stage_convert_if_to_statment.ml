@@ -28,10 +28,11 @@ let rec invoke (node : sexp) : sexp =
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
       let body = List.map invoke body in
       SList (m, fn_ :: args :: body)
-  | SList (m, fname :: args) ->
+  | SList (m, args) ->
+      (* let fname = invoke fname in *)
       let args = List.map invoke args in
-      SList (m, fname :: args)
-  | n -> failsexp __LOC__ [ n ]
+      SList (m, args)
+(* | n -> failsexp __LOC__ [ n ] *)
 
 let rec invoke_up_do (node : sexp) : sexp =
   (* print_endline @@ "LOG[2.1]:: " ^ debug_show_cljexp [ node ]; *)
@@ -69,7 +70,7 @@ let rec invoke_up_do (node : sexp) : sexp =
   | SList (m, (SAtom (_, "___raw_template") as rt) :: body) ->
       let body = List.map invoke_up_do body in
       SList (m, rt :: body)
-  | SList (m, fname :: args) -> (
+  | SList (m, args) -> (
       (* print_endline @@ "LOG[2.1.1]:: " ^ debug_show_cljexp [ SBList (fname :: args) ]; *)
       let args = List.map invoke_up_do args in
       let lets =
@@ -81,9 +82,8 @@ let rec invoke_up_do (node : sexp) : sexp =
       in
       let args = args |> List.map (function SList (_, SAtom (_, "do*") :: body) -> last body | n -> n) in
       match lets with
-      | [] -> SList (m, fname :: args)
-      | _ -> SList (m, (SAtom (meta_empty, "do*") :: lets) @ [ SList (meta_empty, fname :: args) ]))
-  | n -> failsexp __LOC__ [ n ]
+      | [] -> SList (m, args)
+      | _ -> SList (m, (SAtom (meta_empty, "do*") :: lets) @ [ SList (meta_empty, args) ]))
 
 let rec invoke_up_do_ level (node : sexp) : sexp =
   if level = 0 then failwith "Recurse too deep";

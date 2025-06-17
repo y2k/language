@@ -2,6 +2,10 @@
 test: prelude
 	@ clear && dune build && clear && export OCAMLRUNPARAM=b && dune test -f
 
+.PHONY: build
+build: prelude
+	@ dune build
+
 .PHONY: deploy
 deploy: test_e2e deploy_force
 
@@ -24,7 +28,7 @@ restore:
 
 .PHONY: prelude
 prelude:
-	@ dune build && OCAMLRUNPARAM=b _build/default/prelude/main.exe
+	@ dune build prelude && OCAMLRUNPARAM=b _build/default/prelude/main.exe
 
 .PHONY: test_e2e
 test_e2e: test

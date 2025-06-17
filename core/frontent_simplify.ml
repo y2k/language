@@ -125,7 +125,7 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   (* Invoke keyword *)
   | SList (m, [ (SAtom (_, name) as k); arg ])
     when String.starts_with ~prefix:":" name ->
-      SList (m, [ SAtom (meta_empty, "get"); arg; k ])
+      SList (m, [ SAtom (meta_empty, "get"); arg; k ]) |> simplify ctx
   (* Function call *)
   | SList (m, fn :: args) ->
       let args = List.map (simplify ctx) args in

@@ -65,14 +65,25 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
-      (__LOC__), {|(ns _ (:import [java.util Map])) (defn f [^Map x] 42) (defn run [] (f nil))|},{|42|};
-      (* (__LOC__, {|(defn f [^int a] (str a) (+ a a))(defn run [] (f 3) (f 21))|}, {|42|});
-      (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|}); *)
-      (*
+      (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
+      (* *)
+      (__LOC__, {|(defn run [] ((if true (fn [] 42) (fn [] 24))))|}, "42");
+      (__LOC__, {|(defn f [g] ((:a g) 42)) (defn run [] (f {:a (fn [x] x)}))|}, "42");
+      (__LOC__, {|(defn run [] (:a {:a 42}))|}, "42");
+      (__LOC__, {|(ns _ (:import [java.util Map])) (defn f [^Map x] 42) (defn run [] (f nil))|}, {|42|});
+      (__LOC__, {|(defn f [^int a] (str a) (+ a a))(defn run [] (f 3) (f 21))|}, {|42|});
+      (__LOC__, {|(ns _ (:import [java.util Map]))
+(defn run []
+  (let [^Map db nil]
+    42))
+|}, {|42|});
+      (* *)
+      (__LOC__, {|(defn run [] (Integer/parseInt "2"))|}, {|2|});
+      (* *)
       (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
       (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
       (* *)
-      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
       (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
       (__LOC__, {|(def- a 42) (defn run [] a)|}, {|42|});
       (* *)
@@ -113,10 +124,9 @@ let tests =
       (__LOC__, {|(defn run [] (if (= (str "1" "2" "3") "123") 2 3))|}, {|2|});
       (__LOC__, {|(defn run [] (if (= (str 1 "2" 3) "123") 2 3))|}, {|2|});
       (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
-      (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
       (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
       (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-      (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
+      (__LOC__, {|(defn run [] 2)|}, {|2|});
     ]
     |> JavaExecution.create_tests;
   ]

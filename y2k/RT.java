@@ -2,12 +2,22 @@ package y2k;
 
 public class RT {
 
+    // Collections
+
+    public static Object[] into_array(Class<?> cls, Object xs) {
+        var col = (java.util.List<Object>) xs;
+        var result = (Object[]) java.lang.reflect.Array.newInstance(cls, col.size());
+        return col.toArray(result);
+    }
+
     public static Object assoc(Object xs, Object k, Object v) {
         var col = (java.util.Map<Object, Object>) xs;
         var result = new java.util.HashMap<>(col);
         result.put(k, v);
         return result;
     }
+
+    // Lambda
 
     public interface Fn0 {
         public Object invoke() throws Exception;

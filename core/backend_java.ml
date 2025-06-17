@@ -78,6 +78,7 @@ let rec compile (ctx : complie_context) sexp =
   (* instanceof *)
   | SList (_, [ SAtom (_, "instance?"); SAtom (_, type_); instance ]) ->
       let instance = compile ctx instance in
+      let type_ = Str.global_replace (Str.regexp "\\.class$") "" type_ in
       Printf.sprintf "(%s instanceof %s)" instance type_
   (* Constructor *)
   | SList (_, SAtom (_, "new") :: SAtom (_, clazz) :: args) ->

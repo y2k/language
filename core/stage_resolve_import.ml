@@ -6,6 +6,14 @@ type resolve_ctx = {
   root_dir : string;
 }
 
+let resolve_type_for_node ctx = function
+  | SAtom (m, n) when m.symbol <> "" ->
+      let className =
+        ctx.links |> List.assoc_opt m.symbol |> Option.value ~default:m.symbol
+      in
+      SAtom ({ m with symbol = className }, n)
+  | x -> x
+
 let rec resolve (ctx : resolve_ctx) node =
   match node with
   | SAtom (m, name) when String.contains name '/' -> (
@@ -32,18 +40,7 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "fn*") as fn_); SList (ma, args); body ]) ->
-      let args =
-        List.map
-          (function
-            | SAtom (m, n) when m.symbol <> "" ->
-                let className =
-                  ctx.links |> List.assoc_opt m.symbol
-                  |> Option.value ~default:m.symbol
-                in
-                SAtom ({ m with symbol = className }, n)
-            | x -> x)
-          args
-      in
+      let args = List.map (resolve_type_for_node ctx) args in
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; SList (ma, args); body ]))
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->
@@ -58,6 +55,7 @@ let rec resolve (ctx : resolve_ctx) node =
       in
       (ctx, SList (m, do_ :: body))
   | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
+      let name = resolve_type_for_node ctx name in
       let value = value |> List.map (fun x -> resolve ctx x |> snd) in
       (ctx, SList (m, let_ :: name :: value))
   | SList (m, (SAtom (_, "if*") as if_) :: args) ->
