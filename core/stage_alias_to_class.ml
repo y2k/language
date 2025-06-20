@@ -1,24 +1,55 @@
 open Lib__.Common
 
-type ctx = { aliases : (string * string) list }
+type ctx = {
+  aliases : (string * string) list;
+  filename : string;
+  root : string;
+  base_ns : string;
+}
+
+let realpath path = path |> Str.global_replace (Str.regexp "/\\./") "/"
+(* |> fun x -> prerr_endline @@ "LOG[1]: " ^ path ^ " -> " ^ x; x *)
+
+let compute_name ctx name =
+  let parts = String.split_on_char '/' name in
+  let pkg = List.assoc_opt (List.hd parts) ctx.aliases in
+  match pkg with
+  | Some pkg ->
+      let path =
+        Filename.concat
+          (Filename.dirname (FileReader.realpath ctx.filename))
+          (pkg ^ ".clj")
+        |> realpath
+      in
+      let path =
+        let path = Filename.chop_extension path in
+        (* prerr_endline @@ "LOG[2]: " ^ (ctx.root |> FileReader.realpath); *)
+        let n = String.length (ctx.root |> FileReader.realpath) + 1 in
+        String.sub path n (String.length path - n)
+      in
+      let clazz = Str.global_replace (Str.regexp "/") "." path in
+      (* path |> failwith |> ignore; *)
+      (* let clazz = path |> String.split_on_char '.' |> List.rev |> List.hd in *)
+      (* clazz |> failwith |> ignore; *)
+      (* let clazz = path ^ "." ^ clazz in *)
+      (* clazz |> failwith |> ignore; *)
+
+      let fun_name = List.nth parts 1 in
+      (*
+      let clazz =
+        let xs = String.split_on_char '.' pkg in
+        let pkg = xs |> List.rev |> List.tl |> List.rev in
+        let cls = xs |> List.rev |> List.hd |> String.capitalize_ascii in
+        String.concat "." (pkg @ [ cls ])
+      in *)
+      Some (Printf.sprintf "%s.%s#%s" ctx.base_ns clazz fun_name)
+  | _ -> None
 
 let rec invoke (ctx : ctx) = function
-  | SAtom (m, name) as x when String.contains name '/' -> (
+  | SAtom (m, name) as x when String.contains name '/' ->
       (* *)
-      let parts = String.split_on_char '/' name in
-      let pkg = List.assoc_opt (List.hd parts) ctx.aliases in
-      match pkg with
-      | Some pkg ->
-          let name = List.nth parts 1 in
-          let clazz =
-            let xs = String.split_on_char '.' pkg in
-            let pkg = xs |> List.rev |> List.tl |> List.rev in
-            let cls = xs |> List.rev |> List.hd |> String.capitalize_ascii in
-            String.concat "." (pkg @ [ cls ])
-          in
-          let name = Printf.sprintf "%s#%s" clazz name in
-          (ctx, SAtom (m, name))
-      | _ -> (ctx, x))
+      compute_name ctx name
+      |> Option.fold ~none:(ctx, x) ~some:(fun name -> (ctx, SAtom (m, name)))
   | SAtom _ as x -> (ctx, x)
   | SList
       ( m,
@@ -31,10 +62,10 @@ let rec invoke (ctx : ctx) = function
         (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
         |> List.split_into_pairs
         |> List.map (function
-             | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+             | SAtom (_, k), SList (_, [ _; SAtom (_, v) ]) -> (k, v)
              | k, v -> failsexp __LOC__ [ k; v ])
       in
-      let ctx = { aliases = items } in
+      let ctx = { ctx with aliases = items } in
       (* (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ])) *)
       (ctx, SList (m, [ SAtom (meta_empty, "do*") ]))
   | SList (m, SAtom (mdo, "do*") :: children) ->
@@ -52,6 +83,6 @@ let rec invoke (ctx : ctx) = function
       (ctx, SList (m, name :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_invoke node =
-  let ctx = { aliases = [] } in
+let do_invoke base_ns root filename node =
+  let ctx = { aliases = []; filename; root; base_ns } in
   invoke ctx node |> snd

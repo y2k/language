@@ -37,7 +37,23 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
       |> Macro_ns.invoke m
            { root_dir = ctx.otp.root_dir; filename = ctx.otp.filename }
       |> simplify ctx
-  | SList (m, SAtom (mif, "if") :: if_args) ->
+  (* TODO move to prelude *)
+  | SList (m, SAtom (_, "or") :: x :: xs) ->
+      (match xs with
+      | [] -> x
+      | xs ->
+          SList
+            ( m,
+              [
+                SAtom (m, "if");
+                x;
+                x;
+                SList (meta_empty, SAtom (meta_empty, "or") :: xs);
+              ] ))
+      |> simplify ctx
+  | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
+      let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in
+      let if_args = [ cond_; then_ ] @ else_ in
       SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
   | SList (m, SAtom (mdo, "do") :: body) ->
       SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)

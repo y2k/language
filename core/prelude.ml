@@ -16,7 +16,36 @@ let prelude_java_macro = {|
 
 (defn list [& xs] xs)
 
-;; into-array2
+(defn macro_FIXME [& xs]
+  (list 'java.util.Objects.requireNonNull
+        nil
+        (concat
+         (list 'str)
+         xs)))
+
+(defn macro_rest [xs]
+  (let [xs_var (gensym)]
+    (list
+     'do
+     (list
+      'let* xs_var (list 'cast 'java.util.List xs))
+     (list '.subList xs_var 1 (list '.size xs_var)))))
+
+(defn macro_concat [& xs]
+  (concat (list 'y2k.RT.concat)
+          xs))
+
+(defn macro_first [xs]
+  (list 'get xs 0))
+
+(defn macro_empty? [xs]
+  (list '= 0 (list 'count xs)))
+
+(defn macro_some? [x]
+  (list 'not (list 'nil? x)))
+
+(defn macro_nil? [x]
+  (list '= 'nil x))
 
 (defn macro_into-array2 [class col]
   (list 'y2k.RT.into_array class col))

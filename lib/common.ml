@@ -19,7 +19,11 @@ module FileReader = struct
           (fun (type a) (eff : a Effect.t) ->
             match eff with
             | Load _ -> Some (fun (k : (a, _) continuation) -> continue k content)
-            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k path)
+            | Realpath path ->
+                Some
+                  (fun (k : (a, _) continuation) ->
+                    let path = Str.global_replace (Str.regexp "/\\./") "/" path in
+                    continue k path)
             | _ -> None);
       }
 
@@ -228,6 +232,15 @@ let debug_show_sexp (nodes : sexp list) =
   in
   nodes |> List.map show_rec |> String.concat " "
 
+let debug_show_sexp_for_error (nodes : sexp list) =
+  let rec show_rec = function
+    | SAtom (m, x) when m.symbol = "" -> x ^ " [" ^ string_of_int m.line ^ ", " ^ string_of_int m.pos ^ " ]"
+    | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x ^ " [" ^ string_of_int m.line ^ ", " ^ string_of_int m.pos ^ " ]"
+    | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+  in
+  nodes |> List.map show_rec |> String.concat " "
+
 let log_sexp prefix node =
   prerr_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
   node
@@ -247,7 +260,7 @@ let failnode prefix es =
 
 let failsexp prefix (es : sexp list) =
   es
-  |> List.map (fun x -> debug_show_sexp [ x ])
+  |> List.map (fun x -> debug_show_sexp_for_error [ x ])
   |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
   |> Option.value ~default:""
   |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"

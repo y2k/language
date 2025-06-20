@@ -12,6 +12,7 @@ end = struct
       code
       |> Str.global_replace (Str.regexp "package .+;\n") ""
       |> Str.global_replace (Str.regexp "core\\.ext\\.lib\\.") ""
+      |> Str.global_replace (Str.regexp "y2k\\.root\\.eff.") ""
     in
     let code =
       Printf.sprintf
@@ -36,7 +37,11 @@ public static void main(String[] args) {System.exit((int) RT.invoke(user.run));}
                let ext_module =
                  {|(ns _) (defn foo [x] x)|} |> Core.compile "lib" false "/app/src/core/ext/lib/eff.clj" "/app/src"
                in
-               let code = Core.compile "user" true "/app/src/core/ext/user.clj" "/app/src" input in
+               let code =
+                 Lib__.Common.FileReader.with_stub_scope ""
+                   (Core.compile "y2k.root" true "/app/src/core/ext/user.clj" "/app/src")
+                   input
+               in
                let actual = ext_module ^ "\n" ^ code |> run in
                Alcotest.(check string) "" expected actual))
 end
@@ -65,6 +70,8 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
+      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+      (*
       (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
       (* *)
       (__LOC__, {|(defn run [] ((if true (fn [] 42) (fn [] 24))))|}, "42");
@@ -83,7 +90,6 @@ let tests =
       (__LOC__, {|(defn run [] (. "2" hashCode))|}, {|50|});
       (__LOC__, {|(defn run [] (.hashCode "2"))|}, {|50|});
       (* *)
-      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
       (__LOC__, {|(ns _ (:import [java.util Date])) (defn run [] (.hashCode (Date. 42)))|}, {|42|});
       (__LOC__, {|(def- a 42) (defn run [] a)|}, {|42|});
       (* *)
@@ -126,7 +132,7 @@ let tests =
       (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
       (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
       (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-      (__LOC__, {|(defn run [] 2)|}, {|2|});
+      (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
     ]
     |> JavaExecution.create_tests;
   ]

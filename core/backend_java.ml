@@ -37,12 +37,14 @@ let rec compile (ctx : complie_context) sexp =
         if mt.symbol = "private" || mt.symbol = "" then "var" else mt.symbol
       in
       Printf.sprintf "%s %s=%s" type_ name (compile ctx value)
+  | SList (_, [ SAtom (_, "not"); x ]) ->
+      Printf.sprintf "(!(%s))" (compile ctx x)
   | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
       Printf.sprintf "%s=%s" name (compile ctx value)
   | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
       let visibility = if m.symbol = "private" then "private" else "public" in
-      Printf.sprintf "%s static Object %s=%s" visibility name
-        (compile ctx value)
+      Printf.sprintf "%s static Object %s; static {\n%s=%s;\n}" visibility name
+        name (compile ctx value)
   | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
       let args =
         List.map
@@ -160,7 +162,7 @@ let compile (namespace : string) (log : bool) (filename : string)
       |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve filename root_dir
       |> log_stage log "Stage_resolve_import"
-      |> Stage_alias_to_class.do_invoke
+      |> Stage_alias_to_class.do_invoke namespace root_dir filename
       |> log_stage log "Stage_alias_to_class"
       |> Stage_fun_args_type.invoke
       |> log_stage log "Stage_fun_args_type"

@@ -16,13 +16,13 @@ let resolve_type_for_node ctx = function
 
 let rec resolve (ctx : resolve_ctx) node =
   match node with
-  | SAtom (m, name) when String.contains name '/' -> (
+  | SAtom (m, name) as x when String.contains name '/' -> (
       let parts = String.split_on_char '/' name in
       let clazz = List.hd parts in
       let method_ = List.tl parts |> String.concat "." in
       match List.assoc_opt clazz ctx.links with
       | Some x -> (ctx, SAtom (m, x ^ "." ^ method_))
-      | None -> (ctx, SAtom (m, clazz ^ "." ^ method_)))
+      | None -> (ctx, x))
   | SAtom (m, name) -> (
       (* prerr_endline @@ "LOG[__resolve]: " ^ name; *)
       match ctx.links |> List.assoc_opt name with

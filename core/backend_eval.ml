@@ -76,7 +76,8 @@ let rec eval_ (ctx : eval_context) node =
       match eval_ ctx cond with
       | ctx, OBool (_, true) -> eval_ ctx then_
       | ctx, OBool (_, false) -> eval_ ctx else_
-      | _ -> failsexp __LOC__ [ node ])
+      | ctx, ONil _ -> eval_ ctx else_
+      | _, r -> Utils.failobj __LOC__ r)
   | SList (_, [ SAtom (_, "fn*"); SList (_, args_names); body ]) ->
       let l =
         OLambda
@@ -93,7 +94,10 @@ let rec eval_ (ctx : eval_context) node =
                     loop args_names args
                       { ctx with scope = (name, arg) :: ctx.scope }
                 | [], [] -> ctx
-                | names, _ -> failsexp __LOC__ names
+                | _names, _ ->
+                    debug_show_sexp [node] |> failwith |> ignore;
+                    (* Obj.failobj __LOC__ args |> ignore; *)
+                    failsexp __LOC__ [node]
               in
               let ctx = loop args_names args ctx in
               let _, result = eval_ ctx body in

@@ -4,6 +4,14 @@ public class RT {
 
     // Collections
 
+    public static Object concat(Object xs, Object ys) {
+        var a = (java.util.List<Object>) xs;
+        var b = (java.util.List<Object>) ys;
+        var result = new java.util.ArrayList<>(a);
+        result.addAll(b);
+        return result;
+    }
+
     public static Object[] into_array(Class<?> cls, Object xs) {
         var col = (java.util.List<Object>) xs;
         var result = (Object[]) java.lang.reflect.Array.newInstance(cls, col.size());
