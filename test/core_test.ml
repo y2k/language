@@ -49,7 +49,7 @@ end = struct
   let create_tests tests =
     tests
     |> List.map (fun (loc, input, expected) ->
-           Alcotest.test_case loc `Quick (fun () ->
+           Alcotest.test_case loc `Slow (fun () ->
                let actual =
                  FileReader.with_stub_scope "(defn foo [x] x)" (Core.eval true "/app/src/core/ext/user.clj" "") input
                in
