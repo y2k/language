@@ -16,6 +16,9 @@ let prelude_java_macro = {|
 
 (defn list [& xs] xs)
 
+(defn macro_map [f xs]
+  (list 'y2k.RT.map f xs))
+
 (defn macro_FIXME [& xs]
   (list 'java.util.Objects.requireNonNull
         nil
@@ -34,6 +37,12 @@ let prelude_java_macro = {|
 (defn macro_concat [& xs]
   (concat (list 'y2k.RT.concat)
           xs))
+
+(defn macro_merge [m1 m2]
+  (list 'y2k.RT.merge m1 m2))
+
+(defn macro_drop [n xs]
+  (list 'y2k.RT.drop n xs))
 
 (defn macro_first [xs]
   (list 'get xs 0))

@@ -10,6 +10,7 @@ let _assert_bytecode_repl = Utils.assert_ (Lib.main_bytecode { config_default wi
 let () =
   Alcotest.run "Tests"
     [
+      File_test.tests;
       (* ( "Unix",
         [
           Alcotest.test_case __LOC__ `Quick (fun _ ->

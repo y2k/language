@@ -7,9 +7,6 @@ type ctx = {
   base_ns : string;
 }
 
-let realpath path = path |> Str.global_replace (Str.regexp "/\\./") "/"
-(* |> fun x -> prerr_endline @@ "LOG[1]: " ^ path ^ " -> " ^ x; x *)
-
 let compute_name ctx name =
   let parts = String.split_on_char '/' name in
   let pkg = List.assoc_opt (List.hd parts) ctx.aliases in
@@ -19,29 +16,16 @@ let compute_name ctx name =
         Filename.concat
           (Filename.dirname (FileReader.realpath ctx.filename))
           (pkg ^ ".clj")
-        |> realpath
+        |> Files.realpath
       in
       let path =
         let path = Filename.chop_extension path in
-        (* prerr_endline @@ "LOG[2]: " ^ (ctx.root |> FileReader.realpath); *)
-        let n = String.length (ctx.root |> FileReader.realpath) + 1 in
+        let root = ctx.root |> Files.realpath in
+        let n = String.length (root |> FileReader.realpath) + 1 in
         String.sub path n (String.length path - n)
       in
       let clazz = Str.global_replace (Str.regexp "/") "." path in
-      (* path |> failwith |> ignore; *)
-      (* let clazz = path |> String.split_on_char '.' |> List.rev |> List.hd in *)
-      (* clazz |> failwith |> ignore; *)
-      (* let clazz = path ^ "." ^ clazz in *)
-      (* clazz |> failwith |> ignore; *)
-
       let fun_name = List.nth parts 1 in
-      (*
-      let clazz =
-        let xs = String.split_on_char '.' pkg in
-        let pkg = xs |> List.rev |> List.tl |> List.rev in
-        let cls = xs |> List.rev |> List.hd |> String.capitalize_ascii in
-        String.concat "." (pkg @ [ cls ])
-      in *)
       Some (Printf.sprintf "%s.%s#%s" ctx.base_ns clazz fun_name)
   | _ -> None
 

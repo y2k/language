@@ -1,8 +1,50 @@
 package y2k;
 
+import java.util.*;
+
 public class RT {
 
+    private static <T extends Throwable> void throwException(Throwable exception, Object dummy) throws T {
+        throw (T) exception;
+    }
+
+    public static <T> T throwSilent(Object exception) {
+        throwException((Throwable) exception, null);
+        return null;
+    }
+
     // Collections
+
+    public static List<Object> map(Object f, Object xs) {
+        var func = (java.util.function.Function<Object, Object>) f;
+        if (xs instanceof Map) {
+            var map = (Map<Object, Object>) xs;
+            var result = new ArrayList<Object>(map.size());
+            for (Map.Entry<Object, Object> entry : map.entrySet()) {
+                result.add(func.apply(List.of(entry.getKey(), entry.getValue())));
+            }
+            return result;
+        }
+        var col = (Collection<Object>) xs;
+        var result = new ArrayList<Object>(col.size());
+        for (Object x : col) {
+            result.add(func.apply(x));
+        }
+        return result;
+    }
+
+    public static Object drop(Object n, Object xs) {
+        var col = (List<Object>) xs;
+        return col.subList((Integer) n, col.size());
+    }
+
+    public static java.util.Map<Object, Object> merge(Object as, Object bs) {
+        var a = (java.util.Map<Object, Object>) as;
+        var b = (java.util.Map<Object, Object>) bs;
+        var result = new java.util.HashMap<>(a);
+        result.putAll(b);
+        return result;
+    }
 
     public static Object concat(Object xs, Object ys) {
         var a = (java.util.List<Object>) xs;
@@ -79,7 +121,7 @@ public class RT {
         try {
             return ((Fn0) f).invoke();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return throwSilent(e);
         }
     }
 
@@ -87,7 +129,7 @@ public class RT {
         try {
             return ((Fn1) f).invoke(a);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return throwSilent(e);
         }
     }
 
@@ -95,7 +137,7 @@ public class RT {
         try {
             return ((Fn2) f).invoke(a, b);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return throwSilent(e);
         }
     }
 
@@ -103,7 +145,7 @@ public class RT {
         try {
             return ((Fn3) f).invoke(a, b, c);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return throwSilent(e);
         }
     }
 
@@ -111,7 +153,7 @@ public class RT {
         try {
             return ((Fn4) f).invoke(a, b, c, d);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return throwSilent(e);
         }
     }
 }

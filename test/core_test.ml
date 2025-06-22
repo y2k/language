@@ -7,6 +7,7 @@ end = struct
       In_channel.(with_open_bin "../../../y2k/RT.java" input_all)
       |> Str.global_replace (Str.regexp "package y2k;") ""
       |> Str.global_replace (Str.regexp "public class RT") "class RT"
+      |> Str.global_replace (Str.regexp "import java\\.util\\.\\*;\n") ""
     in
     let code =
       code
@@ -17,6 +18,8 @@ end = struct
     let code =
       Printf.sprintf
         {|package y2k;
+
+import java.util.*;
 
 public class App {
 %s;
@@ -70,7 +73,9 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
-      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
+      (__LOC__, {|(defn run [] (java.util.Objects.requireNonNull 42 ^java.util.function.Supplier (fn [] "")))|}, "42");
+      (* (__LOC__, {|(defn run [] (count (map (fn [x] x) [1 2 3 4])))|}, "4"); *)
+      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
       (*
       (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
       (* *)

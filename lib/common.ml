@@ -1,3 +1,18 @@
+let trace prefix to_string x =
+  prerr_endline @@ "LOG " ^ Printf.sprintf "%s %s" prefix (to_string x);
+  x
+
+module Files = struct
+  let realpath ?root path =
+    let root = Option.value root ~default:(Sys.getcwd ()) in
+    let result = Filename.concat root path in
+    result
+    |> Str.global_replace (Str.regexp "/\\./") "/"
+    |> Str.global_replace (Str.regexp "/[^/\\..]+/\\.\\./") "/"
+    |> Str.global_replace (Str.regexp "/[^/\\..]+/\\.\\./") "/"
+  (* |> trace "LOG[realpath]" (Printf.sprintf "%s -> %s" path) *)
+end
+
 type config = { no_lint : bool; virtual_src : string; log : bool; no_deps : bool }
 
 let config_default = { no_lint = false; virtual_src = ""; log = false; no_deps = false }
@@ -37,7 +52,7 @@ module FileReader = struct
           (fun (type a) (eff : a Effect.t) ->
             match eff with
             | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
-            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k (Unix.realpath path))
+            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k (Files.realpath path))
             | _ -> None);
       }
 end
@@ -59,10 +74,6 @@ type cljexp =
   | SBList of meta * cljexp list
   | CBList of meta * cljexp list
 [@@deriving show]
-
-let trace prefix to_string x =
-  prerr_endline @@ "LOG " ^ Printf.sprintf "%s %s" prefix (to_string x);
-  x
 
 let unpack_string x = if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2) else x
 let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")

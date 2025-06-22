@@ -43,9 +43,14 @@ let rec compile (ctx : complie_context) sexp =
       Printf.sprintf "%s=%s" name (compile ctx value)
   | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
       let visibility = if m.symbol = "private" then "private" else "public" in
-      Printf.sprintf "%s static Object %s; static {\n%s=%s;\n}" visibility name
-        name (compile ctx value)
-  | SList (_, [ SAtom (_, "fn*"); SList (_, args); body ]) ->
+      let final =
+        match value with
+        | SList (_, SAtom (_, "fn*") :: _) -> "/* final */"
+        | _ -> "final"
+      in
+      Printf.sprintf "%s static %s Object %s;\nstatic {\n%s=%s;\n}" visibility
+        final name name (compile ctx value)
+  | SList (m, [ SAtom (_, "fn*"); SList (_, args); body ]) -> (
       let args =
         List.map
           (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ])
@@ -60,7 +65,17 @@ let rec compile (ctx : complie_context) sexp =
         |> String.concat "\n"
       in
       let sargs = String.concat "," args in
-      Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body last_body
+      match m.symbol with
+      | "" ->
+          Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body
+            last_body
+      | type_ when String.contains type_ ':' ->
+          let type_parts = String.split_on_char ':' type_ in
+          Printf.sprintf "(%s)(%s)->{\n%s%s;\n}" (List.hd type_parts) sargs body
+            last_body
+      | type_ ->
+          Printf.sprintf "(%s)(%s)->{\n%sreturn %s;\n}" type_ sargs body
+            last_body)
   | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
   | SList (_, SAtom (_, "__compiler_emit") :: args) ->
       let value =

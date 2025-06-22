@@ -6,7 +6,7 @@ let convert_opts opts =
        | SAtom (_, k), v -> (k, v)
        | k, v -> failsexp __LOC__ [ k; v ])
 
-let generate_method args ret_type prefix name =
+let generate_method annot args ret_type prefix name =
   let body =
     let args =
       args |> List.mapi (fun i _ -> Printf.sprintf "p%i" i) |> String.concat ","
@@ -17,7 +17,7 @@ let generate_method args ret_type prefix name =
         Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this,%s)" ret_type prefix
           name args
   in
-  let args =
+  let args2 =
     args
     |> List.mapi (fun i a ->
            match a with
@@ -39,9 +39,20 @@ let generate_method args ret_type prefix name =
     | x :: xs -> x :: List.concat_map (fun x -> [ [ pack_string "," ]; x ]) xs )
     |> List.flatten
   in
+  (* prerr_endline @@ "LOG[annot] " ^ annot; *)
+  let call_super =
+    if annot = "Override" then
+      let args__ =
+        args
+        |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
+        |> String.concat ","
+      in
+      Printf.sprintf "super.%s(%s);\n" name args__
+    else ""
+  in
   let prefix = pack_string (Printf.sprintf "public %s %s(" ret_type name) in
-  let suffix = pack_string (Printf.sprintf ") {\n%s;\n}" body) in
-  [ prefix ] @ args @ [ suffix ]
+  let suffix = pack_string (Printf.sprintf ") {\n%s%s;\n}" call_super body) in
+  [ prefix ] @ args2 @ [ suffix ]
 
 let generate_methods prefix methods =
   let methods =
@@ -51,9 +62,9 @@ let generate_methods prefix methods =
   in
   methods
   |> List.concat_map (function
-       | SList (_, [ _; SAtom (_, name); SList (_, args); SAtom (_, ret_type) ])
+       | SList (_, [ _; SAtom (m, name); SList (_, args); SAtom (_, ret_type) ])
          ->
-           generate_method (List.tl args) ret_type prefix name
+           generate_method m.symbol (List.tl args) ret_type prefix name
        | x -> failsexp __LOC__ [ x ])
 (* |> String.concat "\n" *)
 

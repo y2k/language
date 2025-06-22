@@ -51,6 +51,7 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
                 SList (meta_empty, SAtom (meta_empty, "or") :: xs);
               ] ))
       |> simplify ctx
+  | SList (_, SAtom (_, "case") :: _) as x -> Macro_case.invoke (simplify ctx) x
   | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
       let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in
       let if_args = [ cond_; then_ ] @ else_ in
