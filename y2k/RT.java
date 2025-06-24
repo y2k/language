@@ -4,6 +4,17 @@ import java.util.*;
 
 public class RT {
 
+    public static Object eprintln(Object... xs) {
+        for (Object x : xs) {
+            System.err.print(x);
+            System.err.print(" ");
+        }
+        System.err.println();
+        return null;
+    }
+
+    // Exceptions
+
     private static <T extends Throwable> void throwException(Throwable exception, Object dummy) throws T {
         throw (T) exception;
     }
@@ -14,6 +25,16 @@ public class RT {
     }
 
     // Collections
+
+    public static <T> T get(Object source, Object key) {
+        if (source instanceof java.util.Map) {
+            return (T) ((java.util.Map<?, ?>) source).get(key);
+        }
+        if (source instanceof java.util.List) {
+            return (T) ((java.util.List<?>) source).get((Integer) key);
+        }
+        throw new RuntimeException("Unsupported source: " + source + ", key: " + key);
+    }
 
     public static List<Object> map(Object f, Object xs) {
         var func = (java.util.function.Function<Object, Object>) f;

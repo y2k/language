@@ -13,7 +13,7 @@ end = struct
       code
       |> Str.global_replace (Str.regexp "package .+;\n") ""
       |> Str.global_replace (Str.regexp "core\\.ext\\.lib\\.") ""
-      |> Str.global_replace (Str.regexp "y2k\\.root\\.eff.") ""
+      |> Str.global_replace (Str.regexp "y2k\\.root\\.") ""
     in
     let code =
       Printf.sprintf
@@ -73,10 +73,9 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
+      (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
       (__LOC__, {|(defn run [] (java.util.Objects.requireNonNull 42 ^java.util.function.Supplier (fn [] "")))|}, "42");
-      (* (__LOC__, {|(defn run [] (count (map (fn [x] x) [1 2 3 4])))|}, "4"); *)
-      (* (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|}); *)
-      (*
+      (__LOC__, {|(defn run [] (count (map (fn [x] x) [1 2 3 4])))|}, "4");
       (__LOC__, {|(defn run [] (if (instance? String "1") 2 3))|}, {|2|});
       (* *)
       (__LOC__, {|(defn run [] ((if true (fn [] 42) (fn [] 24))))|}, "42");
@@ -137,7 +136,7 @@ let tests =
       (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
       (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
       (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-      (__LOC__, {|(defn run [] 2)|}, {|2|}); *)
+      (__LOC__, {|(defn run [] 2)|}, {|2|});
     ]
     |> JavaExecution.create_tests;
   ]

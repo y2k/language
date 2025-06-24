@@ -3,6 +3,9 @@
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
 
+(defn macro_eprintln [& xs]
+  (concat (list 'y2k.RT.eprintln) xs))
+
 (defn macro_FIXME [& xs]
   (list 'java.util.Objects.requireNonNull
         nil
@@ -90,17 +93,20 @@
     (list '. (list 'cast 'java.util.Map vxs) 'size)
     (list '. (list 'cast 'java.util.Collection vxs) 'size))))
 
-(defn macro_get [xs i]
-  (let* vxs (gensym))
-  (let* vi (gensym))
-  (list
-   'do
-   (list 'let vxs xs)
-   (list 'let vi i)
-   (list 'if
-         (list 'instance? 'java.util.Map vxs)
-         (list '. (list 'cast 'java.util.Map vxs) 'get vi)
-         (list '. (list 'cast 'java.util.List vxs) 'get (list 'cast 'int (list 'cast 'Object vi))))))
+(defn macro_get [xs k]
+  (list 'y2k.RT.get xs k))
+
+;; (defn macro_get [xs i]
+;;   (let* vxs (gensym))
+;;   (let* vi (gensym))
+;;   (list
+;;    'do
+;;    (list 'let vxs xs)
+;;    (list 'let vi i)
+;;    (list 'if
+;;          (list 'instance? 'java.util.Map vxs)
+;;          (list '. (list 'cast 'java.util.Map vxs) 'get vi)
+;;          (list '. (list 'cast 'java.util.List vxs) 'get (list 'cast 'int (list 'cast 'Object vi))))))
 
 (defn macro_str [& xs]
   (concat
