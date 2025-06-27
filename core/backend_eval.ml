@@ -95,9 +95,9 @@ let rec eval_ (ctx : eval_context) node =
                       { ctx with scope = (name, arg) :: ctx.scope }
                 | [], [] -> ctx
                 | _names, _ ->
-                    debug_show_sexp [node] |> failwith |> ignore;
+                    debug_show_sexp [ node ] |> failwith |> ignore;
                     (* Obj.failobj __LOC__ args |> ignore; *)
-                    failsexp __LOC__ [node]
+                    failsexp __LOC__ [ node ]
               in
               let ctx = loop args_names args ctx in
               let _, result = eval_ ctx body in
@@ -147,8 +147,12 @@ let re_find pattern str =
     Some (Str.matched_string str :: groups)
   with Not_found -> None
 
+let gensym_id = Atomic.make 1
+
 let attach_functions stdin ctx =
   ctx
+  |> reg_fun "gensym" (fun _ ->
+         OQuote (meta_empty, SAtom (meta_empty, NameGenerator.get_new_var ())))
   |> reg_fun "drop" (fun xs ->
          match xs with
          | [ OInt (_, n); OList (_, xs) ] ->
@@ -228,10 +232,6 @@ let attach_functions stdin ctx =
          | x -> Obj.failobj __LOC__ x)
   |> reg_val "nil" (ONil meta_empty)
   |> reg_fun "vector" (fun xs -> OVector (meta_empty, xs))
-  |> reg_fun "gensym" (fun _ ->
-         OQuote
-           ( meta_empty,
-             SAtom (meta_empty, Lib__.Common.NameGenerator.get_new_var ()) ))
   |> reg_fun "concat" (fun xs ->
          xs
          |> List.map (function OList (_, x) -> x | x -> [ x ])
@@ -239,7 +239,9 @@ let attach_functions stdin ctx =
          |> fun xs -> OList (meta_empty, xs))
   |> reg_fun "str" (fun xs ->
          xs
-         |> List.map (function OString (_, x) -> x | x -> F.obj_to_string x)
+         |> List.map (function
+              | OString (_, x) -> x
+              | x -> OUtils.obj_to_string x)
          |> String.concat ""
          |> fun xs -> OString (meta_empty, xs))
   |> reg_fun "+" (function

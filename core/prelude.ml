@@ -16,6 +16,9 @@ let prelude_java_macro = {|
 
 (defn list [& xs] xs)
 
+(defn macro_conj [xs x]
+  (list 'y2k.RT.conj xs x))
+
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
 
@@ -28,6 +31,9 @@ let prelude_java_macro = {|
         (concat
          (list 'str)
          xs)))
+
+(defn macro_not= [x y]
+  (list 'not (list '= x y)))
 
 (defn macro_rest [xs]
   (let [xs_var (gensym)]

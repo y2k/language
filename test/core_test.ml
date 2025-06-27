@@ -73,6 +73,8 @@ let tests =
     ]
     |> EvalExecution.create_tests;
     [
+      (__LOC__, {|(defn run [] (if (not= 1 1) 2 3))|}, "3");
+      (__LOC__, {|(defn run [] (count (conj [1 2] 3)))|}, "3");
       (__LOC__, {|(ns _ (:require ["./lib/eff" :as e])) (defn run [] (e/foo 42))|}, {|42|});
       (__LOC__, {|(defn run [] (java.util.Objects.requireNonNull 42 ^java.util.function.Supplier (fn [] "")))|}, "42");
       (__LOC__, {|(defn run [] (count (map (fn [x] x) [1 2 3 4])))|}, "4");

@@ -26,6 +26,13 @@ public class RT {
 
     // Collections
 
+    public static List<Object> conj(Object xs, Object x) {
+        var col = (Collection<Object>) xs;
+        var result = new ArrayList<>(col);
+        result.add(x);
+        return result;
+    }
+
     public static <T> T get(Object source, Object key) {
         if (source instanceof java.util.Map) {
             return (T) ((java.util.Map<?, ?>) source).get(key);

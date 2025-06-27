@@ -15,6 +15,17 @@ module OUtils = struct
     | OVector (m, xs) ->
         SList (m, SAtom (m, "vector") :: List.map obj_to_sexp xs)
     | x -> failobj __LOC__ x
+
+  let rec obj_to_string = function
+    (* *)
+    | OInt (_, x) -> string_of_int x
+    | OString (_, x) -> "\"" ^ x ^ "\""
+    | OList (_, xs) -> List.map obj_to_string xs |> String.concat ""
+    | OQuote (_, SAtom (_, x)) -> x
+    | ONil _ -> "nil"
+    | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""
+    | OBool (_, x) -> string_of_bool x
+    | x -> failobj __LOC__ x
 end
 
 module NamespaceUtils = struct

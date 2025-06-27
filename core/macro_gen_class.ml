@@ -9,12 +9,12 @@ let convert_opts opts =
 let generate_method annot args ret_type prefix name =
   let body =
     let args =
-      args |> List.mapi (fun i _ -> Printf.sprintf "p%i" i) |> String.concat ","
+      args |> List.mapi (fun i _ -> Printf.sprintf ",p%i" i) |> String.concat ""
     in
     match ret_type with
-    | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s,this,%s)" prefix name args
+    | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args
     | _ ->
-        Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this,%s)" ret_type prefix
+        Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this%s)" ret_type prefix
           name args
   in
   let args2 =
@@ -50,9 +50,23 @@ let generate_method annot args ret_type prefix name =
       Printf.sprintf "super.%s(%s);\n" name args__
     else ""
   in
+  let method_annot =
+    match annot with
+    | "Override" -> []
+    | "" -> []
+    | x ->
+        [
+          pack_string "@";
+          SList
+            ( meta_empty,
+              [ SAtom (meta_empty, "__compiler_resolve_type"); pack_string x ]
+            );
+          pack_string "\n";
+        ]
+  in
   let prefix = pack_string (Printf.sprintf "public %s %s(" ret_type name) in
   let suffix = pack_string (Printf.sprintf ") {\n%s%s;\n}" call_super body) in
-  [ prefix ] @ args2 @ [ suffix ]
+  method_annot @ [ prefix ] @ args2 @ [ suffix ]
 
 let generate_methods prefix methods =
   let methods =
@@ -88,7 +102,7 @@ let invoke (args : sexp list) : sexp =
         ( meta_empty,
           [
             SAtom (meta_empty, "__compiler_resolve_type");
-            pack_string (get_value "extends" "");
+            pack_string (get_value "extends" "Object");
           ] );
       pack_string " {\n";
       (* (get_value "name" "") (get_value "extends" "")); *)
