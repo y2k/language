@@ -12,7 +12,7 @@ let () =
     [
       ("-target", Arg.Set_string target, "Target: js, java, eval, bytecode");
       ("-src", Arg.Set_string src, "Source file (use :stdin for standard input)");
-      ("-capture_stdin", Arg.Bool (( := ) capture_stdin), "Capute stdin");
+      ("-capture_stdin", Arg.Bool (( := ) capture_stdin), "Capture stdin");
       ("-namespace", Arg.Set_string namespace, "Namespace");
       ("-root", Arg.Set_string root_dir, "Root directory");
       ("-log", Arg.Bool (( := ) log), "Show log");

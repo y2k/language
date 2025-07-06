@@ -162,13 +162,6 @@ let do_simplify eval_macro (opt : simplify_opt) (code : string) : sexp =
     |> log_stage (type_ ^ "Parse ")
     |> simplify { log = opt.log; otp = opt; get_macro = macro }
     |> log_stage (type_ ^ "Simplify ")
-    (* |> Stage_resolve_ns.do_resolve opt.filename opt.root_dir
-    |> log_stage opt (type_ ^ "Stage_resolve_ns") *)
-    (* |> Stage_load_require.do_invoke (fun x ->
-           opt.compile x |> do_simplify_inner root_dir filename "[REQUIRE] " [])
-    |> log_stage opt (type_ ^ "Stage_load_require") *)
-    (* |> Stage_flat_do.invoke
-    |> log_stage (type_ ^ "Stage_flat_do") *)
   in
   let macro_fn_list =
     eval_macro (do_simplify_inner "" "macro.clj" "  [MACRO] " [] macro)

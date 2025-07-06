@@ -80,7 +80,32 @@ let generate_methods prefix methods =
          ->
            generate_method m.symbol (List.tl args) ret_type prefix name
        | x -> failsexp __LOC__ [ x ])
-(* |> String.concat "\n" *)
+
+let generate_constructors args cls_name prefix =
+  List.assoc_opt ":init" args
+  |> Option.map (function
+       | SAtom (_, x) ->
+           let x = unpack_string x in
+           [
+             pack_string
+               (Printf.sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n"
+                  cls_name prefix x);
+           ]
+       | x -> failsexp __LOC__ [ x ])
+  |> Option.value ~default:[]
+
+let generate_fields args =
+  List.assoc_opt ":fields" args
+  |> Option.map (function
+       | SList (_, SAtom (_, "vector") :: fields) ->
+           fields
+           |> List.map (function
+                | SAtom (_, name) ->
+                    pack_string
+                      (Printf.sprintf "public Object %s;\n" (unpack_string name))
+                | x -> failsexp __LOC__ [ x ])
+       | x -> failsexp __LOC__ [ x ])
+  |> Option.value ~default:[]
 
 let invoke (args : sexp list) : sexp =
   let args = convert_opts args in
@@ -91,10 +116,8 @@ let invoke (args : sexp list) : sexp =
          | x -> failsexp __LOC__ [ x ])
     |> Option.value ~default
   in
+  let prefix = get_value "prefix" "_" in
   let cls_code =
-    (* {|public static class %s extends %s {
-%s
-}|} *)
     [
       pack_string
         (Printf.sprintf "public static class %s extends " (get_value "name" ""));
@@ -105,12 +128,10 @@ let invoke (args : sexp list) : sexp =
             pack_string (get_value "extends" "Object");
           ] );
       pack_string " {\n";
-      (* (get_value "name" "") (get_value "extends" "")); *)
     ]
-    @ (List.assoc ":methods" args |> generate_methods (get_value "prefix" "_"))
+    @ generate_constructors args (get_value "name" "") prefix
+    @ generate_fields args
+    @ (List.assoc ":methods" args |> generate_methods prefix)
     @ [ pack_string "}\n" ]
   in
-  SList
-    ( meta_empty,
-      SAtom (meta_empty, "__compiler_emit") :: cls_code
-      (* SAtom (meta_empty, "\"" ^ cls_code ^ "\""); *) )
+  SList (meta_empty, SAtom (meta_empty, "__compiler_emit") :: cls_code)

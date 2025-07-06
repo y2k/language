@@ -39,8 +39,8 @@ let rec compile (ctx : complie_context) sexp =
       Printf.sprintf "%s %s=%s" type_ name (compile ctx value)
   | SList (_, [ SAtom (_, "not"); x ]) ->
       Printf.sprintf "(!(%s))" (compile ctx x)
-  | SList (_, [ SAtom (_, "set!"); SAtom (_, name); value ]) ->
-      Printf.sprintf "%s=%s" name (compile ctx value)
+  | SList (_, [ SAtom (_, "set!"); name; value ]) ->
+      Printf.sprintf "%s=%s" (compile ctx name) (compile ctx value)
   | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
       let visibility = if m.symbol = "private" then "private" else "public" in
       let final =
@@ -102,6 +102,12 @@ let rec compile (ctx : complie_context) sexp =
       let clazz = fix_class_name clazz in
       let args = List.map (compile ctx) args in
       Printf.sprintf "new %s(%s)" clazz (String.concat "," args)
+  (* Interop field access *)
+  | SList (_, [ SAtom (_, "."); instance; SAtom (_, field) ])
+    when String.starts_with ~prefix:"-" field ->
+      let instance = compile ctx instance in
+      Printf.sprintf "%s.%s" instance
+        (String.sub field 1 (String.length field - 1))
   (* Interop call *)
   | SList (_, SAtom (_, ".") :: instance :: SAtom (_, method_) :: args) ->
       let instance = compile ctx instance in

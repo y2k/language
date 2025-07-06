@@ -108,7 +108,7 @@ public class RT {
             try {
                 return invoke(a);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                return throwSilent(e);
             }
         }
     }
@@ -126,23 +126,78 @@ public class RT {
     }
 
     public static Object fn(Fn0 f) {
-        return f;
+        return new Fn0() {
+
+            @Override
+            public Object invoke() throws Exception {
+                return f.invoke();
+            }
+
+            @Override
+            public String toString() {
+                return "lambda0";
+            }
+        };
     }
 
     public static Object fn(Fn1 f) {
-        return f;
+        return new Fn1() {
+
+            @Override
+            public Object invoke(Object a) throws Exception {
+                return f.invoke(a);
+            }
+
+            @Override
+            public String toString() {
+                return "lambda1";
+            }
+        };
     }
 
     public static Object fn(Fn2 f) {
-        return f;
+        return new Fn2() {
+
+            @Override
+            public Object invoke(Object a, Object b) throws Exception {
+                return f.invoke(a, b);
+            }
+
+            @Override
+            public String toString() {
+                return "lambda2";
+            }
+        };
     }
 
     public static Object fn(Fn3 f) {
-        return f;
+        return new Fn3() {
+
+            @Override
+            public Object invoke(Object a, Object b, Object c) throws Exception {
+                return f.invoke(a, b, c);
+            }
+
+            @Override
+            public String toString() {
+                return "lambda3";
+            }
+        };
     }
 
     public static Object fn(Fn4 f) {
-        return f;
+        return new Fn4() {
+
+            @Override
+            public Object invoke(Object a, Object b, Object c, Object d) throws Exception {
+                return f.invoke(a, b, c, d);
+            }
+
+            @Override
+            public String toString() {
+                return "lambda4";
+            }
+        };
     }
 
     public static Object invoke(Object f) {
