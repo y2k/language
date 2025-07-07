@@ -24,7 +24,8 @@ import java.util.*;
 public class App {
 %s;
 
-public static void main(String[] args) {System.exit((int) RT.invoke(user.run));}}%s|}
+public static void main(String[] args) {System.exit((int) RT.invoke(user.run));}}%s
+|}
         code prelude
     in
     prerr_endline code;
