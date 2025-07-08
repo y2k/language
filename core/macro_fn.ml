@@ -20,7 +20,7 @@ let desugar_fn_arguments expand_core_macro2 args =
   let rec loop let_args =
     match let_args with
     | [] -> []
-    | ((SAtom _, _) as x) :: t -> x :: loop t
+    | ((SAtom _, _) as x) :: tail -> x :: loop tail
     (*
        [a b c] xs
        >>>
@@ -42,7 +42,7 @@ let desugar_fn_arguments expand_core_macro2 args =
        b (get 1 t1)
        c (get 1 xs)
     *)
-    | (SList (m, SAtom (_, "vector") :: xs), (SAtom _ as v)) :: t ->
+    | (SList (m, SAtom (_, "vector") :: xs), (SAtom _ as v)) :: tail ->
         let new_nodes =
           xs
           |> List.mapi (fun i a ->
@@ -56,10 +56,10 @@ let desugar_fn_arguments expand_core_macro2 args =
                             SAtom (unknown_location, string_of_int i);
                           ] )) ))
         in
-        loop (new_nodes @ t)
-    (* | ((SList _ as a), fn_v) :: t ->
+        loop (new_nodes @ tail)
+    | ((SList (_, SAtom (_, "vector") :: _) as a), fn_v) :: t ->
         let virt_arg = SAtom (unknown_location, NameGenerator.get_new_var ()) in
-        (virt_arg, fn_v) :: loop ((a, virt_arg) :: t) *)
+        (virt_arg, fn_v) :: loop ((a, virt_arg) :: t)
     (*
        {a :b c :d}
        >>>
@@ -72,7 +72,7 @@ let desugar_fn_arguments expand_core_macro2 args =
        e (get xs :f)
        >>>
     *)
-    | (SList (m, SAtom (_, "hash-map") :: xs), (SAtom _ as v)) :: t ->
+    | (SList (m, SAtom (_, "hash-map") :: xs), (SAtom _ as v)) :: tail ->
         let rec loop2 = function
           | [] -> []
           | SAtom (_, ":as") :: lv :: t -> (lv, v) :: loop2 t
@@ -90,11 +90,13 @@ let desugar_fn_arguments expand_core_macro2 args =
           | xs -> failsexp __LOC__ xs
         in
         let new_nodes = loop2 xs in
-        loop (new_nodes @ t)
-    (* | ((SList _ as a), fn_v) :: t ->
+        loop (new_nodes @ tail)
+    | ((SList (_, SAtom (_, "hash-map") :: _) as hm), fn_v) :: tail ->
         let virt_arg = SAtom (unknown_location, NameGenerator.get_new_var ()) in
-        (virt_arg, fn_v) :: loop ((a, virt_arg) :: t) *)
-    | xs -> failsexp __LOC__ (xs |> List.concat_map (fun (a, b) -> [ a; b ]))
+        (virt_arg, fn_v) :: loop ((hm, virt_arg) :: tail)
+    | xs ->
+        failsexp __LOC__
+          (xs |> List.map (fun (a, b) -> SList (meta_empty, [ a; b ])))
   in
   (args2, loop let_args2 |> List.concat_map (fun (a, b) -> [ a; b ]))
 

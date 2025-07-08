@@ -51,6 +51,25 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
                 SList (meta_empty, SAtom (meta_empty, "or") :: xs);
               ] ))
       |> simplify ctx
+  | SList (_, [ SAtom (_, "and"); a1 ]) -> a1 |> simplify ctx
+  | SList (m2, SAtom (m, "and") :: a1 :: args) ->
+      let var = NameGenerator.get_new_var () in
+      SList
+        ( m2,
+          [
+            SAtom (m, "let");
+            SList
+              (meta_empty, [ SAtom (meta_empty, "vector"); SAtom (m, var); a1 ]);
+            SList
+              ( meta_empty,
+                [
+                  SAtom (m, "if");
+                  SAtom (m, var);
+                  SList (meta_empty, SAtom (m, "and") :: args);
+                  SAtom (m, var);
+                ] );
+          ] )
+      |> simplify ctx
   | SList (_, SAtom (_, "case") :: _) as x -> Macro_case.invoke (simplify ctx) x
   | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
       let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in

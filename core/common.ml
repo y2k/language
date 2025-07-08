@@ -1,5 +1,18 @@
 open Lib__.Common
 
+module SexpUtil = struct
+  let butlast node =
+    match node with
+    | SList (_, SAtom (_, "do*") :: children) ->
+        children |> List.rev |> List.tl |> List.rev
+    | _ -> []
+
+  let last = function
+    | SList (_, SAtom (_, "do*") :: children) ->
+        List.nth children (List.length children - 1)
+    | node -> node
+end
+
 module OUtils = struct
   module F = Lib__.Backend_interpreter.Functions
 

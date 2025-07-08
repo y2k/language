@@ -50,6 +50,7 @@ let rec compile (ctx : complie_context) sexp =
       in
       Printf.sprintf "%s static %s Object %s;\nstatic {\n%s=%s;\n}" visibility
         final name name (compile ctx value)
+  (* Function *)
   | SList (m, [ SAtom (_, "fn*"); SList (_, args); body ]) -> (
       let args =
         List.map

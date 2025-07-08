@@ -243,10 +243,11 @@ let debug_show_sexp (nodes : sexp list) =
   in
   nodes |> List.map show_rec |> String.concat " "
 
-let debug_show_sexp_for_error (nodes : sexp list) =
+let debug_show_sexp_for_error ?(show_pos = false) (nodes : sexp list) =
+  let add_pos m = if show_pos then "|" ^ string_of_int m.line ^ ":" ^ string_of_int m.pos ^ "| " else "" in
   let rec show_rec = function
-    | SAtom (m, x) when m.symbol = "" -> x ^ " [" ^ string_of_int m.line ^ ", " ^ string_of_int m.pos ^ " ]"
-    | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x ^ " [" ^ string_of_int m.line ^ ", " ^ string_of_int m.pos ^ " ]"
+    | SAtom (m, x) when m.symbol = "" -> add_pos m ^ x
+    | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ add_pos m ^ x
     | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
     | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
   in
@@ -269,9 +270,9 @@ let failnode prefix es =
   |> prerr_endline;
   failwith ("Invalid node [" ^ prefix ^ "]")
 
-let failsexp prefix (es : sexp list) =
+let failsexp ?(show_pos = false) prefix (es : sexp list) =
   es
-  |> List.map (fun x -> debug_show_sexp_for_error [ x ])
+  |> List.map (fun x -> debug_show_sexp_for_error ~show_pos [ x ])
   |> List.reduce_opt (Printf.sprintf "%s\n---\n%s")
   |> Option.value ~default:""
   |> Printf.sprintf "Can't parse:\n---------\n%s\n---------"
