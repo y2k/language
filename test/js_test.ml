@@ -19,6 +19,10 @@ let create_test =
 let tests =
   ( "JS",
     [
+      (__LOC__, {|(defn main [] (:b (assoc {:a 1 :b 2 :c 3} :b 42)) )|}, "42");
+      (__LOC__, {|(defn main [] (count (concat [1 2] [1] [1 2 3])) )|}, "6");
+      (__LOC__, {|(defn main [] (+ ( * 2 100) (- 50 10) (+ 1 2 2)))|}, "245");
+      (__LOC__, {|(defn f [] (FIXME "A" 2 "C")) (defn main [] 42)|}, "42");
       (__LOC__, {|(defn main [] (+ (if (string? "x") 40 0) (if (string? 1) 0 2)))|}, "42");
       (__LOC__, {|(defn main [] (+ (if (some? "x") 40 0) (if (nil? "x") 0 2)))|}, "42");
       (__LOC__, {|(defn- f [x] x) (defn main [] (f 42))|}, "42");

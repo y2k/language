@@ -117,6 +117,13 @@ let rec eval_ (ctx : eval_context) node =
       in
       let args = List.map (fun x -> eval_ ctx x |> snd) args in
       (ctx, f args)
+  | SList (_, f :: args) -> (
+      trace __LOC__ show_sexp2 node |> ignore;
+      match eval_ ctx f |> snd with
+      | OLambda (_, f) ->
+          let args = List.map (fun x -> eval_ ctx x |> snd) args in
+          (ctx, f args)
+      | x -> OUtils.failobj __LOC__ x)
   | x -> failsexp __LOC__ [ x ]
 
 let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }

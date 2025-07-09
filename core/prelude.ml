@@ -202,20 +202,38 @@ let prelude_js_macro = {|
 (defn macro_str [& xs]
   (concat (list '+ "") xs))
 
-(defn macro_empty? [xs]
-  (list '= 0 (list '.-length xs)))
+(defn macro_string? [x]
+  (list '= (list 'type x) "string"))
 
 (defn macro_nil? [x]
   (list '= x nil))
 
-(defn macro_string? [x]
-  (list '= (list 'type x) "string"))
+(defn macro_some? [x]
+  (list 'not (list '= x nil)))
+
+(defn macro_FIXME [& xs]
+  (list
+   (list 'fn
+         (vector)
+         (list 'throw
+               (list 'Error.
+                     (concat (list 'str) xs)))
+         nil)))
+
+;; Collections
+
+(defn macro_concat [& xs]
+  (concat
+   (list
+    '.concat
+    [])
+   xs))
+
+(defn macro_empty? [xs]
+  (list '= 0 (list '.-length xs)))
 
 (defn macro_count [xs]
   (list '.-length xs))
-
-(defn macro_some? [x]
-  (list 'not (list '= x nil)))
 
 ;; Atoms
 

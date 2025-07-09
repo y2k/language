@@ -154,7 +154,8 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   | SList (_, SAtom (_, n) :: _) as x
     when n = "def*" || n = "do*" || n = "fn*" || n = "let*" || n = "if*" ->
       x
-  | SList (_, SAtom (_, name) :: _) when String.ends_with ~suffix:"*" name ->
+  | SList (_, SAtom (_, name) :: _)
+    when String.ends_with ~suffix:"*" name && name <> "*" ->
       failsexp __LOC__ [ sexp ]
   (* *)
   | SList (_, SAtom (_, "gen-class") :: args) -> Macro_gen_class.invoke args

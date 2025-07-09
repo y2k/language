@@ -40,7 +40,19 @@ let rec do_compile (ctx : context) = function
       Printf.sprintf "(%s>=%s)" (do_compile ctx a) (do_compile ctx b)
   | SList (_, SAtom (_, "+") :: args) ->
       List.map (do_compile ctx) args
-      |> String.concat "+" |> Printf.sprintf "(%s)"
+      |> String.concat " + " |> Printf.sprintf "(%s)"
+  | SList (_, SAtom (_, "-") :: args) ->
+      List.map (do_compile ctx) args
+      |> String.concat " - " |> Printf.sprintf "(%s)"
+  | SList (_, SAtom (_, "*") :: args) ->
+      List.map (do_compile ctx) args
+      |> String.concat " * " |> Printf.sprintf "(%s)"
+  | SList (_, SAtom (_, "/") :: args) ->
+      List.map (do_compile ctx) args
+      |> String.concat " / " |> Printf.sprintf "(%s)"
+  | SList (_, SAtom (_, "%") :: args) ->
+      List.map (do_compile ctx) args
+      |> String.concat " % " |> Printf.sprintf "(%s)"
   | SList (_, [ SAtom (_, "export-default"); x ]) ->
       Printf.sprintf "export default %s" (do_compile ctx x)
   (* TODO: /end *)
@@ -80,6 +92,10 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "assoc!"); name; key; value ]) ->
       Printf.sprintf "%s[%s]=%s" (do_compile ctx name) (do_compile ctx key)
         (do_compile ctx value)
+  (* assoc *)
+  | SList (_, [ SAtom (_, "assoc"); map; key; value ]) ->
+      Printf.sprintf "{ ...%s, [%s]: %s }" (do_compile ctx map)
+        (do_compile ctx key) (do_compile ctx value)
   | SList (_, [ SAtom (m, "def*"); name; value ]) ->
       let export = if m.symbol = "private" then "" else "export " in
       Printf.sprintf "%sconst %s=%s" export (do_compile ctx name)
@@ -93,6 +109,9 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (do_compile ctx cond)
         (do_compile ctx then_) (do_compile ctx else_)
+  (* throw *)
+  | SList (_, [ SAtom (_, "throw"); e ]) ->
+      Printf.sprintf "throw %s" (do_compile ctx e)
   (* set! *)
   | SList (_, [ SAtom (_, "set!"); name; value ]) ->
       Printf.sprintf "%s=%s" (do_compile ctx name) (do_compile ctx value)
