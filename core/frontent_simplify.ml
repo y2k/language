@@ -115,6 +115,17 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
             SAtom (md, "def"); name; SList (m, SAtom (md, "fn") :: args :: body);
           ] )
       |> simplify ctx
+  | SList
+      ( m,
+        [
+          SAtom (_, "if-let");
+          SList (_, SAtom (_, "vector") :: bindings);
+          then_;
+          else_;
+        ] ) ->
+      Macro_if_let.invoke (simplify ctx) m bindings then_ else_ sexp
+  | SList (m, SAtom (_, "cond") :: body) ->
+      Macro_cond.invoke (simplify ctx) m body
   | SList (_, SAtom (_, "fn") :: _) as node ->
       node
       (* |> log_stage ctx.otp.log "[Macro fn BEFORE]" *)

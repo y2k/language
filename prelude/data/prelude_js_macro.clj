@@ -4,14 +4,29 @@
 (defn macro_println [& xs]
   (concat (list 'console.log) xs))
 
+(defn macro_eprintln [& xs]
+  (concat (list 'console.error) xs))
+
 (defn macro_str [& xs]
   (concat (list '+ "") xs))
+
+(defn macro_nil? [x]
+  (list '= x nil))
 
 (defn macro_string? [x]
   (list '= (list 'type x) "string"))
 
-(defn macro_nil? [x]
-  (list '= x nil))
+(defn macro_number? [x]
+  (list '= (list 'type x) "number"))
+
+(defn macro_boolean? [x]
+  (list '= (list 'type x) "boolean"))
+
+;; (defn macro_list? [x]
+;;   (list '= :list (list 'get x :type)))
+
+(defn macro_vector? [x]
+  (list 'Array.isArray x))
 
 (defn macro_some? [x]
   (list 'not (list '= x nil)))
@@ -25,7 +40,31 @@
                      (concat (list 'str) xs)))
          nil)))
 
+;; Regex
+
+(defn macro_re-pattern [x]
+  (list 'RegExp. x))
+
 ;; Collections
+
+(defn macro_first [xs]
+  (list 'get xs 0))
+
+;; (defn macro_list [& xs]
+;;   (let [v (gensym)]
+;;     (list 'let (vector v (vec xs))
+;;           (hash-map
+;;            :type :list
+;;            :items v
+;;            :length (count v)
+;;            'Symbol.iterator (list 'get v 'Symbol.iterator)))))
+
+(defn macro_reduce [f init xs]
+  (let [v (gensym)]
+    (list 'let [v xs]
+          (list 'if (list 'vector? v)
+                (list '.reduce v f init)
+                (list '.reduce (list 'Object.entries v) f init)))))
 
 (defn macro_concat [& xs]
   (concat
@@ -41,6 +80,11 @@
   (list '.-length xs))
 
 ;; Atoms
+
+(defn macro_swap! [a f]
+  (list 'do
+        (list 'assoc! a 0 (list f (list 'get a 0)))
+        (list 'get a 0)))
 
 (defn macro_reset! [a x]
   (list 'assoc! a 0 x))

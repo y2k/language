@@ -27,6 +27,11 @@ module OUtils = struct
     | ONil m -> SAtom (m, "nil")
     | OVector (m, xs) ->
         SList (m, SAtom (m, "vector") :: List.map obj_to_sexp xs)
+    | OMap (m, xs) ->
+        let items =
+          List.concat_map (fun (k, v) -> [ obj_to_sexp k; obj_to_sexp v ]) xs
+        in
+        SList (m, SAtom (m, "hash-map") :: items)
     | x -> failobj __LOC__ x
 
   let rec obj_to_string = function

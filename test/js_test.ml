@@ -19,6 +19,17 @@ let create_test =
 let tests =
   ( "JS",
     [
+      (* (__LOC__, {|(defn main [] (reduce (fn [a b] (+ a b)) 0 (list 1 2 3 4)))|}, "10"); *)
+      (* (__LOC__, {|(defn main [] (count (list 1 2 3 4)))|}, "4"); *)
+      (__LOC__, {|(defn main [] (first [42 1 2]))|}, "42");
+      (__LOC__, {|(def a (atom 1)) (defn main [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, "3");
+      (__LOC__, {|(defn main [] (+ (case 9 1 11 2 22 100) (case 2 1 11 2 22 3 33 44)) )|}, "122");
+      (__LOC__, {|(defn main [] (reduce (fn [a [_ b]] (+ a b)) 0 {:a 40 :b 2}))|}, "42");
+      (__LOC__, {|(defn main [] (+ (cond false 1 :else 40) (cond false 1 true 2 :else 3)))|}, "42");
+      (__LOC__, {|(defn main [] (reduce (fn [a b] (+ a b)) 0 [10 20 12]))|}, "42");
+      ( __LOC__,
+        {|(defn main [] (if (and (nil? nil) (number? 3) (boolean? false) (string? "") (vector? [1 2 3])) 42 0))|},
+        "42" );
       (__LOC__, {|(defn main [] (:b (assoc {:a 1 :b 2 :c 3} :b 42)) )|}, "42");
       (__LOC__, {|(defn main [] (count (concat [1 2] [1] [1 2 3])) )|}, "6");
       (__LOC__, {|(defn main [] (+ ( * 2 100) (- 50 10) (+ 1 2 2)))|}, "245");
@@ -40,7 +51,7 @@ let tests =
       (__LOC__, {|(defn main [] (parseInt (str "4" :2)))|}, "42");
       (__LOC__, {|(defn main [] (+ (if true 21 1) (if false 1 21)))|}, "42");
       (__LOC__, {|(defn main [] (let [x 42] x))|}, "42");
-      (__LOC__, {|(defn f [a b] (println a b) (+ a b)) (defn main [] (f 40 2))|}, "42");
+      (__LOC__, {|(defn f [a b] (eprintln a b) (println a b) (+ a b)) (defn main [] (f 40 2))|}, "42");
       (__LOC__, {|(defn main [] 42)|}, "42");
     ]
     |> create_test )

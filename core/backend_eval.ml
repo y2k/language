@@ -158,6 +158,10 @@ let gensym_id = Atomic.make 1
 
 let attach_functions stdin ctx =
   ctx
+  |> reg_fun "vec" (function
+       | [ OList (_, xs) ] -> OVector (meta_empty, xs)
+       | [ (OVector _ as x) ] -> x
+       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "gensym" (fun _ ->
          OQuote (meta_empty, SAtom (meta_empty, NameGenerator.get_new_var ())))
   |> reg_fun "drop" (fun xs ->
