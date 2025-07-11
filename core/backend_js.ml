@@ -140,11 +140,14 @@ let rec do_compile (ctx : context) = function
       let args = List.map (do_compile ctx) args in
       Printf.sprintf "%s.%s(%s)" (do_compile ctx target) mname
         (String.concat "," args)
+  (* Function call *)
+  | SList (_, SAtom (_, fn) :: args) ->
+      let args = List.map (do_compile ctx) args in
+      let fn = fn |> String.map (function '/' -> '.' | c -> c) in
+      Printf.sprintf "%s(%s)" fn (String.concat "," args)
   | SList (_, fn :: args) ->
       let args = List.map (do_compile ctx) args in
-      let fn =
-        do_compile ctx fn |> String.map (function '/' -> '.' | c -> c)
-      in
+      let fn = do_compile ctx fn in
       Printf.sprintf "%s(%s)" fn (String.concat "," args)
   | node -> failsexp ~show_pos:true __LOC__ [ node ]
 

@@ -21,6 +21,10 @@ let tests =
     [
       (* (__LOC__, {|(defn main [] (reduce (fn [a b] (+ a b)) 0 (list 1 2 3 4)))|}, "10"); *)
       (* (__LOC__, {|(defn main [] (count (list 1 2 3 4)))|}, "4"); *)
+      (*  *)
+      (* (__LOC__, {|(defn f [a] (if (= "/a" (:b (:c a))) 42 0)) (defn main [] (f {:b "/a"}))|}, "42-"); *)
+      (__LOC__, {|(defn f [a] (fn [] (if (= "/cat" (:b a)) 42 3))) (defn main [] ((f {:b "/cat"})))|}, "42");
+      (* *)
       (__LOC__, {|(defn main [] (first [42 1 2]))|}, "42");
       (__LOC__, {|(def a (atom 1)) (defn main [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|}, "3");
       (__LOC__, {|(defn main [] (+ (case 9 1 11 2 22 100) (case 2 1 11 2 22 3 33 44)) )|}, "122");
