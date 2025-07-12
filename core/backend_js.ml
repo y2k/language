@@ -1,6 +1,5 @@
-open Lib__.Common
 open Common
-module Ng = Lib__.Common.NameGenerator
+module Ng = Common.NameGenerator
 
 type context = { filename : string; root_dir : string; namespace : string }
 
@@ -173,7 +172,7 @@ let compile ~log code =
              compile =
                (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
            }
-      |> Lib__.Stage_convert_if_to_statment.invoke
+      |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"

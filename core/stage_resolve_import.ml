@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 type resolve_ctx = {
   links : (string * string) list;

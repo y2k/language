@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let rec invoke = function
   | SAtom _ as x -> x

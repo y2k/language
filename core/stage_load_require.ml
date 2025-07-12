@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 type options = { compile : string -> sexp } [@@deriving show]
 type context = { opt : options } [@@deriving show]

@@ -9,7 +9,7 @@ let () =
     |> List.append
          [
            "(* THIS FILE IS GENERATED *)\n";
-           (* "let java_runtime = {|\n" ^ In_channel.(with_open_bin "prelude/data/y2k/RT.java" input_all) ^ "\n|}\n"; *)
+           "let java_runtime = {|\n" ^ In_channel.(with_open_bin "prelude/data/y2k/RT.java" input_all) ^ "\n|}\n";
          ]
     |> String.concat "\n"
   in

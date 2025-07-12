@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let invoke desugar_and_register _context (node : sexp) : sexp =
   let expand_core_macro2 = desugar_and_register in

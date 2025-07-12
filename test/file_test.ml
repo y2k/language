@@ -1,4 +1,4 @@
-module F = Lib__.Common.Files
+module F = Core__.Common.Files
 
 let assets_ loc path expected =
   Alcotest.test_case loc `Slow (fun () ->

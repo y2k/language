@@ -1,6 +1,5 @@
-open Lib__.Common
 open Common
-module F = Lib__.Backend_interpreter.Functions
+module F = Functions
 
 module Utils = struct
   let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith

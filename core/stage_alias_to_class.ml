@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 type ctx = {
   aliases : (string * string) list;

@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 module NamespaceUtils = struct
   let convert_path_to_ns _ filename path =

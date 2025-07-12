@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let invoke simplify = function
   | SList (m, SAtom (l, "case") :: target :: body) as node ->

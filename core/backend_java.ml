@@ -1,4 +1,3 @@
-open Lib__.Common
 open Common
 
 type compile_opt = { filename : string; root_dir : string; namespace : string }
@@ -169,7 +168,7 @@ let get_macro node =
 
 let compile (namespace : string) (log : bool) (filename : string)
     (root_dir : string) code =
-  Lib__.Common.NameGenerator.with_scope (fun () ->
+  Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontent_simplify.do_simplify get_macro
            {
@@ -180,7 +179,7 @@ let compile (namespace : string) (log : bool) (filename : string)
              compile =
                (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
            }
-      |> Lib__.Stage_convert_if_to_statment.invoke
+      |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve filename root_dir
       |> log_stage log "Stage_resolve_import"

@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let invoke compile m bindings then_ else_ node =
   let rec loop = function

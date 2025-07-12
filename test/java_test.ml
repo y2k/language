@@ -1,10 +1,12 @@
+open Core__.Common
+
 module JavaExecution : sig
   val create_tests : (string * string * string) list -> unit Alcotest.test_case list
 end = struct
   let run (code : string) =
     (* prerr_endline @@ "DIR: " ^ Sys.getcwd (); *)
     let prelude =
-      In_channel.(with_open_bin "../../../y2k/RT.java" input_all)
+      In_channel.(with_open_bin "../../../prelude/data/y2k/RT.java" input_all)
       |> Str.global_replace (Str.regexp "package y2k;") ""
       |> Str.global_replace (Str.regexp "public class RT") "class RT"
       |> Str.global_replace (Str.regexp "import java\\.util\\.\\*;\n") ""
@@ -42,7 +44,7 @@ public static void main(String[] args) {System.exit((int) RT.invoke(user.run));}
                  {|(ns _) (defn foo [x] x)|} |> Core.compile "lib" false "/app/src/core/ext/lib/eff.clj" "/app/src"
                in
                let code =
-                 Lib__.Common.FileReader.with_stub_scope ""
+                 FileReader.with_stub_scope ""
                    (Core.compile "y2k.root" true "/app/src/core/ext/user.clj" "/app/src")
                    input
                in
@@ -53,8 +55,6 @@ end
 module EvalExecution : sig
   val create_tests : (string * string * string) list -> unit Alcotest.test_case list
 end = struct
-  open Lib__.Common
-
   let create_tests tests =
     tests
     |> List.map (fun (loc, input, expected) ->

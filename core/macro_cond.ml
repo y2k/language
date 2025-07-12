@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let invoke compile m body =
   let rec loop = function

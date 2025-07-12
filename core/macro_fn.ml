@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let desugar_fn_arguments expand_core_macro2 args =
   let args2, let_args2 =

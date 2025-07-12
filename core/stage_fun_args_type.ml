@@ -1,4 +1,4 @@
-open Lib__.Common
+open Common
 
 let rec handle_args args body =
   match args with
