@@ -28,7 +28,7 @@ let () =
       let code = In_channel.(with_open_bin !src input_all) in
       match !target with
       | "java" -> FileReader.with_scope (fun _ -> Core.compile !namespace !log !src !root_dir code |> print_endline) ()
-      | "js" -> FileReader.with_scope (fun _ -> Backend_js.compile ~log:!log code |> print_endline) ()
+      | "js" -> FileReader.with_scope (fun _ -> Backend_js.compile ~log:!log code ~filename:!src |> print_endline) ()
       | "eval" | "repl" ->
           FileReader.with_scope
             (fun () ->

@@ -1,7 +1,7 @@
 module A = Alcotest
 module Js = Core__.Backend_js
 
-let compile code = Js.compile ~log:true code |> Printf.sprintf "%s;\n\nprocess.exit(main());"
+let compile code = Js.compile ~log:true ~filename:"main.clj" code |> Printf.sprintf "%s;\n\nprocess.exit(main());"
 
 let run_code code =
   let path = Filename.temp_file "test_" ".js" in
@@ -19,10 +19,10 @@ let create_test =
 let tests =
   ( "JS",
     [
-      (* (__LOC__, {|(defn main [] (reduce (fn [a b] (+ a b)) 0 (list 1 2 3 4)))|}, "10"); *)
-      (* (__LOC__, {|(defn main [] (count (list 1 2 3 4)))|}, "4"); *)
-      (*  *)
-      (* (__LOC__, {|(defn f [a] (if (= "/a" (:b (:c a))) 42 0)) (defn main [] (f {:b "/a"}))|}, "42-"); *)
+      (__LOC__, {|(defn main [] (last [1 2 42]))|}, "42");
+      (__LOC__, {|(defn main [] (+ (get (conj [1 2] 40) 2) (count (conj [1 2] 4))))|}, "43");
+      (__LOC__, {|(defn main [] (if (fn? (fn [] 0)) 42 0))|}, "42");
+      (__LOC__, {|(defn main [] (if (= __LOC__ "main.clj:1:22") 42 0))|}, "42");
       (__LOC__, {|(defn f [a] (fn [] (if (= "/cat" (:b a)) 42 3))) (defn main [] ((f {:b "/cat"})))|}, "42");
       (* *)
       (__LOC__, {|(defn main [] (first [42 1 2]))|}, "42");

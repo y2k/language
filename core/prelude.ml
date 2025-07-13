@@ -453,6 +453,9 @@ let prelude_js_macro = {|
 (defn macro_nil? [x]
   (list '= x nil))
 
+(defn macro_fn? [x]
+  (list '= (list 'type x) "function"))
+
 (defn macro_string? [x]
   (list '= (list 'type x) "string"))
 
@@ -486,6 +489,12 @@ let prelude_js_macro = {|
   (list 'RegExp. x))
 
 ;; Collections
+
+(defn macro_last [xs]
+  (list '.at xs -1))
+
+(defn macro_conj [xs x]
+  (list 'concat xs (list 'vector x)))
 
 (defn macro_first [xs]
   (list 'get xs 0))

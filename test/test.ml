@@ -3,7 +3,7 @@ let () =
     [
       (* *)
       (* *)
-      ("V2", Java_test.tests);
+      ("Java", Java_test.tests);
       Js_test.tests;
       File_test.tests;
     ]

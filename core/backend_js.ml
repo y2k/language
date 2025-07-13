@@ -156,8 +156,7 @@ let get_macro node =
   let ctx = Backend_eval.eval1 "" node |> fst in
   Backend_eval.get_all_functions ctx
 
-let compile ~log code =
-  let filename = "" in
+let compile ~log ~filename code =
   let root_dir = "" in
   let namespace = "" in
   Ng.with_scope (fun () ->

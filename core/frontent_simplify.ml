@@ -29,6 +29,8 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   if ctx.log && false then
     prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
   match sexp with
+  | SAtom (m, "__LOC__") ->
+      SAtom (meta_empty, Printf.sprintf "\"%s:%i:%i\"" ctx.otp.filename m.line m.pos)
   | SAtom _ as x -> x
   | SList (_, []) as x -> x
   | SList (m, SAtom (_, "ns") :: _ :: args) ->
