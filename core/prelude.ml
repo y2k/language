@@ -490,6 +490,9 @@ let prelude_js_macro = {|
 
 ;; Collections
 
+(defn macro_rest [xs]
+  (list '.slice xs 1))
+
 (defn macro_last [xs]
   (list '.at xs -1))
 
