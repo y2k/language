@@ -1,5 +1,5 @@
 .PHONY: test
-test: prelude
+test: prelude build
 	@ clear && dune build && clear && export OCAMLRUNPARAM=b && dune test -f
 
 .PHONY: build

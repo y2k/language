@@ -43,6 +43,9 @@
                      (concat (list 'str) xs)))
          nil)))
 
+(defn macro_unixtime []
+  (list '/ (list 'Date.now) 1000))
+
 ;; Regex
 
 (defn macro_re-pattern [x]

@@ -19,6 +19,7 @@ let create_test =
 let tests =
   ( "JS",
     [
+      (__LOC__, {|(defn main [] (if (and (> (unixtime) 1700000000) (< (unixtime) 2700000000)) 42 2))|}, "42");
       (__LOC__, {|(defn main [] (+ (first (rest [1 40 3])) (count (rest [1 40 3]))))|}, "42");
       (__LOC__, {|(defn main [] (last [1 2 42]))|}, "42");
       (__LOC__, {|(defn main [] (+ (get (conj [1 2] 40) 2) (count (conj [1 2] 4))))|}, "43");
