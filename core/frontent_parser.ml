@@ -27,6 +27,7 @@ let pnode find_line_and_pos =
     *> ( A.many1
            (A.char '\\' *> A.char '"'
            >>| Fun.const "\\\""
+           <|> (A.char '\\' *> A.char '\\' >>| Fun.const "\\\\")
            <|> (A.satisfy (( <> ) '"') >>| String.make 1))
        >>| fun x -> String.concat "" x )
     <* A.char '"'
