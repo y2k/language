@@ -13,9 +13,15 @@ module Files = struct
   (* |> trace "LOG[realpath]" (Printf.sprintf "%s -> %s" path) *)
 end
 
-type config = { no_lint : bool; virtual_src : string; log : bool; no_deps : bool }
+type config = {
+  no_lint : bool;
+  virtual_src : string;
+  log : bool;
+  no_deps : bool;
+}
 
-let config_default = { no_lint = false; virtual_src = ""; log = false; no_deps = false }
+let config_default =
+  { no_lint = false; virtual_src = ""; log = false; no_deps = false }
 
 module FileReader = struct
   type _ Effect.t += Load : string -> string Effect.t
@@ -29,15 +35,20 @@ module FileReader = struct
     Effect.Deep.match_with f arg
       {
         retc = Fun.id;
-        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
+        exnc =
+          (fun e ->
+            Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
-            | Load _ -> Some (fun (k : (a, _) continuation) -> continue k content)
+            | Load _ ->
+                Some (fun (k : (a, _) continuation) -> continue k content)
             | Realpath path ->
                 Some
                   (fun (k : (a, _) continuation) ->
-                    let path = Str.global_replace (Str.regexp "/\\./") "/" path in
+                    let path =
+                      Str.global_replace (Str.regexp "/\\./") "/" path
+                    in
                     continue k path)
             | _ -> None);
       }
@@ -47,12 +58,20 @@ module FileReader = struct
     Effect.Deep.match_with f arg
       {
         retc = Fun.id;
-        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
+        exnc =
+          (fun e ->
+            Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
-            | Load path -> Some (fun (k : (a, _) continuation) -> continue k In_channel.(with_open_bin path input_all))
-            | Realpath path -> Some (fun (k : (a, _) continuation) -> continue k (Files.realpath path))
+            | Load path ->
+                Some
+                  (fun (k : (a, _) continuation) ->
+                    continue k In_channel.(with_open_bin path input_all))
+            | Realpath path ->
+                Some
+                  (fun (k : (a, _) continuation) ->
+                    continue k (Files.realpath path))
             | _ -> None);
       }
 end
@@ -66,7 +85,8 @@ type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 let unknown_location = { line = 0; pos = 0; symbol = "" }
 let meta_empty = { line = 0; pos = 0; symbol = "" }
 
-type sexp = SAtom of meta * string | SList of meta * sexp list [@@deriving show]
+type sexp = SAtom of meta * string | SList of meta * sexp list
+[@@deriving show]
 
 type cljexp =
   | Atom of meta * string
@@ -75,11 +95,18 @@ type cljexp =
   | CBList of meta * cljexp list
 [@@deriving show]
 
-let unpack_string x = if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2) else x
+let unpack_string x =
+  if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2)
+  else x
+
 let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
-let get_type meta = if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
-let get_type_or_var meta = if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol
+
+let get_type meta =
+  if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
+
+let get_type_or_var meta =
+  if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol
 
 let change_meta m node =
   match node with
@@ -88,7 +115,8 @@ let change_meta m node =
   | CBList (_, xs) -> CBList (m, xs)
   | SBList (_, xs) -> SBList (m, xs)
 
-let change_smeta m (node : sexp) = match node with SAtom (_, x) -> SAtom (m, x) | SList (_, xs) -> SList (m, xs)
+let change_smeta m (node : sexp) =
+  match node with SAtom (_, x) -> SAtom (m, x) | SList (_, xs) -> SList (m, xs)
 
 let get_symbol = function
   | Atom (m, _) -> m.symbol
@@ -96,10 +124,19 @@ let get_symbol = function
   | SBList (m, _) -> m.symbol
   | CBList (m, _) -> m.symbol
 
-let get_sexp_symbol = function SAtom (m, _) -> m.symbol | SList (m, _) -> m.symbol
+let get_sexp_symbol = function
+  | SAtom (m, _) -> m.symbol
+  | SList (m, _) -> m.symbol
+
 let unwrap_do = function RBList (_, Atom (_, "do*") :: xs) -> xs | x -> [ x ]
-let unwrap_sexp_do = function SList (_, SAtom (_, "do*") :: xs) -> xs | x -> [ x ]
-let unwrap_single_do = function RBList (_, [ Atom (_, "do*"); xs ]) -> xs | x -> x
+
+let unwrap_sexp_do = function
+  | SList (_, SAtom (_, "do*") :: xs) -> xs
+  | x -> [ x ]
+
+let unwrap_single_do = function
+  | RBList (_, [ Atom (_, "do*"); xs ]) -> xs
+  | x -> x
 
 module StringMap = struct
   include Map.Make (String)
@@ -108,11 +145,14 @@ module StringMap = struct
     let bindings = bindings map in
     Format.fprintf fmt "@[<v>{";
     bindings
-    |> List.iter (fun (key, value) -> Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value value);
+    |> List.iter (fun (key, value) ->
+           Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
+             value);
     Format.fprintf fmt "@,}@]"
 end
 
-type function_decl = { params : cljexp list; body : cljexp list } [@@deriving show]
+type function_decl = { params : cljexp list; body : cljexp list }
+[@@deriving show]
 
 type obj =
   | OVector of meta * obj list
@@ -120,6 +160,7 @@ type obj =
   | OMap of meta * (obj * obj) list
   | OString of meta * string
   | OInt of meta * int
+  | OFloat of meta * float
   | OBool of meta * bool
   | ONil of meta
   | OLambda of meta * (obj list -> obj)
@@ -130,7 +171,9 @@ module Obj = struct
   let failobj loc xs =
     match xs with
     | [ x ] -> Printf.sprintf "%s %s" loc (show_obj x) |> failwith
-    | xs -> Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs))) |> failwith
+    | xs ->
+        Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs)))
+        |> failwith
 
   let equal a b =
     match (a, b) with
@@ -157,10 +200,23 @@ type context = {
 }
 [@@deriving show]
 
-let show_error_location filename m = Printf.sprintf "%s:%d:%d" filename m.line m.pos
-let debug_show_scope ctx = StringMap.bindings ctx.scope |> List.map (fun (k, _) -> k) |> String.concat ", "
-let debug_show_macro ctx = StringMap.bindings ctx.macros |> List.map (fun (k, _) -> k) |> String.concat ", "
-let debug_show_imports ctx = StringMap.bindings ctx.imports |> List.map (fun (k, _) -> k) |> String.concat ", "
+let show_error_location filename m =
+  Printf.sprintf "%s:%d:%d" filename m.line m.pos
+
+let debug_show_scope ctx =
+  StringMap.bindings ctx.scope
+  |> List.map (fun (k, _) -> k)
+  |> String.concat ", "
+
+let debug_show_macro ctx =
+  StringMap.bindings ctx.macros
+  |> List.map (fun (k, _) -> k)
+  |> String.concat ", "
+
+let debug_show_imports ctx =
+  StringMap.bindings ctx.imports
+  |> List.map (fun (k, _) -> k)
+  |> String.concat ", "
 
 let empty_context =
   {
@@ -187,7 +243,9 @@ module NameGenerator = struct
     Effect.Deep.match_with f ()
       {
         retc = Fun.id;
-        exnc = (fun e -> Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
+        exnc =
+          (fun e ->
+            Printexc.raise_with_backtrace e (Printexc.get_raw_backtrace ()));
         effc =
           (fun (type a) (eff : a Effect.t) ->
             match eff with
@@ -204,31 +262,50 @@ end
 module List = struct
   include List
 
-  let rec split_into_pairs = function a :: b :: rest -> (a, b) :: split_into_pairs rest | _ -> []
-  let reduce loc f xs = match xs with [] -> failwith loc | xs -> List.fold_left f (List.hd xs) (List.tl xs)
+  let rec split_into_pairs = function
+    | a :: b :: rest -> (a, b) :: split_into_pairs rest
+    | _ -> []
+
+  let reduce loc f xs =
+    match xs with
+    | [] -> failwith loc
+    | xs -> List.fold_left f (List.hd xs) (List.tl xs)
+
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
 
 let rec debug_show_cljexp1 = function
   | Atom (m, x) when m.symbol = "" -> x
   | Atom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-  | RBList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
-  | RBList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
-  | SBList (_, xs) -> "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
-  | CBList (_, xs) -> "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}"
+  | RBList (m, xs) when m.symbol = "" ->
+      "(" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
+  | RBList (m, xs) ->
+      "^" ^ m.symbol ^ " ("
+      ^ String.concat " " (List.map debug_show_cljexp1 xs)
+      ^ ")"
+  | SBList (_, xs) ->
+      "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
+  | CBList (_, xs) ->
+      "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}"
 
 let rec debug_show_sexp1 = function
   | SAtom (m, x) when m.symbol = "" -> x
   | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-  | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
-  | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
+  | SList (m, xs) when m.symbol = "" ->
+      "(" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
+  | SList (m, xs) ->
+      "^" ^ m.symbol ^ " ("
+      ^ String.concat " " (List.map debug_show_sexp1 xs)
+      ^ ")"
 
 let debug_show_cljexp nodes =
   let rec show_rec = function
     | Atom (m, x) when m.symbol = "" -> x
     | Atom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-    | RBList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
-    | RBList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | RBList (m, xs) when m.symbol = "" ->
+        "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | RBList (m, xs) ->
+        "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
     | SBList (_, xs) -> "[" ^ String.concat " " (List.map show_rec xs) ^ "]"
     | CBList (_, xs) -> "{" ^ String.concat " " (List.map show_rec xs) ^ "}"
   in
@@ -238,18 +315,26 @@ let debug_show_sexp (nodes : sexp list) =
   let rec show_rec = function
     | SAtom (m, x) when m.symbol = "" -> x
     | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-    | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
-    | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) when m.symbol = "" ->
+        "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) ->
+        "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
   in
   nodes |> List.map show_rec |> String.concat " "
 
 let debug_show_sexp_for_error ?(show_pos = false) (nodes : sexp list) =
-  let add_pos m = if show_pos then "|" ^ string_of_int m.line ^ ":" ^ string_of_int m.pos ^ "| " else "" in
+  let add_pos m =
+    if show_pos then
+      "|" ^ string_of_int m.line ^ ":" ^ string_of_int m.pos ^ "| "
+    else ""
+  in
   let rec show_rec = function
     | SAtom (m, x) when m.symbol = "" -> add_pos m ^ x
     | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ add_pos m ^ x
-    | SList (m, xs) when m.symbol = "" -> "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
-    | SList (m, xs) -> "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) when m.symbol = "" ->
+        "(" ^ String.concat " " (List.map show_rec xs) ^ ")"
+    | SList (m, xs) ->
+        "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
   in
   nodes |> List.map show_rec |> String.concat " "
 
@@ -335,6 +420,7 @@ module Functions = struct
         ^ "}"
     | OString (_, s) -> "\"" ^ Scanf.unescaped s ^ "\""
     | OInt (_, i) -> string_of_int i ^ "i"
+    | OFloat (_, f) -> string_of_float f ^ "f"
     | OBool (_, b) -> string_of_bool b ^ "b"
     | ONil _ -> "nil"
     | OLambda _ -> "lambda"
@@ -353,6 +439,7 @@ module Functions = struct
         ^ "}"
     | OString (_, s) -> "\"" ^ s ^ "\""
     | OInt (_, i) -> string_of_int i
+    | OFloat (_, f) -> string_of_float f
     | OBool (_, b) -> string_of_bool b
     | ONil _ -> "nil"
     | OLambda _ -> "lambda"
@@ -393,6 +480,7 @@ module OUtils = struct
   let rec obj_to_sexp = function
     (* *)
     | OInt (m, x) -> SAtom (m, string_of_int x)
+    | OFloat (m, x) -> SAtom (m, string_of_float x)
     | OString (m, x) -> SAtom (m, "\"" ^ x ^ "\"")
     | OList (m, xs) -> SList (m, List.map obj_to_sexp xs)
     | OQuote (_, x) -> x

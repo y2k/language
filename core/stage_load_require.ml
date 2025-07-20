@@ -26,6 +26,7 @@ let rec invoke (ctx : context) = function
       (* show_context ctx |> failwith |> ignore; *)
       (ctx, SList (meta_empty, SAtom (meta_empty, "do*") :: items))
   | SList (_, SAtom (_, "def*") :: _) as x -> (ctx, x)
+  | SList (_, SAtom (_, "if*") :: _) as x -> (ctx, x)
   (* | SList (_, SAtom (_, "quote*") :: _) as x -> (ctx, x) *)
   | SList (_, SAtom (_, n) :: _) as x
     when String.ends_with ~suffix:"*" n && n <> "*" ->

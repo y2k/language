@@ -59,6 +59,7 @@ let rec invoke = function
     when String.ends_with ~suffix:"*" name && name <> "*" ->
       failsexp __LOC__ [ x ]
   | SList (m, name :: args) ->
+      let name = invoke name in
       let args = List.map invoke args in
       SList (m, name :: args)
   | x -> failsexp __LOC__ [ x ]

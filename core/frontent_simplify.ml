@@ -30,7 +30,8 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
     prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
   match sexp with
   | SAtom (m, "__LOC__") ->
-      SAtom (meta_empty, Printf.sprintf "\"%s:%i:%i\"" ctx.otp.filename m.line m.pos)
+      SAtom
+        (meta_empty, Printf.sprintf "\"%s:%i:%i\"" ctx.otp.filename m.line m.pos)
   | SAtom _ as x -> x
   | SList (_, []) as x -> x
   | SList (m, SAtom (_, "ns") :: _ :: args) ->
@@ -74,7 +75,10 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   | SList (_, SAtom (_, "case") :: _) as x -> Macro_case.invoke (simplify ctx) x
   | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
       let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in
-      let if_args = [ cond_; then_ ] @ else_ in
+      let if_args =
+        [ SList (meta_empty, [ SAtom (meta_empty, "boolean"); cond_ ]); then_ ]
+        @ else_
+      in
       SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
   | SList (m, SAtom (mdo, "do") :: body) ->
       SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)

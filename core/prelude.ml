@@ -7,6 +7,13 @@ import java.util.*;
 
 public class RT {
 
+    public static boolean toBoolean(Object x) {
+        if (x instanceof Boolean) {
+            return (Boolean) x;
+        }
+        return x != null;
+    }
+
     public static Object eprintln(Object... xs) {
         for (Object x : xs) {
             System.err.print(x);
@@ -259,6 +266,12 @@ let prelude_java_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_boolean [x]
+  (list 'y2k.RT.toBoolean x))
+
+(defn macro_unixtime []
+  (list '/ (list '.getTime (list 'java.util.Date.)) 1000.0))
+
 (defn list [& xs] xs)
 
 (defn macro_conj [xs x]
@@ -320,10 +333,21 @@ let prelude_java_macro = {|
   (list 'java.util.concurrent.atomic.AtomicReference. x))
 
 (defn macro_reset! [a x]
-  (list
-   '.set
-   (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
-   x))
+  (let [var (gensym)]
+;;
+    (list 'let (list 'vector var x)
+          (list '.set
+                (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+                var)
+          var)
+;;
+    ))
+
+;; (defn macro_reset! [a x]
+;;   (list
+;;    '.set
+;;    (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+;;    x))
 
 (defn macro_swap! [a f]
   (list
@@ -437,6 +461,8 @@ let prelude_js_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_boolean [x] x)
 
 (defn macro_comment [x]
   (list 'do))

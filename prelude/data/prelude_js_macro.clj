@@ -1,3 +1,5 @@
+(defn macro_boolean [x] x)
+
 (defn macro_comment [x]
   (list 'do))
 

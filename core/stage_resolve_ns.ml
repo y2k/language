@@ -109,19 +109,20 @@ let do_resolve filename root_dir node =
       prelude_fns =
         StringSet.of_list
           [
-            "gensym";
-            "vendor";
-            "hash-map";
-            "reduce";
-            "map";
-            "str";
-            "get";
-            "vector";
-            "set!";
-            "drop";
+            "boolean";
             "count";
-            "vector?";
+            "drop";
+            "gensym";
+            "get";
+            "hash-map";
             "map?";
+            "map";
+            "reduce";
+            "set!";
+            "str";
+            "vector?";
+            "vector";
+            "vendor";
           ];
     }
   in

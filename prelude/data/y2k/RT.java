@@ -4,6 +4,13 @@ import java.util.*;
 
 public class RT {
 
+    public static boolean toBoolean(Object x) {
+        if (x instanceof Boolean) {
+            return (Boolean) x;
+        }
+        return x != null;
+    }
+
     public static Object eprintln(Object... xs) {
         for (Object x : xs) {
             System.err.print(x);

@@ -23,10 +23,12 @@ let rec compile (ctx : complie_context) sexp =
   | SAtom (_, x) -> x |> String.map (fun x -> if x = '/' then '.' else x)
   (* Operators *)
   | SList (_, SAtom (_, op) :: args)
-    when op = "+" || op = "-" || op = "*" || op = "/" ->
+    when op = "+" || op = "-" || op = "*" || op = "/" || op = "<" || op = "<="
+         || op = ">" || op = ">=" ->
       List.map (compile ctx) args
-      |> List.map (Printf.sprintf "((int)%s)")
-      |> String.concat op |> Printf.sprintf "(%s)"
+      |> String.concat (" " ^ op ^ " ")
+      |> Printf.sprintf "(%s)"
+  (* *)
   | SList (_, SAtom (_, "do*") :: body) ->
       body |> List.map (compile ctx) |> String.concat ";\n"
   | SList (_, [ SAtom (_, "let*"); SAtom (_, name) ]) ->
@@ -67,7 +69,7 @@ let rec compile (ctx : complie_context) sexp =
       let sargs = String.concat "," args in
       match m.symbol with
       | "" ->
-          Printf.sprintf "y2k.RT.fn((%s)->{%s\nreturn %s;\n})" sargs body
+          Printf.sprintf "y2k.RT.fn((%s)->{\n%s\nreturn %s;\n})" sargs body
             last_body
       | type_ when String.contains type_ ':' ->
           let type_parts = String.split_on_char ':' type_ in

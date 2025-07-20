@@ -40,6 +40,8 @@ let rec eval_ (ctx : eval_context) node =
   match node with
   | SAtom (m, x) when int_of_string_opt x <> None ->
       (ctx, OInt (m, int_of_string x))
+  | SAtom (m, x) when float_of_string_opt x <> None ->
+      (ctx, OFloat (m, float_of_string x))
   | SAtom (m, x) when String.starts_with ~prefix:"\"" x ->
       ( ctx,
         OString
@@ -157,6 +159,11 @@ let gensym_id = Atomic.make 1
 
 let attach_functions stdin ctx =
   ctx
+  |> reg_fun "boolean" (function
+       | [ OBool (_, x) ] -> OBool (meta_empty, x)
+       | [ ONil _ ] -> OBool (meta_empty, false)
+       | [ _ ] -> OBool (meta_empty, true)
+       | xs -> Obj.failobj __LOC__ xs)
   |> reg_fun "vec" (function
        | [ OList (_, xs) ] -> OVector (meta_empty, xs)
        | [ (OVector _ as x) ] -> x
