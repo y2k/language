@@ -181,6 +181,8 @@ module Obj = struct
     | OString (_, x), OString (_, y) -> x = y
     | OBool (_, x), OBool (_, y) -> x = y
     | ONil _, ONil _ -> true
+    | ONil _, _ -> false
+    | _, ONil _ -> false
     | a, b -> failobj __LOC__ [ a; b ]
 end
 
@@ -320,7 +322,7 @@ let debug_show_sexp (nodes : sexp list) =
     | SList (m, xs) ->
         "^" ^ m.symbol ^ " (" ^ String.concat " " (List.map show_rec xs) ^ ")"
   in
-  nodes |> List.map show_rec |> String.concat " "
+  nodes |> List.map show_rec |> String.concat " " |> Printf.sprintf "[%s]"
 
 let debug_show_sexp_for_error ?(show_pos = false) (nodes : sexp list) =
   let add_pos m =

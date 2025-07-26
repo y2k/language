@@ -142,3 +142,11 @@
   (concat
    (list 'java.util.Arrays.asList)
    xs))
+
+;; Collections
+
+(defn macro_shuffle [seed xs]
+  (list 'y2k.RT.shuffle seed xs))
+
+(defn macro_take [n xs]
+  (list 'y2k.RT.take n xs))

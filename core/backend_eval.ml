@@ -159,6 +159,21 @@ let gensym_id = Atomic.make 1
 
 let attach_functions stdin ctx =
   ctx
+  |> reg_fun "with-meta" (fun xs ->
+         match xs with
+         | [ o; OString (_, symbol) ] -> (
+             match o with
+             | ONil m -> ONil { m with symbol }
+             | OVector (m, xs) -> OVector ({ m with symbol }, xs)
+             | OList (m, xs) -> OList ({ m with symbol }, xs)
+             | OMap (m, xs) -> OMap ({ m with symbol }, xs)
+             | OString (m, s) -> OString ({ m with symbol }, s)
+             | OInt (m, i) -> OInt ({ m with symbol }, i)
+             | OFloat (m, f) -> OFloat ({ m with symbol }, f)
+             | OBool (m, b) -> OBool ({ m with symbol }, b)
+             | OLambda (m, f) -> OLambda ({ m with symbol }, f)
+             | OQuote (m, n) -> OQuote ({ m with symbol }, n))
+         | x -> Obj.failobj __LOC__ x)
   |> reg_fun "boolean" (function
        | [ OBool (_, x) ] -> OBool (meta_empty, x)
        | [ ONil _ ] -> OBool (meta_empty, false)
@@ -285,10 +300,10 @@ let attach_functions stdin ctx =
            OVector (meta_empty, List.map (fun x -> f [ x ]) xs)
        | x -> Obj.failobj __LOC__ x)
 
-let eval1 (stdin : string) node =
+let eval1 ctx (stdin : string) node =
   (* prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ]; *)
   rec_level := 0;
-  let ctx = attach_functions stdin empty_eval_context in
+  let ctx = attach_functions stdin ctx in
   node |> eval_ ctx
 
 let convert_to_ns path =
@@ -298,7 +313,9 @@ let convert_to_ns path =
 
 let eval2 (log : bool) (filename : string) (stdin : string) code =
   let _origin_filename = filename in
-  let get_macro node = eval1 "" node |> fst |> get_all_functions in
+  let get_macro node =
+    eval1 empty_eval_context "" node |> fst |> get_all_functions
+  in
   let rec serialize_to_string = function
     | SAtom (_, x) -> x
     | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
@@ -331,7 +348,12 @@ let eval2 (log : bool) (filename : string) (stdin : string) code =
     |> log_stage log (type_ ^ " Stage_flat_do")
   in
   NameGenerator.with_scope (fun () ->
-      Prelude.prelude_eval ^ code
+      code
       |> eval3 "[EVAL]" (get_dir filename) filename
-      |> eval1 stdin |> snd |> OUtils.obj_to_sexp |> serialize_to_string
-      |> unpack_string)
+      |> eval1
+           (fst
+              (eval_
+                 (attach_functions "" empty_eval_context)
+                 (eval3 "[PRELUDE]" "" "prelude.clj" Prelude.prelude_eval)))
+           stdin
+      |> snd |> OUtils.obj_to_sexp |> serialize_to_string |> unpack_string)

@@ -100,30 +100,33 @@ let rec resolve (ctx : resolve_ctx) node =
   | x -> failsexp __LOC__ [ x ]
 
 let do_resolve filename root_dir node =
-  let ctx =
-    {
-      links = [];
-      aliases = [];
-      filename;
-      root_dir;
-      prelude_fns =
-        StringSet.of_list
-          [
-            "boolean";
-            "count";
-            "drop";
-            "gensym";
-            "get";
-            "hash-map";
-            "map?";
-            "map";
-            "reduce";
-            "set!";
-            "str";
-            "vector?";
-            "vector";
-            "vendor";
-          ];
-    }
-  in
-  resolve ctx node |> snd
+  if filename = "prelude.clj" then node
+  else
+    let ctx =
+      {
+        links = [];
+        aliases = [];
+        filename;
+        root_dir;
+        prelude_fns =
+          StringSet.of_list
+            [
+              "boolean";
+              "count";
+              "drop";
+              "gensym";
+              "get";
+              "hash-map";
+              "map?";
+              "map";
+              "reduce";
+              "set!";
+              "some?";
+              "str";
+              "vector?";
+              "vector";
+              "vendor";
+            ];
+      }
+    in
+    resolve ctx node |> snd

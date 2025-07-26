@@ -33,11 +33,16 @@ let rec compile (ctx : complie_context) sexp =
   (* *)
   | SList (_, [ SAtom (_, "int"); x ]) ->
       compile ctx x |> Printf.sprintf "((int)%s)"
+  | SList (_, [ SAtom (_, "double"); x ]) ->
+      compile ctx x |> Printf.sprintf "((double)%s)"
   (* *)
   | SList (_, SAtom (_, "do*") :: body) ->
       body |> List.map (compile ctx) |> String.concat ";\n"
-  | SList (_, [ SAtom (_, "let*"); SAtom (_, name) ]) ->
-      Printf.sprintf "Object %s" name
+  | SList (_, [ SAtom (_, "let*"); SAtom (mt, name) ]) ->
+      let type_ =
+        if mt.symbol = "private" || mt.symbol = "" then "Object" else mt.symbol
+      in
+      Printf.sprintf "%s %s" type_ name
   | SList (_, [ SAtom (_, "let*"); SAtom (mt, name); value ]) ->
       let type_ =
         if mt.symbol = "private" || mt.symbol = "" then "var" else mt.symbol
@@ -170,7 +175,7 @@ let do_compile (opt : compile_opt) sexp =
   Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
 
 let get_macro node =
-  let ctx = Backend_eval.eval1 "" node |> fst in
+  let ctx = Backend_eval.eval1 Backend_eval.empty_eval_context "" node |> fst in
   Backend_eval.get_all_functions ctx
 
 let compile (namespace : string) (log : bool) (filename : string)

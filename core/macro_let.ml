@@ -1,60 +1,37 @@
 open Common
 
-let invoke desugar_and_register _context (node : sexp) : sexp =
-  let expand_core_macro2 = desugar_and_register in
-  match node with
-  | SList (m2, SAtom (_, "let") :: SList (_, _ :: vals) :: body) -> (
-      let unpack_let_args args =
-        let rec loop = function
-          | [] -> []
-          | SAtom (m, "_") :: v :: tail ->
-              SAtom (m, NameGenerator.get_new_var ())
-              :: expand_core_macro2 v :: loop tail
-          | (SAtom _ as k) :: v :: tail ->
-              k :: expand_core_macro2 v :: loop tail
-          | SList (m, _ :: xs) :: v :: tail ->
-              let temp_val = NameGenerator.get_new_var () in
-              let a = [ SAtom (meta_empty, temp_val); expand_core_macro2 v ] in
-              let b =
-                xs
-                |> List.fold_left
-                     (fun (i, acc) x ->
-                       let binding =
-                         match x with
-                         | SAtom (_, "_") -> []
-                         | x ->
-                             [
-                               x;
-                               expand_core_macro2
-                                 (SList
-                                    ( m,
-                                      [
-                                        SAtom (meta_empty, "get");
-                                        SAtom (meta_empty, temp_val);
-                                        SAtom (meta_empty, string_of_int i);
-                                      ] ));
-                             ]
-                       in
-                       (i + 1, acc @ binding))
-                     (0, a)
-                |> snd
-              in
-              b @ loop tail
-          | xs -> failsexp __LOC__ xs
-        in
-        SList (m2, [ SAtom (meta_empty, "let*"); SList (meta_empty, loop args) ])
+let rec loop = function
+  | [] -> []
+  | (SAtom (_, "_"), _) :: tail -> loop tail
+  | ((SAtom _, _) as kv) :: tail -> kv :: loop tail
+  | ((SList (_, SAtom (_, "vector") :: _) as k), (SList _ as v)) :: tail ->
+      let nv = SAtom (meta_empty, NameGenerator.get_new_var ()) in
+      loop ((nv, v) :: (k, nv) :: tail)
+  | (SList (_, SAtom (_, "vector") :: kps), (SAtom _ as v)) :: tail ->
+      let xs =
+        kps
+        |> List.mapi (fun i k ->
+               ( k,
+                 SList
+                   ( meta_empty,
+                     [
+                       SAtom (meta_empty, "get");
+                       v;
+                       SAtom (meta_empty, string_of_int i);
+                     ] ) ))
       in
-      match unpack_let_args vals with
-      | SList (_, _l :: SList (_, args) :: let_body) ->
-          let body = List.map desugar_and_register body in
-          let lets =
-            List.split_into_pairs args
-            |> List.map (fun (k, v) ->
-                   let v = expand_core_macro2 v in
-                   SList (meta_empty, [ SAtom (meta_empty, "let"); k; v ]))
-          in
-          (* SList (m3, (l :: SList (m4, args) :: let_body) @ body) *)
-          SList (m2, SAtom (meta_empty, "do") :: (lets @ let_body @ body))
-          |> desugar_and_register
-      | n -> failsexp __LOC__ [ n ])
+      loop (xs @ tail)
+  | xs -> failsexp __LOC__ (List.concat_map (fun (k, v) -> [ k; v ]) xs)
+
+let mk_let k v = SList (meta_empty, [ SAtom (meta_empty, "let*"); k; v ])
+
+let invoke simplify _context = function
+  | SList
+      (m2, SAtom (_, "let") :: SList (_, SAtom (_, "vector") :: vals) :: body)
+    ->
+      let lets =
+        loop (List.split_into_pairs vals)
+        |> List.map (fun (k, v) -> mk_let k (simplify v))
+      in
+      SList (m2, (SAtom (meta_empty, "do") :: lets) @ body) |> simplify
   | node -> failsexp __LOC__ [ node ]

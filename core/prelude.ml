@@ -36,6 +36,19 @@ public class RT {
 
     // Collections
 
+    public static List<Object> take(Object n, Object xs) {
+        var col = (List<Object>) xs;
+        return col.subList(0, (Integer) n);
+    }
+
+    public static List<Object> shuffle(Object seed, Object xs) {
+        var col = (Collection<Object>) xs;
+        var result = new ArrayList<>(col);
+        var seed2 = (long) (((double) seed) * Long.MAX_VALUE);
+        Collections.shuffle(result, new Random(seed2));
+        return result;
+    }
+
     public static List<Object> conj(Object xs, Object x) {
         var col = (Collection<Object>) xs;
         var result = new ArrayList<>(col);
@@ -410,6 +423,15 @@ let prelude_java_macro = {|
   (concat
    (list 'java.util.Arrays.asList)
    xs))
+
+;; Collections
+
+(defn macro_shuffle [seed xs]
+  (list 'y2k.RT.shuffle seed xs))
+
+(defn macro_take [n xs]
+  (list 'y2k.RT.take n xs))
+
 |}
 
 let prelude_eval_macro = {|
@@ -444,8 +466,13 @@ let prelude_eval = {|
 
 ;; Specific target prelude
 
-(def* vector
-  (fn* [& xs] xs))
+(def* vector (fn* [& xs] xs))
+
+(defn not [x] (if x false true))
+
+(defn nil? [x] (= x nil))
+(defn some? [x] (not (nil? x)))
+
 |}
 
 let prelude_js_macro = {|

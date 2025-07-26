@@ -60,9 +60,14 @@ let tests =
   [
     ( __LOC__,
       {|
+    (defn test6 [] (if (= 3 (count (take 3 [1 2 3 4 5 6]))) 64 0))
+    (defn test5 [] (if (= [3 2 1] (shuffle 0.0 [1 2 3])) 32 0))
+    (defn test4 [] (let [[y [x]] [0 [16]]] x))
+    (defn test3 [] (let [x (int (double 8))]) x)
+    (defn test2 [] (let [x (int (count [1 2 3])) ^int y (+ 1 x)]) 4)
     (defn test1 [] (if (= 5 (mod 33 7)) 2 0))
-    (defn run [] (+ 0 (int (test1))))|},
-      "2" );
+    (defn run [] (+ 1 (int (test6)) (int (test5)) (int (test4)) (int (test3)) (int (test2)) (int (test1))))|},
+      "127" );
     (* Atom *)
     (__LOC__, {|(defn run [] (let [x (atom 0)] (reset! x 42)))|}, {|42|});
     (* *)

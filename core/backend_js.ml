@@ -153,7 +153,7 @@ let rec do_compile (ctx : context) = function
 (* *)
 
 let get_macro node =
-  let ctx = Backend_eval.eval1 "" node |> fst in
+  let ctx = Backend_eval.eval1 Backend_eval.empty_eval_context "" node |> fst in
   Backend_eval.get_all_functions ctx
 
 let compile ~log ~filename code =

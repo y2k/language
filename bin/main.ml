@@ -25,14 +25,27 @@ let () =
       | "java" -> print_endline @@ Prelude.java_runtime
       | _ -> failwith @@ "Invalid target " ^ !target)
   | _ -> (
-      let code = In_channel.(with_open_bin !src input_all) in
+      let code _ = In_channel.(with_open_bin !src input_all) in
       match !target with
-      | "java" -> FileReader.with_scope (fun _ -> Core.compile !namespace !log !src !root_dir code |> print_endline) ()
-      | "js" -> FileReader.with_scope (fun _ -> Backend_js.compile ~log:!log code ~filename:!src |> print_endline) ()
+      | "java" ->
+          FileReader.with_scope
+            (fun _ ->
+              Core.compile !namespace !log !src !root_dir (code ())
+              |> print_endline)
+            ()
+      | "js" ->
+          FileReader.with_scope
+            (fun _ ->
+              Backend_js.compile ~log:!log (code ()) ~filename:!src
+              |> print_endline)
+            ()
       | "eval" | "repl" ->
           FileReader.with_scope
             (fun () ->
-              let input = if !capture_stdin then In_channel.(with_open_bin !src input_all) else "" in
-              Core.eval !log !src input code |> print_endline)
+              let input =
+                if !capture_stdin then In_channel.(with_open_bin !src input_all)
+                else ""
+              in
+              Core.eval !log !src input (code ()) |> print_endline)
             ()
       | t -> failwith @@ "Invalid target " ^ t)
