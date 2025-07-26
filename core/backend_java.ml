@@ -28,6 +28,11 @@ let rec compile (ctx : complie_context) sexp =
       List.map (compile ctx) args
       |> String.concat (" " ^ op ^ " ")
       |> Printf.sprintf "(%s)"
+  | SList (_, [ SAtom (_, "mod"); x; y ]) ->
+      Printf.sprintf "(%s %% %s)" (compile ctx x) (compile ctx y)
+  (* *)
+  | SList (_, [ SAtom (_, "int"); x ]) ->
+      compile ctx x |> Printf.sprintf "((int)%s)"
   (* *)
   | SList (_, SAtom (_, "do*") :: body) ->
       body |> List.map (compile ctx) |> String.concat ";\n"

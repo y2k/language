@@ -58,6 +58,11 @@ end
 
 let tests =
   [
+    ( __LOC__,
+      {|
+    (defn test1 [] (if (= 5 (mod 33 7)) 2 0))
+    (defn run [] (+ 0 (int (test1))))|},
+      "2" );
     (* Atom *)
     (__LOC__, {|(defn run [] (let [x (atom 0)] (reset! x 42)))|}, {|42|});
     (* *)
@@ -149,6 +154,5 @@ let tests =
     (__LOC__, {|(defn run [] (if (= 2 2) 3 4))|}, {|3|});
     (__LOC__, {|(defn run [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn run [] (if true 2 3))|}, {|2|});
-    (__LOC__, {|(defn run [] 2)|}, {|2|});
   ]
   |> JavaExecution.create_tests
