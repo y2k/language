@@ -18,6 +18,7 @@ end
 
 let tests =
   [
+    (__LOC__, {|(or nil nil 2 nil)|}, "2");
     (__LOC__, {|(if (some? (:b {:a 1 :b 2 :c 3})) 2 3)|}, "2");
     (__LOC__, {|(if (some? (:d {:a 1 :b 2 :c 3})) 2 3)|}, "3");
     ( __LOC__,
