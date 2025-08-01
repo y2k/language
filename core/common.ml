@@ -175,13 +175,14 @@ module Obj = struct
         Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs)))
         |> failwith
 
-  let equal a b =
+  let rec equal a b =
     match (a, b) with
     | OInt (_, x), OInt (_, y) -> x = y
     | OString (_, x), OString (_, y) -> x = y
     | OBool (_, x), OBool (_, y) -> x = y
     | ONil _, ONil _ -> true
     | ONil _, _ -> false
+    | OVector (_, xs), OVector (_, ys) -> List.for_all2 equal xs ys
     | _, ONil _ -> false
     | a, b -> failobj __LOC__ [ a; b ]
 end

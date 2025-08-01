@@ -104,7 +104,7 @@
 
 (defn macro_hash-map [& xs]
   (concat
-   (list 'java.util.Map.of)
+   (list 'y2k.RT.hash_map)
    xs))
 
 (defn macro_count [xs]
@@ -140,12 +140,45 @@
     (reduce (fn* [acc x] (str acc "%s")) "" xs))
    xs))
 
+(defn macro_string? [x]
+  (list 'instance? 'String x))
+
+(defn macro_boolean? [x]
+  (list 'instance? 'Boolean (list 'cast 'Object x)))
+
+(defn macro_println [& xs]
+  (list 'System.out.println
+        (concat (list 'str) xs)))
+
+(defn macro_eprintln [& xs]
+  (list 'System.err.println
+        (concat (list 'str) xs)))
+
+;; Collections
+
+(defn macro_vec [x] x)
+
+(defn macro_list [& xs]
+  (concat
+   (list 'java.util.Arrays.asList)
+   xs))
+
 (defn macro_vector [& xs]
   (concat
    (list 'java.util.Arrays.asList)
    xs))
 
-;; Collections
+(defn macro_reduce [f init xs]
+  (list 'y2k.RT.reduce f init xs))
+
+(defn macro_second [xs]
+  (list 'get xs 1))
+
+(defn macro_vector? [xs]
+  (list 'instance? 'java.util.List xs))
+
+(defn macro_contains? [m k]
+  (list 'y2k.RT.contains m k))
 
 (defn macro_shuffle [seed xs]
   (list 'y2k.RT.shuffle seed xs))

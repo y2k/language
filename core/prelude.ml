@@ -36,6 +36,33 @@ public class RT {
 
     // Collections
 
+    public static Object hash_map(Object... xs) {
+        var result = new HashMap<Object, Object>();
+        for (int i = 0; i < xs.length; i += 2) {
+            result.put(xs[i], xs[i + 1]);
+        }
+        return result;
+    }
+
+    public static Object reduce(Object f, Object init, Object xs) {
+        var func = (Fn2) f;
+        var col = (Collection<Object>) xs;
+        var result = init;
+        for (Object x : col) {
+            try {
+                result = func.invoke(result, x);
+            } catch (Exception e) {
+                throwException(e, null);
+            }
+        }
+        return result;
+    }
+
+    public static Boolean contains(Object xs, Object x) {
+        var col = (Map<?, ?>) xs;
+        return col.containsKey(x);
+    }
+
     public static List<Object> take(Object n, Object xs) {
         var col = (List<Object>) xs;
         return col.subList(0, (Integer) n);
@@ -385,7 +412,7 @@ let prelude_java_macro = {|
 
 (defn macro_hash-map [& xs]
   (concat
-   (list 'java.util.Map.of)
+   (list 'y2k.RT.hash_map)
    xs))
 
 (defn macro_count [xs]
@@ -421,12 +448,45 @@ let prelude_java_macro = {|
     (reduce (fn* [acc x] (str acc "%s")) "" xs))
    xs))
 
+(defn macro_string? [x]
+  (list 'instance? 'String x))
+
+(defn macro_boolean? [x]
+  (list 'instance? 'Boolean (list 'cast 'Object x)))
+
+(defn macro_println [& xs]
+  (list 'System.out.println
+        (concat (list 'str) xs)))
+
+(defn macro_eprintln [& xs]
+  (list 'System.err.println
+        (concat (list 'str) xs)))
+
+;; Collections
+
+(defn macro_vec [x] x)
+
+(defn macro_list [& xs]
+  (concat
+   (list 'java.util.Arrays.asList)
+   xs))
+
 (defn macro_vector [& xs]
   (concat
    (list 'java.util.Arrays.asList)
    xs))
 
-;; Collections
+(defn macro_reduce [f init xs]
+  (list 'y2k.RT.reduce f init xs))
+
+(defn macro_second [xs]
+  (list 'get xs 1))
+
+(defn macro_vector? [xs]
+  (list 'instance? 'java.util.List xs))
+
+(defn macro_contains? [m k]
+  (list 'y2k.RT.contains m k))
 
 (defn macro_shuffle [seed xs]
   (list 'y2k.RT.shuffle seed xs))
@@ -474,6 +534,11 @@ let prelude_eval = {|
 
 (defn nil? [x] (= x nil))
 (defn some? [x] (not (nil? x)))
+
+(defn not= [a b] (not (= a b)))
+
+(defn first [xs] (get xs 0))
+(defn second [xs] (get xs 1))
 
 |}
 
@@ -547,6 +612,19 @@ let prelude_js_macro = {|
   (list 'RegExp. x))
 
 ;; Collections
+
+(defn macro_vec [x] x)
+
+(defn macro_list [& xs]
+  (concat
+   (list 'vector)
+   xs))
+
+(defn macro_second [xs]
+  (list 'get xs 1))
+
+(defn macro_contains? [xs x]
+  (list '.hasOwnProperty xs x))
 
 (defn macro_rest [xs]
   (list '.slice xs 1))

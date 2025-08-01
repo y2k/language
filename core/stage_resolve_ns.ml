@@ -111,18 +111,29 @@ let do_resolve filename root_dir node =
         prelude_fns =
           StringSet.of_list
             [
+              "boolean?";
               "boolean";
+              "contains?";
               "count";
               "drop";
+              "eprintln";
+              "first";
               "gensym";
               "get";
               "hash-map";
+              "list";
               "map?";
               "map";
+              "not";
+              "not=";
+              "println";
               "reduce";
+              "second";
               "set!";
               "some?";
               "str";
+              "string?";
+              "vec";
               "vector?";
               "vector";
               "vendor";

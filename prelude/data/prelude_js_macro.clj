@@ -55,6 +55,19 @@
 
 ;; Collections
 
+(defn macro_vec [x] x)
+
+(defn macro_list [& xs]
+  (concat
+   (list 'vector)
+   xs))
+
+(defn macro_second [xs]
+  (list 'get xs 1))
+
+(defn macro_contains? [xs x]
+  (list '.hasOwnProperty xs x))
+
 (defn macro_rest [xs]
   (list '.slice xs 1))
 

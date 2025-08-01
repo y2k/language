@@ -33,6 +33,33 @@ public class RT {
 
     // Collections
 
+    public static Object hash_map(Object... xs) {
+        var result = new HashMap<Object, Object>();
+        for (int i = 0; i < xs.length; i += 2) {
+            result.put(xs[i], xs[i + 1]);
+        }
+        return result;
+    }
+
+    public static Object reduce(Object f, Object init, Object xs) {
+        var func = (Fn2) f;
+        var col = (Collection<Object>) xs;
+        var result = init;
+        for (Object x : col) {
+            try {
+                result = func.invoke(result, x);
+            } catch (Exception e) {
+                throwException(e, null);
+            }
+        }
+        return result;
+    }
+
+    public static Boolean contains(Object xs, Object x) {
+        var col = (Map<?, ?>) xs;
+        return col.containsKey(x);
+    }
+
     public static List<Object> take(Object n, Object xs) {
         var col = (List<Object>) xs;
         return col.subList(0, (Integer) n);
