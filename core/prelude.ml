@@ -279,6 +279,8 @@ let prelude_java_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_declare [x] (list 'do))
+
 (defn macro_boolean [x]
   (list 'y2k.RT.toBoolean x))
 

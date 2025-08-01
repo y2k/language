@@ -60,6 +60,7 @@ let tests =
   [
     ( __LOC__,
       {|
+    (declare parse)
     (defn test6 [] (if (= 3 (count (take 3 [1 2 3 4 5 6]))) 64 0))
     (defn test5 [] (if (= [3 2 1] (shuffle 0.0 [1 2 3])) 32 0))
     (defn test4 [] (let [[y [x]] [0 [16]]] x))
