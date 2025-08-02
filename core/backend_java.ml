@@ -20,7 +20,8 @@ let rec compile (ctx : complie_context) sexp =
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
-  | SAtom (_, x) -> x |> String.map (fun x -> if x = '/' then '.' else x)
+  (* | SAtom (_, x) -> x |> String.map (fun x -> if x = '/' then '.' else x) *)
+  | SAtom (_, x) -> x
   (* Operators *)
   | SList (_, SAtom (_, op) :: args)
     when op = "+" || op = "-" || op = "*" || op = "/" || op = "<" || op = "<="
@@ -183,14 +184,7 @@ let compile (namespace : string) (log : bool) (filename : string)
   Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontent_simplify.do_simplify get_macro
-           {
-             log;
-             macro = Prelude.prelude_java_macro;
-             filename;
-             root_dir;
-             compile =
-               (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
-           }
+           { log; macro = Prelude.prelude_java_macro; filename; root_dir }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve filename root_dir

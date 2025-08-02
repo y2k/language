@@ -162,11 +162,6 @@ let eval2 (log : bool) (filename : string) (stdin : string) code =
            macro = Prelude.prelude_eval_macro;
            filename;
            root_dir;
-           compile =
-             (fun path ->
-               let code = FileReader.read path in
-               (* prerr_endline @@ "[LOG] path: " ^ path ^ ", code: " ^ code; *)
-               eval3 "  [COMPILE2]" (get_dir filename) filename code);
          }
     |> Stage_resolve_ns.do_resolve filename root_dir
     |> log_stage log (type_ ^ " Stage_resolve_ns")

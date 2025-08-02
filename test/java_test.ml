@@ -1,4 +1,5 @@
 open Core__.Common
+open Core__
 
 module JavaExecution : sig
   val create_tests :
@@ -42,13 +43,13 @@ public static void main(String[] args) {System.exit((int) RT.invoke(user.test));
            Alcotest.test_case loc `Quick (fun () ->
                let ext_module =
                  {|(ns _) (defn foo [x] x)|}
-                 |> Core.compile "lib" false "/app/src/core/ext/lib/eff.clj"
-                      "/app/src"
+                 |> Backend_java.compile "lib" false
+                      "/app/src/core/ext/lib/eff.clj" "/app/src"
                in
                let code =
                  FileReader.with_stub_scope ""
-                   (Core.compile "y2k.root" true "/app/src/core/ext/user.clj"
-                      "/app/src")
+                   (Backend_java.compile "y2k.root" true
+                      "/app/src/core/ext/user.clj" "/app/src")
                    input
                in
                let actual = ext_module ^ "\n" ^ code |> run in

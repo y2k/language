@@ -27,10 +27,14 @@ let () =
   | _ -> (
       let code _ = In_channel.(with_open_bin !src input_all) in
       match !target with
+      | "sexp" ->
+          FileReader.with_scope
+            (fun _ -> Backend_sexp.invoke ~log:!log (code ()) |> print_endline)
+            ()
       | "java" ->
           FileReader.with_scope
             (fun _ ->
-              Core.compile !namespace !log !src !root_dir (code ())
+              Backend_java.compile !namespace !log !src !root_dir (code ())
               |> print_endline)
             ()
       | "js" ->
@@ -46,6 +50,6 @@ let () =
                 if !capture_stdin then In_channel.(with_open_bin !src input_all)
                 else ""
               in
-              Core.eval !log !src input (code ()) |> print_endline)
+              Backend_eval.eval2 !log !src input (code ()) |> print_endline)
             ()
       | t -> failwith @@ "Invalid target " ^ t)

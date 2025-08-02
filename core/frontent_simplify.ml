@@ -5,7 +5,6 @@ type simplify_opt = {
   macro : string;
   filename : string;
   root_dir : string;
-  compile : string -> sexp;
 }
 
 type simplify_ctx = {

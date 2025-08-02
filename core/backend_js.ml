@@ -163,14 +163,7 @@ let compile ~log ~filename code =
       (* prerr_endline @@ "LOG: code: " ^ code; *)
       code
       |> Frontent_simplify.do_simplify get_macro
-           {
-             log;
-             macro = Prelude.prelude_js_macro;
-             filename;
-             root_dir;
-             compile =
-               (fun _ -> SList (meta_empty, [ SAtom (meta_empty, "do") ]));
-           }
+           { log; macro = Prelude.prelude_js_macro; filename; root_dir }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
