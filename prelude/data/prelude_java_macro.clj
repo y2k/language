@@ -147,12 +147,16 @@
   (list 'instance? 'Boolean (list 'cast 'Object x)))
 
 (defn macro_println [& xs]
-  (list 'System.out.println
-        (concat (list 'str) xs)))
+  (list 'do
+        (list 'System.out.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
 
 (defn macro_eprintln [& xs]
-  (list 'System.err.println
-        (concat (list 'str) xs)))
+  (list 'do
+        (list 'System.err.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
 
 ;; Collections
 

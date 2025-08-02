@@ -7,6 +7,10 @@ import java.util.*;
 
 public class RT {
 
+    public static Object nop() {
+        return null;
+    }
+
     public static boolean toBoolean(Object x) {
         if (x instanceof Boolean) {
             return (Boolean) x;
@@ -455,12 +459,16 @@ let prelude_java_macro = {|
   (list 'instance? 'Boolean (list 'cast 'Object x)))
 
 (defn macro_println [& xs]
-  (list 'System.out.println
-        (concat (list 'str) xs)))
+  (list 'do
+        (list 'System.out.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
 
 (defn macro_eprintln [& xs]
-  (list 'System.err.println
-        (concat (list 'str) xs)))
+  (list 'do
+        (list 'System.err.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
 
 ;; Collections
 

@@ -12,6 +12,8 @@ let tests =
 (if (= (str [1 2]) (str (vec (list 1 2))))                nil (FIXME))
 (println  "1" "2")
 (eprintln "1" "2")
+(let t1 (println  "1" "2"))
+(let t2 (eprintln "1" "2"))
   0)|},
       "0" );
   ]

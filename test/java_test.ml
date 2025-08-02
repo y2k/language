@@ -139,11 +139,13 @@ let tests =
            :name MyClass
            :extends Thread
            :prefix "sample_"
-           :methods [[add [int int] int]])
-          (defn sample_add [self ^int a ^int b]
-            (+ a b))
-          (defn test []
-            (.add (MyClass.) 40 2))|},
+           :methods [[add [int int] int]
+                     [^:static foo1 ["String[]"] Object]
+                     [^:static foo2 [] void]])
+          (defn sample_foo1 [_] nil)
+          (defn sample_foo2 [] nil)
+          (defn sample_add [self ^int a ^int b] (+ a b))
+          (defn test [] (.add (MyClass.) 40 2))|},
         {|42|} );
       (* *)
       (__LOC__, {|(defn test [] (.hashCode (new String "2")))|}, {|50|});

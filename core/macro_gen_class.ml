@@ -7,15 +7,39 @@ let convert_opts opts =
        | k, v -> failsexp __LOC__ [ k; v ])
 
 let generate_method annot args ret_type prefix name =
+  let method_annot, is_static =
+    match annot with
+    | "Override" -> ([], false)
+    | ":static" -> ([], true)
+    | "" -> ([], false)
+    | x ->
+        ( [
+            pack_string "@";
+            SList
+              ( meta_empty,
+                [ SAtom (meta_empty, "__compiler_resolve_type"); pack_string x ]
+              );
+            pack_string "\n";
+          ],
+          false )
+  in
   let body =
     let args =
       args |> List.mapi (fun i _ -> Printf.sprintf ",p%i" i) |> String.concat ""
     in
-    match ret_type with
-    | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args
-    | _ ->
-        Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this%s)" ret_type prefix
-          name args
+    if is_static then
+      (* let args = if args == "" then args else "," ^ args in *)
+      match ret_type with
+      | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s%s)" prefix name args
+      | _ ->
+          Printf.sprintf "return (%s)y2k.RT.invoke(%s%s%s)" ret_type prefix name
+            args
+    else
+      match ret_type with
+      | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args
+      | _ ->
+          Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this%s)" ret_type prefix
+            name args
   in
   let args2 =
     args
@@ -28,7 +52,7 @@ let generate_method annot args ret_type prefix name =
                    ( meta_empty,
                      [
                        SAtom (meta_empty, "__compiler_resolve_type");
-                       pack_string a;
+                       pack_string (unpack_string a);
                      ] );
                  pack_string (Printf.sprintf " p%i" i);
                ]
@@ -50,21 +74,10 @@ let generate_method annot args ret_type prefix name =
       Printf.sprintf "super.%s(%s);\n" name args__
     else ""
   in
-  let method_annot =
-    match annot with
-    | "Override" -> []
-    | "" -> []
-    | x ->
-        [
-          pack_string "@";
-          SList
-            ( meta_empty,
-              [ SAtom (meta_empty, "__compiler_resolve_type"); pack_string x ]
-            );
-          pack_string "\n";
-        ]
+  let static_annot = if is_static then "static " else "" in
+  let prefix =
+    pack_string (Printf.sprintf "public %s%s %s(" static_annot ret_type name)
   in
-  let prefix = pack_string (Printf.sprintf "public %s %s(" ret_type name) in
   let suffix = pack_string (Printf.sprintf ") {\n%s%s;\n}" call_super body) in
   method_annot @ [ prefix ] @ args2 @ [ suffix ]
 

@@ -4,6 +4,10 @@ import java.util.*;
 
 public class RT {
 
+    public static Object nop() {
+        return null;
+    }
+
     public static boolean toBoolean(Object x) {
         if (x instanceof Boolean) {
             return (Boolean) x;
