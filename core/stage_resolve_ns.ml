@@ -126,13 +126,16 @@ let do_resolve filename root_dir node =
               "map";
               "not";
               "not=";
+              "parse-int";
               "println";
               "reduce";
+              "rest";
               "second";
               "set!";
               "some?";
               "str";
               "string?";
+              "subs";
               "vec";
               "vector?";
               "vector";

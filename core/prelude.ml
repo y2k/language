@@ -310,6 +310,21 @@ let prelude_java_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_parse-int [s]
+  (list 'Integer/parseInt
+        (list 'cast 'String s)))
+
+(defn macro_subs [s sp ep]
+  (list '.substring
+        (list 'cast 'String s)
+        (list 'cast 'int sp)
+        (list 'cast 'int ep)))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith
+        (list 'cast 'String s)
+        (list 'cast 'String prefix)))
+
 (defn macro_declare [x] (list 'do))
 
 (defn macro_boolean [x]
@@ -344,7 +359,7 @@ let prelude_java_macro = {|
     (list
      'do
      (list
-      'let* xs_var (list 'cast 'java.util.List xs))
+      'let xs_var (list 'cast 'java.util.List xs))
      (list '.subList xs_var 1 (list '.size xs_var)))))
 
 (defn macro_concat [& xs]
@@ -423,12 +438,14 @@ let prelude_java_macro = {|
   (let* vxs (gensym))
   (list
    'do
-   (list 'let vxs xs)
+   (list 'let vxs (list 'cast 'Object xs))
    (list
-    'if
-    (list 'instance? 'java.util.Map vxs)
+    'if (list 'instance? 'java.util.Map vxs)
     (list '. (list 'cast 'java.util.Map vxs) 'size)
-    (list '. (list 'cast 'java.util.Collection vxs) 'size))))
+    (list
+     'if (list 'string? vxs)
+     (list '.length (list 'cast 'String vxs))
+     (list '. (list 'cast 'java.util.Collection vxs) 'size)))))
 
 (defn macro_get [xs k]
   (list 'y2k.RT.get xs k))
@@ -563,6 +580,15 @@ let prelude_js_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_parse-int [s]
+  (list 'parseInt s))
+
+(defn macro_subs [s sp ep]
+  (list '.substring s sp ep))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith s prefix))
 
 (defn macro_boolean [x] x)
 

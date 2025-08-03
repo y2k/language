@@ -25,6 +25,17 @@ let re_find pattern str =
 
 let attach reg_val reg_fun stdin ctx =
   ctx
+  |> reg_fun "parse-int" (function
+       | [ OString (_, s) ] -> OInt (meta_empty, int_of_string s)
+       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "subs" (function
+       | [ OString (_, s); OInt (_, p); OInt (_, l) ] ->
+           OString (meta_empty, String.sub s p (p + l))
+       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "rest" (function
+       | [ OList (_, xs) ] -> OList (meta_empty, List.tl xs)
+       | [ OVector (_, xs) ] -> OVector (meta_empty, List.tl xs)
+       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "eprintln" (fun xs ->
          let s = xs |> List.map show_obj |> String.concat " " in
          prerr_endline s;
@@ -124,6 +135,7 @@ let attach reg_val reg_fun stdin ctx =
          match xs with
          | [ OList (_, xs) ] -> OInt (meta_empty, List.length xs)
          | [ OVector (_, xs) ] -> OInt (meta_empty, List.length xs)
+         | [ OString (_, s) ] -> OInt (meta_empty, String.length s)
          | x -> Obj.failobj __LOC__ x)
   |> reg_fun "string/split" (fun xs ->
          match xs with

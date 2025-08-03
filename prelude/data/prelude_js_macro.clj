@@ -1,3 +1,12 @@
+(defn macro_parse-int [s]
+  (list 'parseInt s))
+
+(defn macro_subs [s sp ep]
+  (list '.substring s sp ep))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith s prefix))
+
 (defn macro_boolean [x] x)
 
 (defn macro_comment [x]
