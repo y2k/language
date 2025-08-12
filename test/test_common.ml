@@ -19,6 +19,7 @@ let tests =
 (if (= "Hello" (subs "Hello world" 0 5))                  nil (FIXME))
 (if (= 5 (count "Hello"))                                 nil (FIXME))
 (if (= 42 (parse-int "42"))                               nil (FIXME))
+(if (= 3 (last [1 2 3]))                                  nil (FIXME))
   0)|},
       "0" );
   ]

@@ -121,6 +121,7 @@ let do_resolve filename root_dir node =
               "gensym";
               "get";
               "hash-map";
+              "last";
               "list";
               "map?";
               "map";

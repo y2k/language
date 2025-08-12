@@ -63,6 +63,9 @@
 (defn macro_first [xs]
   (list 'get xs 0))
 
+(defn macro_last [xs]
+  (list 'get xs (list '- (list 'cast 'int (list 'count xs)) 1)))
+
 (defn macro_empty? [xs]
   (list '= 0 (list 'count xs)))
 

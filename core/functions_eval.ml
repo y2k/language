@@ -36,6 +36,10 @@ let attach reg_val reg_fun stdin ctx =
        | [ OList (_, xs) ] -> OList (meta_empty, List.tl xs)
        | [ OVector (_, xs) ] -> OVector (meta_empty, List.tl xs)
        | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "last" (function
+       | [ OList (_, xs) ] -> List.nth xs (List.length xs - 1)
+       | [ OVector (_, xs) ] -> List.nth xs (List.length xs - 1)
+       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "eprintln" (fun xs ->
          let s = xs |> List.map show_obj |> String.concat " " in
          prerr_endline s;
