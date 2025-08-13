@@ -25,8 +25,7 @@ let sexp_to_obj = function
 
 let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   let get_macro name = ctx.get_macro |> List.assoc_opt ("macro_" ^ name) in
-  if ctx.log && false then
-    prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ];
+  (* prerr_endline @@ "SIMPLIFY: " ^ debug_show_sexp [ sexp ]; *)
   match sexp with
   | SAtom (m, "__LOC__") ->
       SAtom
@@ -142,17 +141,11 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
       let f =
         match get_macro name with Some x -> x | None -> failwith __LOC__
       in
-      let args = args |> List.map sexp_to_obj in
-      let result = f args in
+      let result = args |> List.map sexp_to_obj |> f in
+      (* prerr_endline @@ "\n[MACRO 1] " ^ OUtils.debug_obj_to_string result; *)
       let result = OUtils.obj_to_sexp result in
-      (* prerr_endline @@ "MACRO RESULT: " ^ debug_show_sexp [ result ]; *)
-      let result = simplify ctx result in
-      (* prerr_endline @@ "MACRO RESULT(SIMPLE): " ^ debug_show_sexp [ result ]; *)
-      (* prerr_endline @@ "LOG2: " ^ debug_show_sexp [ result ]; *)
-      (* let result = Lib__.Stage_convert_if_to_statment.invoke result in *)
-      (* prerr_endline @@ "LOG3: " ^ debug_show_sexp [ result ]; *)
-      (* compile ctx result *)
-      result
+      (* prerr_endline @@ "[MACRO 2] " ^ debug_show_sexp [ result ]; *)
+      simplify ctx result
   (* Constructor *)
   | SList (m, SAtom (mn, clazz) :: args)
     when String.ends_with ~suffix:"." clazz && clazz <> "." ->

@@ -20,6 +20,7 @@ let tests =
 (if (= 5 (count "Hello"))                                 nil (FIXME))
 (if (= 42 (parse-int "42"))                               nil (FIXME))
 (if (= 3 (last [1 2 3]))                                  nil (FIXME))
+(if (= (str ["a" 2 :c]) "[\"a\" 2 \"c\"]")                nil (FIXME (str ["a" 2 :c])))
   0)|},
       "0" );
   ]

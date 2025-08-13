@@ -25,6 +25,12 @@ let re_find pattern str =
 
 let attach reg_val reg_fun ctx =
   ctx
+  |> reg_fun "FIXME" (fun xs ->
+         xs
+         |> List.map (function
+              | OString (_, x) -> x
+              | x -> OUtils.obj_to_string x)
+         |> String.concat " " |> failwith)
   |> reg_fun "parse-int" (function
        | [ OString (_, s) ] -> OInt (meta_empty, int_of_string s)
        | x -> Obj.failobj __LOC__ x)
@@ -163,10 +169,17 @@ let attach reg_val reg_fun ctx =
          | [ OVector (_, xs); OInt (_, i) ] -> List.nth xs i
          | x -> Obj.failobj __LOC__ x)
   |> reg_val "nil" (ONil meta_empty)
-  |> reg_fun "vector" (fun xs -> OVector (meta_empty, xs))
+  |> reg_fun "vector" (fun xs ->
+         (* prerr_endline @@ "[LOG:vector] "
+         ^ OUtils.debug_obj_to_string (OList (meta_empty, xs)); *)
+         OVector (meta_empty, xs))
   |> reg_fun "concat" (fun xs ->
+         (* prerr_endline @@ "[LOG:concat] "
+         ^ OUtils.debug_obj_to_string (OList (meta_empty, xs)); *)
          xs
-         |> List.map (function OList (_, x) -> x | x -> [ x ])
+         |> List.map (function
+              | OList (_, x) -> x
+              | x -> Obj.failobj __LOC__ [ x ])
          |> List.flatten
          |> fun xs -> OList (meta_empty, xs))
   |> reg_fun "str" (fun xs ->

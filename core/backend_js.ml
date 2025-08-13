@@ -153,8 +153,9 @@ let rec do_compile (ctx : context) = function
 (* *)
 
 let get_macro node =
-  let ctx = Backend_eval.eval1 Backend_eval.empty_eval_context node |> fst in
-  Backend_eval.get_all_functions ctx
+  Backend_eval.eval_ (Backend_eval.create_prelude_context ()) node
+  |> fst
+  |> Backend_eval.get_all_functions
 
 let compile ~log ~filename code =
   let root_dir = "" in

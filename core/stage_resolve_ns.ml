@@ -99,7 +99,7 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, SList (m, fn :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_resolve filename root_dir node =
+let do_resolve functions filename root_dir node =
   if filename = "prelude.clj" then node
   else
     let ctx =
@@ -108,40 +108,7 @@ let do_resolve filename root_dir node =
         aliases = [];
         filename;
         root_dir;
-        prelude_fns =
-          StringSet.of_list
-            [
-              "boolean?";
-              "boolean";
-              "contains?";
-              "count";
-              "drop";
-              "eprintln";
-              "first";
-              "gensym";
-              "get";
-              "hash-map";
-              "last";
-              "list";
-              "map?";
-              "map";
-              "not";
-              "not=";
-              "parse-int";
-              "println";
-              "reduce";
-              "rest";
-              "second";
-              "set!";
-              "some?";
-              "str";
-              "string?";
-              "subs";
-              "vec";
-              "vector?";
-              "vector";
-              "vendor";
-            ];
+        prelude_fns = StringSet.of_list functions;
       }
     in
     resolve ctx node |> snd

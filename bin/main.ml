@@ -43,6 +43,6 @@ let () =
             ()
       | "eval" | "repl" ->
           FileReader.with_scope
-            (fun () -> Backend_eval.eval2 !log !src (code ()) |> print_endline)
+            (fun () -> Backend_eval.invoke !log !src (code ()) |> print_endline)
             ()
       | t -> failwith @@ "Invalid target " ^ t)

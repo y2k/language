@@ -180,10 +180,9 @@ module Obj = struct
     | OInt (_, x), OInt (_, y) -> x = y
     | OString (_, x), OString (_, y) -> x = y
     | OBool (_, x), OBool (_, y) -> x = y
-    | ONil _, ONil _ -> true
-    | ONil _, _ -> false
     | OVector (_, xs), OVector (_, ys) -> List.for_all2 equal xs ys
-    | _, ONil _ -> false
+    | ONil _, ONil _ -> true
+    | ONil _, _ | _, ONil _ -> false
     | a, b -> failobj __LOC__ [ a; b ]
 end
 
@@ -506,23 +505,29 @@ module OUtils = struct
     | ONil _ -> "nil"
     | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""
     | OBool (_, x) -> string_of_bool x
+    | OQuote (_, m) -> "(quote" ^ debug_show_sexp_for_error [ m ] ^ ")"
     | x -> failobj __LOC__ x
+
+  let rec debug_obj_to_string = function
+    | OInt (_, x) -> string_of_int x
+    | OFloat (_, x) -> string_of_float x
+    | OString (_, x) -> "\"" ^ x ^ "\""
+    | OList (_, xs) ->
+        List.map debug_obj_to_string xs
+        |> String.concat " " |> Printf.sprintf "(%s)"
+    | OQuote (_, SAtom (_, x)) -> x
+    | ONil _ -> "nil"
+    | OVector (_, xs) ->
+        List.map debug_obj_to_string xs
+        |> String.concat " " |> Printf.sprintf "[%s]"
+    | OBool (_, x) -> string_of_bool x
+    | OQuote (_, m) -> "(quote '" ^ debug_show_sexp_for_error [ m ] ^ "')"
+    | OMap _ -> failwith "OMap"
+    | OLambda _ -> failwith "OLambda"
 end
 
 module NamespaceUtils = struct
-  let get_ns_from_path _ path =
-    (* prerr_endline @@ "LOG[get_ns_from_path] " ^ " | " ^ path; *)
-    "m" ^ string_of_int (String.hash path)
-  (* let path =
-      String.sub path (String.length root)
-        (String.length path - String.length root)
-    in
-    path
-    |> (fun x ->
-    if String.starts_with ~prefix:"/" x then String.sub x 1 (String.length x - 1)
-    else x)
-    |> Str.global_replace (Str.regexp "\\.clj") ""
-    |> Str.global_replace (Str.regexp "/") "." *)
+  let get_ns_from_path _ path = "m" ^ string_of_int (String.hash path)
 
   let mangle_name (ns : string) (name : string) : string =
     let result =

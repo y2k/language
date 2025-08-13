@@ -176,7 +176,9 @@ let do_compile (opt : compile_opt) sexp =
   Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
 
 let get_macro node =
-  let ctx = Backend_eval.eval1 Backend_eval.empty_eval_context node |> fst in
+  let ctx =
+    Backend_eval.eval_ (Backend_eval.create_prelude_context ()) node |> fst
+  in
   Backend_eval.get_all_functions ctx
 
 let compile (namespace : string) (log : bool) (filename : string)

@@ -556,8 +556,6 @@ let prelude_eval = {|
 
 ;; Specific target prelude
 
-(def* vector (fn* [& xs] xs))
-
 (defn not [x] (if x false true))
 
 (defn nil? [x] (= x nil))
