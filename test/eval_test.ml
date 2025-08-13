@@ -12,7 +12,7 @@ end = struct
                let input = input ^ "\n(test)" in
                let actual =
                  FileReader.with_stub_scope "(defn foo [x] x)"
-                   (Backend_eval.eval2 true "/app/src/core/ext/user.clj" "")
+                   (Backend_eval.eval2 true "/app/src/core/ext/user.clj")
                    input
                in
                Alcotest.(check string) "" expected actual))

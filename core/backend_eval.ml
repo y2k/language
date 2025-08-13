@@ -3,6 +3,10 @@ module F = Functions
 
 module Utils = struct
   let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith
+
+  let rec serialize_to_string = function
+    | SAtom (_, x) -> x
+    | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
 end
 
 type eval_context = {
@@ -134,10 +138,10 @@ let reg_fun name f ctx =
 
 let gensym_id = Atomic.make 1
 
-let eval1 ctx (stdin : string) node =
+let eval1 ctx node =
   (* prerr_endline @@ "EVAL: " ^ debug_show_sexp [ x ]; *)
   rec_level := 0;
-  let ctx = Functions_eval.attach reg_val reg_fun stdin ctx in
+  let ctx = Functions_eval.attach reg_val reg_fun ctx in
   node |> eval_ ctx
 
 let convert_to_ns path =
@@ -145,44 +149,34 @@ let convert_to_ns path =
   |> List.filter (fun x -> x <> "" && x <> ".")
   |> String.concat "."
 
-let eval2 (log : bool) (filename : string) (stdin : string) code =
-  let _origin_filename = filename in
+let rec eval3 origin_filename log get_macro type_ root_dir filename code =
+  code
+  |> Frontent_simplify.do_simplify get_macro
+       { log; macro = Prelude.prelude_eval_macro; filename; root_dir }
+  |> Stage_resolve_ns.do_resolve filename root_dir
+  |> log_stage log (type_ ^ " Stage_resolve_ns")
+  |> Stage_load_require.do_invoke (fun path ->
+         let path2 =
+           Filename.concat (Filename.dirname origin_filename) (path ^ ".clj")
+           |> FileReader.realpath
+         in
+         let code = FileReader.read path2 in
+         eval3 origin_filename log get_macro "  [REQ]" "" path2 code)
+  |> log_stage log (type_ ^ " Stage_load_require")
+  |> Stage_flat_do.invoke
+  |> log_stage log (type_ ^ " Stage_flat_do")
+
+let eval2 (log : bool) (filename : string) code =
   let get_macro node =
-    eval1 empty_eval_context "" node |> fst |> get_all_functions
-  in
-  let rec serialize_to_string = function
-    | SAtom (_, x) -> x
-    | SList (_, xs) -> xs |> List.map serialize_to_string |> String.concat ""
-  in
-  let rec eval3 type_ root_dir filename code =
-    code
-    |> Frontent_simplify.do_simplify get_macro
-         {
-           log;
-           macro = Prelude.prelude_eval_macro;
-           filename;
-           root_dir;
-         }
-    |> Stage_resolve_ns.do_resolve filename root_dir
-    |> log_stage log (type_ ^ " Stage_resolve_ns")
-    |> Stage_load_require.do_invoke (fun path ->
-           let path2 =
-             Filename.concat (Filename.dirname _origin_filename) (path ^ ".clj")
-             |> FileReader.realpath
-           in
-           let code = FileReader.read path2 in
-           eval3 "  [REQ]" "" path2 code)
-    |> log_stage log (type_ ^ " Stage_load_require")
-    |> Stage_flat_do.invoke
-    |> log_stage log (type_ ^ " Stage_flat_do")
+    eval1 empty_eval_context node |> fst |> get_all_functions
   in
   NameGenerator.with_scope (fun () ->
       code
-      |> eval3 "[EVAL]" (get_dir filename) filename
+      |> eval3 filename log get_macro "[EVAL]" (get_dir filename) filename
       |> eval1
            (fst
               (eval_
-                 (Functions_eval.attach reg_val reg_fun "" empty_eval_context)
-                 (eval3 "[PRELUDE]" "" "prelude.clj" Prelude.prelude_eval)))
-           stdin
-      |> snd |> OUtils.obj_to_sexp |> serialize_to_string |> unpack_string)
+                 (Functions_eval.attach reg_val reg_fun empty_eval_context)
+                 (eval3 filename log get_macro "[PRELUDE]" "" "prelude.clj"
+                    Prelude.prelude_eval)))
+      |> snd |> OUtils.obj_to_sexp |> Utils.serialize_to_string |> unpack_string)

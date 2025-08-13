@@ -9,5 +9,5 @@ let invoke ~log code =
   Frontent_simplify.do_simplify (Fun.const [])
     { log; macro = ""; filename = ""; root_dir = "" }
     code
-  |> Stage_resolve_ns.do_resolve "" ""
+  (* |> Stage_resolve_ns.do_resolve "" "" *)
   |> convert

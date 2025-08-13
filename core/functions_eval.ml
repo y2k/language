@@ -23,7 +23,7 @@ let re_find pattern str =
     Some (Str.matched_string str :: groups)
   with Not_found -> None
 
-let attach reg_val reg_fun stdin ctx =
+let attach reg_val reg_fun ctx =
   ctx
   |> reg_fun "parse-int" (function
        | [ OString (_, s) ] -> OInt (meta_empty, int_of_string s)
@@ -153,7 +153,6 @@ let attach reg_val reg_fun stdin ctx =
                    (fun x -> OString (meta_empty, x))
                    (String.split_on_char (String.get sep 0) x) )
          | x -> Obj.failobj __LOC__ x)
-  |> reg_val "STDIN" (OString (meta_empty, stdin))
   |> reg_fun "get" (fun xs ->
          match xs with
          | [ OMap (_, m); k ] ->
