@@ -40,6 +40,15 @@ public class RT {
 
     // Collections
 
+    public static java.util.List<?> vec(Object xs) {
+        if (xs instanceof Collection) {
+            return (java.util.List<?>) xs;
+        } else if (xs instanceof Object[]) {
+            return Arrays.asList((Object[]) xs);
+        }
+        throw new RuntimeException("Unsupported source: " + xs);
+    }
+
     public static Object hash_map(Object... xs) {
         var result = new HashMap<Object, Object>();
         for (int i = 0; i < xs.length; i += 2) {
@@ -320,6 +329,12 @@ let prelude_java_macro = {|
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
+(defn macro_string/split [s sep]
+  (list 'vec
+        (list '.split
+              (list 'cast 'String s)
+              (list 'cast 'String sep))))
+
 (defn macro_string/starts-with? [s prefix]
   (list '.startsWith
         (list 'cast 'String s)
@@ -492,7 +507,8 @@ let prelude_java_macro = {|
 
 ;; Collections
 
-(defn macro_vec [x] x)
+(defn macro_vec [xs]
+  (list 'y2k.RT.vec xs))
 
 (defn macro_list [& xs]
   (concat
@@ -587,6 +603,9 @@ let prelude_js_macro = {|
 
 (defn macro_subs [s sp ep]
   (list '.substring s sp ep))
+
+(defn macro_string/split [s sep]
+  (list '.split s sep))
 
 (defn macro_string/starts-with? [s prefix]
   (list '.startsWith s prefix))

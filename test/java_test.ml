@@ -3,9 +3,12 @@ open Core__
 
 module JavaExecution : sig
   val create_tests :
-    (string * string * string) list -> unit Alcotest.test_case list
+    string ->
+    string ->
+    (string * string * string) list ->
+    unit Alcotest.test_case list
 end = struct
-  let run (code : string) =
+  let run cls_name (code : string) =
     (* prerr_endline @@ "DIR: " ^ Sys.getcwd (); *)
     let prelude =
       In_channel.(with_open_bin "../../../prelude/data/y2k/RT.java" input_all)
@@ -28,8 +31,8 @@ import java.util.*;
 public class App {
 %s;
 
-public static void main(String[] args) {System.exit((int) RT.invoke(user.test));}}%s|}
-        code prelude
+public static void main(String[] args) {System.exit((int) RT.invoke(%s.test));}}%s|}
+        code cls_name prelude
     in
     prerr_endline code;
     let file_name = Filename.temp_file "y2k" ".java" in
@@ -37,7 +40,7 @@ public static void main(String[] args) {System.exit((int) RT.invoke(user.test));
     let result = Sys.command (Printf.sprintf "java %s" file_name) in
     string_of_int result
 
-  let create_tests tests =
+  let create_tests path cls_name tests =
     tests
     |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Quick (fun () ->
@@ -48,11 +51,10 @@ public static void main(String[] args) {System.exit((int) RT.invoke(user.test));
                in
                let code =
                  FileReader.with_stub_scope ""
-                   (Backend_java.compile "y2k.root" true
-                      "/app/src/core/ext/user.clj" "/app/src")
+                   (Backend_java.compile "y2k.root" true path "/app/src")
                    input
                in
-               let actual = ext_module ^ "\n" ^ code |> run in
+               let actual = ext_module ^ "\n" ^ code |> run cls_name in
                Alcotest.(check string) "" expected actual))
 end
 
@@ -161,4 +163,4 @@ let tests =
     (__LOC__, {|(defn test [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn test [] (if true 2 3))|}, {|2|});
   ]
-  |> JavaExecution.create_tests
+  |> JavaExecution.create_tests "/app/src/core/ext/user.clj" "user"

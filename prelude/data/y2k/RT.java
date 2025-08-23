@@ -37,6 +37,15 @@ public class RT {
 
     // Collections
 
+    public static java.util.List<?> vec(Object xs) {
+        if (xs instanceof Collection) {
+            return (java.util.List<?>) xs;
+        } else if (xs instanceof Object[]) {
+            return Arrays.asList((Object[]) xs);
+        }
+        throw new RuntimeException("Unsupported source: " + xs);
+    }
+
     public static Object hash_map(Object... xs) {
         var result = new HashMap<Object, Object>();
         for (int i = 0; i < xs.length; i += 2) {

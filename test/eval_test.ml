@@ -3,16 +3,16 @@ open Core__
 
 module EvalExecution : sig
   val create_tests :
-    (string * string * string) list -> unit Alcotest.test_case list
+    string -> (string * string * string) list -> unit Alcotest.test_case list
 end = struct
-  let create_tests tests =
+  let create_tests path tests =
     tests
     |> List.map (fun (loc, input, expected) ->
            Alcotest.test_case loc `Slow (fun () ->
                let input = input ^ "\n(test)" in
                let actual =
                  FileReader.with_stub_scope "(defn foo [x] x)"
-                   (Backend_eval.invoke true "/app/src/core/ext/user.clj")
+                   (Backend_eval.invoke true path)
                    input
                in
                Alcotest.(check string) "" expected actual))
@@ -33,4 +33,4 @@ let tests =
       {|(ns _ (:require ["./lib/eff" :as e])) (defn test [] (e/foo 4))|},
       "4" );
   ]
-  |> EvalExecution.create_tests
+  |> EvalExecution.create_tests "/app/src/core/ext/user.clj"

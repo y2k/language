@@ -153,7 +153,7 @@ let attach reg_val reg_fun ctx =
              (* FIXME: This is a hack *)
              (* let sep = Str.global_replace (Str.regexp "\\\\n") "\n" sep in *)
              (* prerr_endline @@ "|" ^ sep ^ "|"; *)
-             OList
+             OVector
                ( meta_empty,
                  List.map
                    (fun x -> OString (meta_empty, x))

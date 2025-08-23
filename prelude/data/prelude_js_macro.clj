@@ -4,6 +4,9 @@
 (defn macro_subs [s sp ep]
   (list '.substring s sp ep))
 
+(defn macro_string/split [s sep]
+  (list '.split s sep))
+
 (defn macro_string/starts-with? [s prefix]
   (list '.startsWith s prefix))
 

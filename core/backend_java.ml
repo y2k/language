@@ -102,6 +102,7 @@ let rec compile (ctx : complie_context) sexp =
       let else_ = compile ctx else_ in
       Printf.sprintf "if (%s) {\n%s;\n} else {\n%s;\n}" cond then_ else_
   | SList (_, [ SAtom (_, "cast"); SAtom (_, type_); value ]) ->
+      let type_ = unpack_string type_ in
       let type_ = fix_class_name type_ in
       let value = compile ctx value in
       Printf.sprintf "((%s)%s)" type_ value

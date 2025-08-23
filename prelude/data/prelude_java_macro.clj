@@ -8,6 +8,12 @@
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
+(defn macro_string/split [s sep]
+  (list 'vec
+        (list '.split
+              (list 'cast 'String s)
+              (list 'cast 'String sep))))
+
 (defn macro_string/starts-with? [s prefix]
   (list '.startsWith
         (list 'cast 'String s)
@@ -86,14 +92,11 @@
 
 (defn macro_reset! [a x]
   (let [var (gensym)]
-;;
     (list 'let (list 'vector var x)
           (list '.set
                 (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
                 var)
-          var)
-;;
-    ))
+          var)))
 
 ;; (defn macro_reset! [a x]
 ;;   (list
@@ -180,7 +183,8 @@
 
 ;; Collections
 
-(defn macro_vec [x] x)
+(defn macro_vec [xs]
+  (list 'y2k.RT.vec xs))
 
 (defn macro_list [& xs]
   (concat
