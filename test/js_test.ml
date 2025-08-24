@@ -11,9 +11,9 @@ let run_code code =
   Out_channel.(with_open_bin path (fun f -> output_string f code));
   Sys.command (Printf.sprintf "node %s" path) |> string_of_int
 
-let create_test =
+let create_test speed =
   List.map (fun (loc, (input : string), expected) ->
-      A.test_case loc `Slow (fun () ->
+      A.test_case loc speed (fun () ->
           let compiled = compile input in
           let actual = run_code compiled in
           A.check A.string "" expected actual))
@@ -97,4 +97,4 @@ let tests =
       "42" );
     (__LOC__, {|(defn test [] 42)|}, "42");
   ]
-  |> create_test
+  |> create_test `Slow

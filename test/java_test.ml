@@ -3,6 +3,7 @@ open Core__
 
 module JavaExecution : sig
   val create_tests :
+    [ `Slow | `Quick ] ->
     string ->
     string ->
     (string * string * string) list ->
@@ -40,10 +41,10 @@ public static void main(String[] args) {System.exit((int) RT.invoke(%s.test));}}
     let result = Sys.command (Printf.sprintf "java %s" file_name) in
     string_of_int result
 
-  let create_tests path cls_name tests =
+  let create_tests speed path cls_name tests =
     tests
     |> List.map (fun (loc, input, expected) ->
-           Alcotest.test_case loc `Quick (fun () ->
+           Alcotest.test_case loc speed (fun () ->
                let ext_module =
                  {|(ns _) (defn foo [x] x)|}
                  |> Backend_java.compile "lib" false
@@ -163,4 +164,4 @@ let tests =
     (__LOC__, {|(defn test [] (if false 2 3))|}, {|3|});
     (__LOC__, {|(defn test [] (if true 2 3))|}, {|2|});
   ]
-  |> JavaExecution.create_tests "/app/src/core/ext/user.clj" "user"
+  |> JavaExecution.create_tests `Slow "/app/src/core/ext/user.clj" "user"

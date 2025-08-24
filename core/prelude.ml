@@ -329,6 +329,11 @@ let prelude_java_macro = {|
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
+(defn macro_string/join [sep xs]
+  (list 'String/join
+        (list 'cast 'String sep)
+        (list 'cast 'java.util.Collection xs)))
+
 (defn macro_string/split [s sep]
   (list 'vec
         (list '.split
@@ -362,9 +367,9 @@ let prelude_java_macro = {|
 (defn macro_FIXME [& xs]
   (list 'java.util.Objects.requireNonNull
         nil
-        (concat
-         (list 'str)
-         xs)))
+        (list 'string/join
+              " "
+              (concat (list 'vector) xs))))
 
 (defn macro_not= [x y]
   (list 'not (list '= x y)))
@@ -413,14 +418,11 @@ let prelude_java_macro = {|
 
 (defn macro_reset! [a x]
   (let [var (gensym)]
-;;
     (list 'let (list 'vector var x)
           (list '.set
                 (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
                 var)
-          var)
-;;
-    ))
+          var)))
 
 ;; (defn macro_reset! [a x]
 ;;   (list
@@ -604,12 +606,6 @@ let prelude_js_macro = {|
 (defn macro_subs [s sp ep]
   (list '.substring s sp ep))
 
-(defn macro_string/split [s sep]
-  (list '.split s sep))
-
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith s prefix))
-
 (defn macro_boolean [x] x)
 
 (defn macro_comment [x]
@@ -659,6 +655,17 @@ let prelude_js_macro = {|
 
 (defn macro_unixtime []
   (list '/ (list 'Date.now) 1000))
+
+;; Strings
+
+(defn macro_string/join [sep xs]
+  (list '.join xs sep))
+
+(defn macro_string/split [s sep]
+  (list '.split s sep))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith s prefix))
 
 ;; Regex
 

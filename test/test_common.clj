@@ -18,4 +18,5 @@
   (if (= 42 (parse-int "42"))                                  nil (FIXME __LOC__))
   (if (= 3 (last [1 2 3]))                                     nil (FIXME __LOC__))
   (if (= (str ["a" "2" "c"]) (str (string/split "a 2 c" " "))) nil (FIXME __LOC__))
+  (if (= "a b" (string/join " " ["a" "b"]))                    nil (FIXME __LOC__))
   0)

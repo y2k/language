@@ -3,12 +3,15 @@ open Core__
 
 module EvalExecution : sig
   val create_tests :
-    string -> (string * string * string) list -> unit Alcotest.test_case list
+    [ `Slow | `Quick ] ->
+    string ->
+    (string * string * string) list ->
+    unit Alcotest.test_case list
 end = struct
-  let create_tests path tests =
+  let create_tests speed path tests =
     tests
     |> List.map (fun (loc, input, expected) ->
-           Alcotest.test_case loc `Slow (fun () ->
+           Alcotest.test_case loc speed (fun () ->
                let input = input ^ "\n(test)" in
                let actual =
                  FileReader.with_stub_scope "(defn foo [x] x)"
@@ -33,4 +36,4 @@ let tests =
       {|(ns _ (:require ["./lib/eff" :as e])) (defn test [] (e/foo 4))|},
       "4" );
   ]
-  |> EvalExecution.create_tests "/app/src/core/ext/user.clj"
+  |> EvalExecution.create_tests `Quick "/app/src/core/ext/user.clj"

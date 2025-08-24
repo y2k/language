@@ -23,6 +23,20 @@ let re_find pattern str =
     Some (Str.matched_string str :: groups)
   with Not_found -> None
 
+module Builtin = struct
+  let rec to_string = function
+    (* *)
+    | ONil _ -> "nil"
+    | OInt (_, x) -> string_of_int x
+    | OString (_, x) -> x
+    | OBool (_, x) -> string_of_bool x
+    | OList (_, xs) -> List.map to_string xs |> String.concat ""
+    | OVector (_, xs) -> List.map to_string xs |> String.concat ""
+    | OQuote (_, SAtom (_, x)) -> x
+    | OQuote (_, m) -> "(quote" ^ debug_show_sexp_for_error [ m ] ^ ")"
+    | x -> Obj.failobj __LOC__ [ x ]
+end
+
 let attach reg_val reg_fun ctx =
   ctx
   |> reg_fun "FIXME" (fun xs ->
@@ -147,6 +161,12 @@ let attach reg_val reg_fun ctx =
          | [ OVector (_, xs) ] -> OInt (meta_empty, List.length xs)
          | [ OString (_, s) ] -> OInt (meta_empty, String.length s)
          | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "string/join" (fun xs ->
+         match xs with
+         | [ OString (_, sep); OVector (_, xs) ] ->
+             OString
+               (meta_empty, String.concat sep (List.map Builtin.to_string xs))
+         | x -> Obj.failobj __LOC__ x)
   |> reg_fun "string/split" (fun xs ->
          match xs with
          | [ OString (_, x); OString (_, sep) ] ->
@@ -196,6 +216,10 @@ let attach reg_val reg_fun ctx =
        | [ OLambda (_, f); init; OList (_, xs) ] ->
            List.fold_left (fun acc x -> f [ acc; x ]) init xs
        | [ OLambda (_, f); init; OVector (_, xs) ] ->
+           List.fold_left (fun acc x -> f [ acc; x ]) init xs
+       | [ OLambda (_, f); OVector (_, xs) ] ->
+           let init = List.hd xs in
+           let xs = List.tl xs in
            List.fold_left (fun acc x -> f [ acc; x ]) init xs
        | [ OLambda (_, f); init; OMap (_, xs) ] ->
            List.fold_left

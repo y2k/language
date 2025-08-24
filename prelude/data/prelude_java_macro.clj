@@ -8,6 +8,11 @@
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
+(defn macro_string/join [sep xs]
+  (list 'String/join
+        (list 'cast 'String sep)
+        (list 'cast 'java.util.Collection xs)))
+
 (defn macro_string/split [s sep]
   (list 'vec
         (list '.split
@@ -41,9 +46,9 @@
 (defn macro_FIXME [& xs]
   (list 'java.util.Objects.requireNonNull
         nil
-        (concat
-         (list 'str)
-         xs)))
+        (list 'string/join
+              " "
+              (concat (list 'vector) xs))))
 
 (defn macro_not= [x y]
   (list 'not (list '= x y)))

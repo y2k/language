@@ -4,12 +4,6 @@
 (defn macro_subs [s sp ep]
   (list '.substring s sp ep))
 
-(defn macro_string/split [s sep]
-  (list '.split s sep))
-
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith s prefix))
-
 (defn macro_boolean [x] x)
 
 (defn macro_comment [x]
@@ -59,6 +53,17 @@
 
 (defn macro_unixtime []
   (list '/ (list 'Date.now) 1000))
+
+;; Strings
+
+(defn macro_string/join [sep xs]
+  (list '.join xs sep))
+
+(defn macro_string/split [s sep]
+  (list '.split s sep))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith s prefix))
 
 ;; Regex
 
