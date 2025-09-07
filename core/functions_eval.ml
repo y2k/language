@@ -1,26 +1,20 @@
 open Common
 
-let re_find pattern str =
-  let pattern =
-    pattern
-    |> Str.global_replace (Str.regexp "(") "\\("
-    |> Str.global_replace (Str.regexp ")") "\\)"
-  in
-  let re = Str.regexp pattern in
+let re_find pattern str : string list option =
+  let re = Re.Pcre.re pattern |> Re.compile in
   try
-    let _result = Str.search_forward re str 0 in
-    (* prerr_endline @@ "LOG: " ^ string_of_int _result; *)
+    let result = Re.exec ~pos:0 re str in
+    let full_match = Re.Group.get result 0 in
     let groups =
-      Seq.unfold
-        (fun i ->
-          try
-            let r = Str.matched_group i str in
-            Some (r, i + 1)
-          with Invalid_argument _ -> None)
-        1
-      |> List.of_seq
+      let rec collect_groups acc i =
+        try
+          let group = Re.Group.get result i in
+          collect_groups (group :: acc) (i + 1)
+        with Not_found -> List.rev acc
+      in
+      collect_groups [] 1
     in
-    Some (Str.matched_string str :: groups)
+    Some (full_match :: groups)
   with Not_found -> None
 
 module Builtin = struct
@@ -145,10 +139,15 @@ let attach reg_val reg_fun ctx =
          match xs with
          | [ OString (_, x) ] -> OString (meta_empty, String.trim x)
          | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "re-pattern" (fun xs ->
+         match xs with
+         | [ OString (_, p) ] -> OString (meta_empty, p)
+         | x -> Obj.failobj __LOC__ x)
   |> reg_fun "re-find" (fun xs ->
          match xs with
          | [ OString (_, pattern); OString (_, str) ] -> (
              match re_find pattern str with
+             | Some [ x ] -> OString (meta_empty, x)
              | Some xs ->
                  OList
                    ( meta_empty,

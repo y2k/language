@@ -13,14 +13,15 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends
-  ocaml
-  dune
-  angstrom
-  ppx_deriving
-  yojson
-  ppx_deriving_yojson
   (alcotest :with-test)
+  angstrom
+  bencode
+  dune
+  ocaml
+  ppx_deriving
+  ppx_deriving_yojson
+  re
   tiny_httpd
-  bencode)
+  yojson)
  (tags
   (topics "to describe" your project)))

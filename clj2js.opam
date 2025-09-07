@@ -6,15 +6,16 @@ maintainer: ["y2k"]
 license: "LICENSE"
 tags: ["topics" "to describe" "your" "project"]
 depends: [
-  "ocaml"
-  "dune" {>= "3.11"}
-  "angstrom"
-  "ppx_deriving"
-  "yojson"
-  "ppx_deriving_yojson"
   "alcotest" {with-test}
-  "tiny_httpd"
+  "angstrom"
   "bencode"
+  "dune" {>= "3.11"}
+  "ocaml"
+  "ppx_deriving"
+  "ppx_deriving_yojson"
+  "re"
+  "tiny_httpd"
+  "yojson"
   "odoc" {with-doc}
 ]
 build: [

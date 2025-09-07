@@ -1,5 +1,5 @@
 (library
  (name core)
- (libraries unix str angstrom yojson ppx_deriving_yojson.runtime)
+ (libraries re unix str angstrom yojson ppx_deriving_yojson.runtime)
  (preprocess
   (pps ppx_deriving.show ppx_deriving_yojson)))

@@ -186,6 +186,14 @@
               (concat (list 'str) xs))
         (list 'y2k.RT.nop)))
 
+;; Regex
+
+(defn macro_re-pattern [x]
+  (list 'java.util.regex.Pattern.compile x))
+
+(defn macro_re-find [p i]
+  (list 'y2k.RT.re_find p i))
+
 ;; Collections
 
 (defn macro_vec [xs]

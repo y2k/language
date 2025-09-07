@@ -16,5 +16,6 @@ let () =
       ("Eval", Eval_test.tests);
       ("Java", Java_test.tests);
       ("JS", Js_test.tests);
+      ("Regex", Regex_test.tests);
       (* *)
     ]

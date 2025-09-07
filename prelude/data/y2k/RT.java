@@ -35,6 +35,18 @@ public class RT {
         return null;
     }
 
+    // Regex
+
+    public static Object re_find(Object re, Object s) {
+        var pattern = (java.util.regex.Pattern) re;
+        var matcher = pattern.matcher((CharSequence) s);
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return null;
+        }
+    }
+
     // Collections
 
     public static java.util.List<?> vec(Object xs) {

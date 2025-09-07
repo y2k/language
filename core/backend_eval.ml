@@ -55,7 +55,8 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
             ( m,
               unpack_string x
               |> Str.global_replace (Str.regexp "\\\\n") "\n"
-              |> Str.global_replace (Str.regexp "\\\\t") "\t" ) )
+              |> Str.global_replace (Str.regexp "\\\\t") "\t"
+              |> Scanf.unescaped ) )
     | SAtom (m, x) when String.starts_with ~prefix:":" x ->
         (ctx, OString (m, unpack_symbol x))
     | SAtom (m, x) when String.starts_with ~prefix:"'" x ->

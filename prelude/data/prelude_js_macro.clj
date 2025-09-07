@@ -70,6 +70,9 @@
 (defn macro_re-pattern [x]
   (list 'RegExp. x))
 
+(defn macro_re-find [p i]
+  (list '.exec p i))
+
 ;; Collections
 
 (defn macro_vec [x] x)

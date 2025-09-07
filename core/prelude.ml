@@ -38,6 +38,18 @@ public class RT {
         return null;
     }
 
+    // Regex
+
+    public static Object re_find(Object re, Object s) {
+        var pattern = (java.util.regex.Pattern) re;
+        var matcher = pattern.matcher((CharSequence) s);
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return null;
+        }
+    }
+
     // Collections
 
     public static java.util.List<?> vec(Object xs) {
@@ -507,6 +519,14 @@ let prelude_java_macro = {|
               (concat (list 'str) xs))
         (list 'y2k.RT.nop)))
 
+;; Regex
+
+(defn macro_re-pattern [x]
+  (list 'java.util.regex.Pattern.compile x))
+
+(defn macro_re-find [p i]
+  (list 'y2k.RT.re_find p i))
+
 ;; Collections
 
 (defn macro_vec [xs]
@@ -671,6 +691,9 @@ let prelude_js_macro = {|
 
 (defn macro_re-pattern [x]
   (list 'RegExp. x))
+
+(defn macro_re-find [p i]
+  (list '.exec p i))
 
 ;; Collections
 
