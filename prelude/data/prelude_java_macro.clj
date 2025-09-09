@@ -44,11 +44,17 @@
   (concat (list 'y2k.RT.eprintln) xs))
 
 (defn macro_FIXME [& xs]
-  (list 'java.util.Objects.requireNonNull
-        nil
-        (list 'string/join
-              " "
-              (concat (list 'vector) xs))))
+  (list 'y2k.RT.invoke
+        'y2k.prelude_java.fixme
+        '__LOC__
+        (concat (list 'vector) xs)))
+
+;; (defn macro_FIXME [& xs]
+;;   (list 'java.util.Objects.requireNonNull
+;;         nil
+;;         (list 'string/join
+;;               " "
+;;               (concat (list 'vector) xs))))
 
 (defn macro_not= [x y]
   (list 'not (list '= x y)))
@@ -147,19 +153,7 @@
      (list '. (list 'cast 'java.util.Collection vxs) 'size)))))
 
 (defn macro_get [xs k]
-  (list 'y2k.RT.get xs k))
-
-;; (defn macro_get [xs i]
-;;   (let* vxs (gensym))
-;;   (let* vi (gensym))
-;;   (list
-;;    'do
-;;    (list 'let vxs xs)
-;;    (list 'let vi i)
-;;    (list 'if
-;;          (list 'instance? 'java.util.Map vxs)
-;;          (list '. (list 'cast 'java.util.Map vxs) 'get vi)
-;;          (list '. (list 'cast 'java.util.List vxs) 'get (list 'cast 'int (list 'cast 'Object vi))))))
+  (list 'y2k.RT.invoke 'y2k.prelude_java.get xs k))
 
 (defn macro_str [& xs]
   (concat

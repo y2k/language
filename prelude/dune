@@ -1,4 +1,4 @@
 (executable
  (public_name build_prelude)
  (name main)
- (libraries str))
+ (libraries str unix))

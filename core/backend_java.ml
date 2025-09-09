@@ -48,7 +48,8 @@ let rec compile (ctx : complie_context) sexp =
       let type_ =
         if mt.symbol = "private" || mt.symbol = "" then "var" else mt.symbol
       in
-      Printf.sprintf "%s %s=%s" type_ name (compile ctx value)
+      let cast_type = if type_ = "var" then "" else "(" ^ type_ ^ ")" in
+      Printf.sprintf "%s %s=%s%s" type_ name cast_type (compile ctx value)
   | SList (_, [ SAtom (_, "not"); x ]) ->
       Printf.sprintf "(!(%s))" (compile ctx x)
   | SList (_, [ SAtom (_, "set!"); name; value ]) ->

@@ -105,16 +105,6 @@ public class RT {
         return result;
     }
 
-    public static <T> T get(Object source, Object key) {
-        if (source instanceof java.util.Map) {
-            return (T) ((java.util.Map<?, ?>) source).get(key);
-        }
-        if (source instanceof java.util.List) {
-            return (T) ((java.util.List<?>) source).get((Integer) key);
-        }
-        throw new RuntimeException("Unsupported source: " + source + ", key: " + key);
-    }
-
     public static List<Object> map(Object f, Object xs) {
         var func = (java.util.function.Function<Object, Object>) f;
         if (xs instanceof Map) {

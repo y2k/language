@@ -21,6 +21,7 @@ let () =
   | "generate" -> (
       match !target with
       | "java" -> print_endline @@ Prelude.java_runtime
+      | "java_prelude" -> print_endline @@ Prelude.java_runtime2
       | _ -> failwith @@ "Invalid target " ^ !target)
   | _ -> (
       let code _ = In_channel.(with_open_bin !src input_all) in

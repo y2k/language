@@ -108,16 +108,6 @@ public class RT {
         return result;
     }
 
-    public static <T> T get(Object source, Object key) {
-        if (source instanceof java.util.Map) {
-            return (T) ((java.util.Map<?, ?>) source).get(key);
-        }
-        if (source instanceof java.util.List) {
-            return (T) ((java.util.List<?>) source).get((Integer) key);
-        }
-        throw new RuntimeException("Unsupported source: " + source + ", key: " + key);
-    }
-
     public static List<Object> map(Object f, Object xs) {
         var func = (java.util.function.Function<Object, Object>) f;
         if (xs instanceof Map) {
@@ -317,6 +307,39 @@ public class RT {
 }
 |}
 
+let java_runtime2 = {|
+package y2k;
+
+public class prelude_java {
+public static /* final */ Object get;
+static {
+get=y2k.RT.fn((xs,i)->{
+Object p__2;
+if (y2k.RT.toBoolean((xs instanceof java.util.Map))) {
+p__2=((java.util.Map)xs).get(i);
+} else {
+Object p__1;
+if (y2k.RT.toBoolean((xs instanceof java.util.List))) {
+p__1=((java.util.List)xs).get(((int)i));
+} else {
+p__1=y2k.RT.invoke(y2k.prelude_java.fixme,"prelude/data/prelude_java.clj:63:9",java.util.Arrays.asList("Unsupported source: ",String.format("%s",xs),", key: ",String.format("%s",i)));
+};
+p__2=p__1;
+};
+return p__2;
+});
+};
+public static /* final */ Object fixme;
+static {
+fixme=y2k.RT.fn((loc,xs)->{
+
+return java.util.Objects.requireNonNull(null,String.format("%s%s%s",loc," ",xs));
+});
+};
+}
+
+|}
+
 let prelude_java_macro = {|
 ;; Shared definitions for all targets
 
@@ -377,11 +400,17 @@ let prelude_java_macro = {|
   (concat (list 'y2k.RT.eprintln) xs))
 
 (defn macro_FIXME [& xs]
-  (list 'java.util.Objects.requireNonNull
-        nil
-        (list 'string/join
-              " "
-              (concat (list 'vector) xs))))
+  (list 'y2k.RT.invoke
+        'y2k.prelude_java.fixme
+        '__LOC__
+        (concat (list 'vector) xs)))
+
+;; (defn macro_FIXME [& xs]
+;;   (list 'java.util.Objects.requireNonNull
+;;         nil
+;;         (list 'string/join
+;;               " "
+;;               (concat (list 'vector) xs))))
 
 (defn macro_not= [x y]
   (list 'not (list '= x y)))
@@ -480,19 +509,7 @@ let prelude_java_macro = {|
      (list '. (list 'cast 'java.util.Collection vxs) 'size)))))
 
 (defn macro_get [xs k]
-  (list 'y2k.RT.get xs k))
-
-;; (defn macro_get [xs i]
-;;   (let* vxs (gensym))
-;;   (let* vi (gensym))
-;;   (list
-;;    'do
-;;    (list 'let vxs xs)
-;;    (list 'let vi i)
-;;    (list 'if
-;;          (list 'instance? 'java.util.Map vxs)
-;;          (list '. (list 'cast 'java.util.Map vxs) 'get vi)
-;;          (list '. (list 'cast 'java.util.List vxs) 'get (list 'cast 'int (list 'cast 'Object vi))))))
+  (list 'y2k.RT.invoke 'y2k.prelude_java.get xs k))
 
 (defn macro_str [& xs]
   (concat

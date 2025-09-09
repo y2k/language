@@ -40,9 +40,9 @@ let resolve_value ctx name =
 
 let rec eval_ (ctx : eval_context) (node : sexp) =
   let ctx = { ctx with level = ctx.level + 1 } in
-  prerr_endline @@ "[EVAL  IN] "
+  (* prerr_endline @@ "[EVAL  IN] "
   ^ String.init ctx.level (Fun.const ' ')
-  ^ F.sexp_to_string node;
+  ^ F.sexp_to_string node; *)
   let ctx, result =
     match node with
     | SAtom (m, x) when int_of_string_opt x <> None ->
@@ -139,9 +139,9 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
   (* prerr_endline @@ "[EVAL OUT] "
   ^ String.init ctx.level (Fun.const ' ')
   ^ F.debug_obj_to_string result; *)
-  prerr_endline @@ "[EVAL OUT] "
+  (* prerr_endline @@ "[EVAL OUT] "
   ^ String.init ctx.level (Fun.const ' ')
-  ^ F.sexp_to_string node ^ " -> " ^ F.obj_to_string result;
+  ^ F.sexp_to_string node ^ " -> " ^ F.obj_to_string result; *)
   ({ ctx with level = ctx.level - 1 }, result)
 
 let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }
