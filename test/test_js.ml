@@ -2,7 +2,7 @@ module A = Alcotest
 module Js = Core__.Backend_js
 
 let compile code =
-  Js.compile ~log:true ~filename:"main.clj" code
+  Js.compile ~builtin_macro:Macro.invoke ~log:true ~filename:"main.clj" code
   |> Printf.sprintf "%s;\n\nprocess.exit(test());"
 
 let run_code code =

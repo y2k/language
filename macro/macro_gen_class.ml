@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 let convert_opts opts =
   opts |> List.split_into_pairs
@@ -120,31 +120,35 @@ let generate_fields args =
        | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
-let invoke (args : sexp list) : sexp =
-  let args = convert_opts args in
-  let get_value name default =
-    List.assoc_opt (":" ^ name) args
-    |> Option.map (function
-         | SAtom (_, v) -> unpack_string v
-         | x -> failsexp __LOC__ [ x ])
-    |> Option.value ~default
-  in
-  let prefix = get_value "prefix" "_" in
-  let cls_code =
-    [
-      pack_string
-        (Printf.sprintf "public static class %s extends " (get_value "name" ""));
-      SList
-        ( meta_empty,
-          [
-            SAtom (meta_empty, "__compiler_resolve_type");
-            pack_string (get_value "extends" "Object");
-          ] );
-      pack_string " {\n";
-    ]
-    @ generate_constructors args (get_value "name" "") prefix
-    @ generate_fields args
-    @ (List.assoc ":methods" args |> generate_methods prefix)
-    @ [ pack_string "}\n" ]
-  in
-  SList (meta_empty, SAtom (meta_empty, "__compiler_emit") :: cls_code)
+let invoke = function
+  | SList (_, SAtom (_, "gen-class") :: args) ->
+      let args = convert_opts args in
+      let get_value name default =
+        List.assoc_opt (":" ^ name) args
+        |> Option.map (function
+             | SAtom (_, v) -> unpack_string v
+             | x -> failsexp __LOC__ [ x ])
+        |> Option.value ~default
+      in
+      let prefix = get_value "prefix" "_" in
+      let cls_code =
+        [
+          pack_string
+            (Printf.sprintf "public static class %s extends "
+               (get_value "name" ""));
+          SList
+            ( meta_empty,
+              [
+                SAtom (meta_empty, "__compiler_resolve_type");
+                pack_string (get_value "extends" "Object");
+              ] );
+          pack_string " {\n";
+        ]
+        @ generate_constructors args (get_value "name" "") prefix
+        @ generate_fields args
+        @ (List.assoc ":methods" args |> generate_methods prefix)
+        @ [ pack_string "}\n" ]
+      in
+      SList (meta_empty, SAtom (meta_empty, "__compiler_emit") :: cls_code)
+      |> Option.some
+  | _ -> None

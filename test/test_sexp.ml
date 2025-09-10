@@ -2,7 +2,8 @@ open Core__
 
 let test () =
   let actual =
-    Backend_sexp.invoke ~log:true {|(defn f [a b c] (+ a b) (+ b c))|}
+    Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:true
+      {|(defn f [a b c] (+ a b) (+ b c))|}
   in
   let expected =
     {|(

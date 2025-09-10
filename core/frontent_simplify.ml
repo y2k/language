@@ -11,17 +11,12 @@ type simplify_ctx = {
   otp : simplify_opt;
   log : bool;
   get_macro : (string * (obj list -> obj)) list;
+  run_builtin_macro : (sexp -> sexp) -> simplify_ctx -> sexp -> sexp option;
 }
 
 let sexp_to_obj = function
   | SAtom (m, _) as x -> OQuote (m, x)
   | SList (m, _) as x -> OQuote (m, x)
-
-(* let log_stage (opt : simplify_opt) title node =
-  (if opt.log then
-     let padding = String.make (max 0 (30 - String.length title)) ' ' in
-     prerr_endline @@ "* " ^ title ^ padding ^ " -> " ^ debug_show_sexp [ node ]);
-  node *)
 
 let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   let get_macro name = ctx.get_macro |> List.assoc_opt ("macro_" ^ name) in
@@ -32,11 +27,6 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
         (meta_empty, Printf.sprintf "\"%s:%i:%i\"" ctx.otp.filename m.line m.pos)
   | SAtom _ as x -> x
   | SList (_, []) as x -> x
-  | SList (m, SAtom (_, "ns") :: _ :: args) ->
-      args
-      |> Macro_ns.invoke m
-           { root_dir = ctx.otp.root_dir; filename = ctx.otp.filename }
-      |> simplify ctx
   (* TODO move to prelude *)
   | SList (m, SAtom (_, "or") :: x :: xs) ->
       (match xs with
@@ -70,7 +60,6 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
                 ] );
           ] )
       |> simplify ctx
-  | SList (_, SAtom (_, "case") :: _) as x -> Macro_case.invoke (simplify ctx) x
   | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
       let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in
       let if_args =
@@ -80,11 +69,6 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
       SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
   | SList (m, SAtom (mdo, "do") :: body) ->
       SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)
-  | SList (_, SAtom (_, "let") :: SList (_, SAtom (_, "vector") :: _) :: _) ->
-      Macro_let.invoke (simplify ctx) ctx sexp
-  | SList (m, SAtom (ml, "let") :: name :: value) ->
-      let value = List.map (simplify ctx) value in
-      SList (m, SAtom (ml, "let*") :: name :: value)
   | SList (m, [ SAtom (md, "def-"); name; value ]) ->
       SList (m, [ SAtom ({ md with symbol = "private" }, "def"); name; value ])
       |> simplify ctx
@@ -118,22 +102,6 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
             SAtom (md, "def"); name; SList (m, SAtom (md, "fn") :: args :: body);
           ] )
       |> simplify ctx
-  | SList
-      ( m,
-        [
-          SAtom (_, "if-let");
-          SList (_, SAtom (_, "vector") :: bindings);
-          then_;
-          else_;
-        ] ) ->
-      Macro_if_let.invoke (simplify ctx) m bindings then_ else_ sexp
-  | SList (m, SAtom (_, "cond") :: body) ->
-      Macro_cond.invoke (simplify ctx) m body
-  | SList (_, SAtom (_, "fn") :: _) as node ->
-      node
-      (* |> log_stage ctx.otp.log "[Macro fn BEFORE]" *)
-      |> Macro_fn.invoke (simplify ctx)
-      (* |> log_stage ctx.otp.log "[Macro fn AFTER]" *)
   | SList (m, [ SAtom (dm, "def"); k; v ]) ->
       SList (m, [ SAtom (dm, "def*"); k; simplify ctx v ])
   (* Macro call *)
@@ -165,30 +133,44 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   | SList (_, SAtom (_, name) :: _)
     when String.ends_with ~suffix:"*" name && name <> "*" ->
       failsexp __LOC__ [ sexp ]
-  (* *)
-  | SList (_, SAtom (_, "gen-class") :: args) -> Macro_gen_class.invoke args
   (* Invoke keyword *)
   | SList (m, [ (SAtom (_, name) as k); arg ])
     when String.starts_with ~prefix:":" name ->
       SList (m, [ SAtom (meta_empty, "get"); arg; k ]) |> simplify ctx
-  (* Function call *)
-  | SList (m, fn :: args) ->
-      let args = List.map (simplify ctx) args in
-      let fn = simplify ctx fn in
-      SList (m, fn :: args)
+  (* Builtin Macro / Function call *)
+  | SList (m, fn :: args) as node -> (
+      match ctx.run_builtin_macro (simplify ctx) ctx node with
+      | Some macro_result -> macro_result |> simplify ctx
+      | None ->
+          let args = List.map (simplify ctx) args in
+          let fn = simplify ctx fn in
+          SList (m, fn :: args))
 
-let do_simplify eval_macro (opt : simplify_opt) (code : string) : sexp =
+let do_simplify ~builtin_macro eval_macro (opt : simplify_opt) (code : string) :
+    sexp =
   let node = Frontent_parser.parse_text code in
   let macro =
     Frontent_parser.parse_text opt.macro
-    |> simplify { log = false; otp = opt; get_macro = [] }
+    |> simplify
+         {
+           run_builtin_macro = builtin_macro;
+           log = false;
+           otp = opt;
+           get_macro = [];
+         }
   in
   let do_simplify_inner root_dir filename type_ macro node =
     let opt = { opt with filename; root_dir } in
     let log_stage = log_stage opt.log in
     node
     |> log_stage (type_ ^ "Parse ")
-    |> simplify { log = opt.log; otp = opt; get_macro = macro }
+    |> simplify
+         {
+           run_builtin_macro = builtin_macro;
+           log = opt.log;
+           otp = opt;
+           get_macro = macro;
+         }
     |> log_stage (type_ ^ "Simplify ")
   in
   let macro_fn_list =

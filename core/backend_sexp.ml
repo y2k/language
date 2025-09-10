@@ -18,8 +18,8 @@ let rec convert = function
   | SList (_, xs) ->
       xs |> List.map convert |> String.concat "\n" |> Printf.sprintf "(\n%s\n)"
 
-let invoke ~log code =
-  Frontent_simplify.do_simplify (Fun.const [])
+let invoke ~builtin_macro ~log code =
+  Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
     { log; macro = ""; filename = ""; root_dir = "" }
     code
   |> Stage_resolve_ns.do_resolve [] "" ""

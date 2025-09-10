@@ -1,6 +1,6 @@
-open Common
+open Core__.Common
 
-let invoke compile m bindings then_ else_ node =
+let invoke compile m bindings then_ else_ _node =
   let rec loop = function
     | SAtom (l, name) :: value :: tail ->
         let name = if name = "_" then NameGenerator.get_new_var () else name in
@@ -25,8 +25,18 @@ let invoke compile m bindings then_ else_ node =
                   ] );
             ] )
     | [] -> then_
-    | _ ->
-        failwith @@ "if-let has wrong signature [" ^ show_sexp2 node ^ "] "
-        ^ __LOC__
+    | x -> failsexp __LOC__ x
   in
   loop bindings |> compile
+
+let invoke simplify = function
+  | SList
+      ( m,
+        [
+          SAtom (_, "if-let");
+          SList (_, SAtom (_, "vector") :: bindings);
+          then_;
+          else_;
+        ] ) as sexp ->
+      invoke simplify m bindings then_ else_ sexp |> Option.some
+  | _ -> None

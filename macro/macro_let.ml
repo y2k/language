@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 let rec loop = function
   | [] -> []
@@ -25,7 +25,7 @@ let rec loop = function
 
 let mk_let k v = SList (meta_empty, [ SAtom (meta_empty, "let*"); k; v ])
 
-let invoke simplify _context = function
+let invoke simplify = function
   | SList
       (m2, SAtom (_, "let") :: SList (_, SAtom (_, "vector") :: vals) :: body)
     ->
@@ -33,5 +33,9 @@ let invoke simplify _context = function
         loop (List.split_into_pairs vals)
         |> List.map (fun (k, v) -> mk_let k (simplify v))
       in
-      SList (m2, (SAtom (meta_empty, "do") :: lets) @ body) |> simplify
-  | node -> failsexp __LOC__ [ node ]
+      SList (m2, (SAtom (meta_empty, "do") :: lets) @ body)
+      |> simplify |> Option.some
+  | SList (m, SAtom (ml, "let") :: name :: value) ->
+      let value = List.map simplify value in
+      SList (m, SAtom (ml, "let*") :: name :: value) |> Option.some
+  | _ -> None

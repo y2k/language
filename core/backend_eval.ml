@@ -13,6 +13,8 @@ type eval_context = {
   ns : (string * obj ref) list;
   scope : (string * obj) list;
   level : int;
+  builtin_macro :
+    (sexp -> sexp) -> Frontent_simplify.simplify_ctx -> sexp -> sexp option;
 }
 [@@deriving show]
 
@@ -26,8 +28,6 @@ let get_all_functions (ctx : eval_context) =
   |> List.map (fun (x, y) -> (x, !y))
   |> List.filter_map (fun (x, y) ->
          match y with OLambda (_, f) -> Some (x, f) | _ -> None)
-
-let empty_eval_context = { ns = []; scope = []; level = 0 }
 
 let resolve_value ctx name =
   if name = "true" then OBool (meta_empty, true)
@@ -159,7 +159,7 @@ let convert_to_ns path =
 let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =
   code
-  |> Frontent_simplify.do_simplify get_macro
+  |> Frontent_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
        { log; macro = Prelude.prelude_eval_macro; filename; root_dir }
   |> Stage_resolve_ns.do_resolve (ctx.ns |> List.map fst) filename root_dir
   |> log_stage log (type_ ^ " Stage_resolve_ns")
@@ -174,22 +174,26 @@ let rec compile (ctx : eval_context) origin_filename log get_macro type_
   |> Stage_flat_do.invoke
   |> log_stage log (type_ ^ " Stage_flat_do")
 
-let create_prelude_context () =
+let empty_eval_context ~builtin_macro =
+  { builtin_macro; ns = []; scope = []; level = 0 }
+
+let create_prelude_context ~builtin_macro =
   let prelude_sexp =
-    compile empty_eval_context "" false (Fun.const []) "[PRELUDE]" ""
-      "prelude.clj" Prelude.prelude_eval
+    compile
+      (empty_eval_context ~builtin_macro)
+      "" false (Fun.const []) "[PRELUDE]" "" "prelude.clj" Prelude.prelude_eval
   in
-  empty_eval_context
+  empty_eval_context ~builtin_macro
   |> Functions_eval.attach reg_val reg_fun
   |> Fun.flip eval_ prelude_sexp
   |> fst
 
-let invoke (log : bool) (filename : string) code =
+let invoke ~builtin_macro (log : bool) (filename : string) code =
   let get_macro node =
-    eval_ empty_eval_context node |> fst |> get_all_functions
+    eval_ (empty_eval_context ~builtin_macro) node |> fst |> get_all_functions
   in
   NameGenerator.with_scope (fun () ->
-      let ctx = create_prelude_context () in
+      let ctx = create_prelude_context ~builtin_macro in
       code
       |> compile ctx filename log get_macro "[EVAL]" (get_dir filename) filename
       |> eval_ ctx |> snd |> OUtils.obj_to_sexp |> Utils.serialize_to_string

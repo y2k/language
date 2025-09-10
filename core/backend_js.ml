@@ -152,18 +152,17 @@ let rec do_compile (ctx : context) = function
 
 (* *)
 
-let get_macro node =
-  Backend_eval.eval_ (Backend_eval.create_prelude_context ()) node
-  |> fst
-  |> Backend_eval.get_all_functions
+let get_macro ~builtin_macro node =
+  Backend_eval.eval_ (Backend_eval.create_prelude_context ~builtin_macro) node
+  |> fst |> Backend_eval.get_all_functions
 
-let compile ~log ~filename code =
+let compile ~builtin_macro ~log ~filename code =
   let root_dir = "" in
   let namespace = "" in
   Ng.with_scope (fun () ->
       (* prerr_endline @@ "LOG: code: " ^ code; *)
       code
-      |> Frontent_simplify.do_simplify get_macro
+      |> Frontent_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Prelude.prelude_js_macro; filename; root_dir }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "

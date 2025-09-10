@@ -15,7 +15,7 @@ end = struct
                let input = input ^ "\n(test)" in
                let actual =
                  FileReader.with_stub_scope "(defn foo [x] x)"
-                   (Backend_eval.invoke true path)
+                   (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
                    input
                in
                Alcotest.(check string) "" expected actual))

@@ -28,22 +28,30 @@ let () =
       match !target with
       | "sexp" ->
           FileReader.with_scope
-            (fun _ -> Backend_sexp.invoke ~log:!log (code ()) |> print_endline)
+            (fun _ ->
+              Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:!log
+                (code ())
+              |> print_endline)
             ()
       | "java" ->
           FileReader.with_scope
             (fun _ ->
-              Backend_java.compile !namespace !log !src !root_dir (code ())
+              Backend_java.compile ~builtin_macro:Macro.invoke !namespace !log
+                !src !root_dir (code ())
               |> print_endline)
             ()
       | "js" ->
           FileReader.with_scope
             (fun _ ->
-              Backend_js.compile ~log:!log (code ()) ~filename:!src
+              Backend_js.compile ~builtin_macro:Macro.invoke ~log:!log (code ())
+                ~filename:!src
               |> print_endline)
             ()
       | "eval" | "repl" ->
           FileReader.with_scope
-            (fun () -> Backend_eval.invoke !log !src (code ()) |> print_endline)
+            (fun () ->
+              Backend_eval.invoke ~builtin_macro:Macro.invoke !log !src
+                (code ())
+              |> print_endline)
             ()
       | t -> failwith @@ "Invalid target " ^ t)

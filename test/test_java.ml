@@ -26,7 +26,8 @@ public class ff {
         (Fun.flip output_string Prelude.java_runtime2));
     let java_code =
       FileReader.with_stub_scope ""
-        (Backend_java.compile "y2k" true "app/test" "app/test")
+        (Backend_java.compile ~builtin_macro:Macro.invoke "y2k" true "app/test"
+           "app/test")
         code
     in
     Out_channel.(

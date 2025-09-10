@@ -177,17 +177,18 @@ let do_compile (opt : compile_opt) sexp =
   let body = compile () sexp in
   Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
 
-let get_macro node =
+let get_macro ~builtin_macro node =
   let ctx =
-    Backend_eval.eval_ (Backend_eval.create_prelude_context ()) node |> fst
+    Backend_eval.eval_ (Backend_eval.create_prelude_context ~builtin_macro) node
+    |> fst
   in
   Backend_eval.get_all_functions ctx
 
-let compile (namespace : string) (log : bool) (filename : string)
+let compile ~builtin_macro (namespace : string) (log : bool) (filename : string)
     (root_dir : string) code =
   Common.NameGenerator.with_scope (fun () ->
       code
-      |> Frontent_simplify.do_simplify get_macro
+      |> Frontent_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Prelude.prelude_java_macro; filename; root_dir }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "

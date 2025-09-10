@@ -1,4 +1,4 @@
 (executable
  (public_name clj2js)
  (name main)
- (libraries core str))
+ (libraries core macro str))

@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 let invoke simplify = function
   | SList (m, SAtom (l, "case") :: target :: body) as node ->
@@ -30,5 +30,5 @@ let invoke simplify = function
                 ] );
             loop body;
           ] )
-      |> simplify
-  | x -> failsexp __LOC__ [ x ]
+      |> simplify |> Option.some
+  | _ -> None
