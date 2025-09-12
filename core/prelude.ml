@@ -637,6 +637,9 @@ let prelude_js_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_not= [x y]
+  (list 'not (list '= x y)))
+
 (defn macro_parse-int [s]
   (list 'parseInt s))
 
@@ -672,8 +675,8 @@ let prelude_js_macro = {|
 (defn macro_boolean? [x]
   (list '= (list 'type x) "boolean"))
 
-;; (defn macro_list? [x]
-;;   (list '= :list (list 'get x :type)))
+(defn macro_merge [m1 m2]
+  (list 'Object.assign (list 'hash-map) m1 m2))
 
 (defn macro_vector? [x]
   (list 'Array.isArray x))

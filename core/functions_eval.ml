@@ -33,6 +33,19 @@ end
 
 let attach reg_val reg_fun ctx =
   ctx
+  |> reg_fun "merge" (fun xs ->
+         match xs with
+         | [ OMap (_, xs1); OMap (_, xs2) ] ->
+             let r =
+               List.fold_left
+                 (fun acc x ->
+                   acc
+                   |> List.filter (fun (k, _) -> not (Obj.equal k (fst x)))
+                   |> List.cons x)
+                 xs2 xs1
+             in
+             OMap (meta_empty, r)
+         | x -> Obj.failobj __LOC__ x)
   |> reg_fun "FIXME" (fun xs ->
          xs
          |> List.map (function
@@ -157,6 +170,7 @@ let attach reg_val reg_fun ctx =
   |> reg_fun "count" (fun xs ->
          match xs with
          | [ OList (_, xs) ] -> OInt (meta_empty, List.length xs)
+         | [ OMap (_, xs) ] -> OInt (meta_empty, List.length xs)
          | [ OVector (_, xs) ] -> OInt (meta_empty, List.length xs)
          | [ OString (_, s) ] -> OInt (meta_empty, String.length s)
          | x -> Obj.failobj __LOC__ x)

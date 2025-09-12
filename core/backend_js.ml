@@ -27,6 +27,8 @@ let rec do_compile (ctx : context) = function
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
+  | SAtom (_, x) when not (String.starts_with ~prefix:"\"" x) ->
+      x |> String.map (fun x -> if x = '/' then '.' else x)
   | SAtom (_, x) -> x
   (* TODO: move to macro *)
   | SList (_, [ SAtom (_, "<="); a; b ]) ->
@@ -149,8 +151,6 @@ let rec do_compile (ctx : context) = function
       let fn = do_compile ctx fn in
       Printf.sprintf "%s(%s)" fn (String.concat "," args)
   | node -> failsexp ~show_pos:true __LOC__ [ node ]
-
-(* *)
 
 let get_macro ~builtin_macro node =
   Backend_eval.eval_ (Backend_eval.create_prelude_context ~builtin_macro) node

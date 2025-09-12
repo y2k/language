@@ -501,6 +501,12 @@ module OUtils = struct
     | OInt (_, x) -> string_of_int x
     | OString (_, x) -> "\"" ^ x ^ "\""
     | OList (_, xs) -> List.map obj_to_string xs |> String.concat ""
+    | OMap (_, xs) ->
+        xs
+        |> List.map (fun (k, v) ->
+               Printf.sprintf "%s %s" (obj_to_string k) (obj_to_string v))
+        |> String.concat " "
+        |> Printf.sprintf "{%s}"
     | OQuote (_, SAtom (_, x)) -> x
     | ONil _ -> "nil"
     | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""

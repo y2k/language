@@ -20,7 +20,6 @@ let rec compile (ctx : complie_context) sexp =
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
-  (* | SAtom (_, x) -> x |> String.map (fun x -> if x = '/' then '.' else x) *)
   | SAtom (_, x) -> x
   (* Operators *)
   | SList (_, SAtom (_, op) :: args)

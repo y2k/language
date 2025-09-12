@@ -1,7 +1,14 @@
 (defn- assert_ [loc expected actual]
-  (if (= (str expected) (str actual)) nil (FIXME loc actual)))
+  (if (= (str expected) (str actual))
+    nil
+    (FIXME loc actual)))
 
 (defn test []
+  (assert_ __LOC__ (count {:a 1 :b 2 :c 4}) (count (merge {:a 1 :b 3} {:b 2 :c 4})))
+  (assert_ __LOC__ true (not= 1 2))
+  (assert_ __LOC__ false (not= 1 1))
+  (assert_ __LOC__ true (= 1 1))
+  (assert_ __LOC__ false (= 1 2))
   (assert_ __LOC__ "12" (re-find (re-pattern "^\\d+") "12bb"))
   (println  "1" "2")
   (eprintln "1" "2")
