@@ -53,6 +53,13 @@ module FileReader = struct
             | _ -> None);
       }
 
+  let resolve_env_in_path path =
+    let var = ".+\\$LY2K_PACKAGES_DIR" in
+    match Sys.getenv_opt "LY2K_PACKAGES_DIR" with
+    | Some value ->
+        Str.global_replace (Str.regexp var) value path
+    | None -> path
+
   let with_scope f arg =
     let open Effect.Deep in
     Effect.Deep.match_with f arg
@@ -67,6 +74,7 @@ module FileReader = struct
             | Load path ->
                 Some
                   (fun (k : (a, _) continuation) ->
+                    let path = resolve_env_in_path path in
                     continue k In_channel.(with_open_bin path input_all))
             | Realpath path ->
                 Some
