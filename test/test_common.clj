@@ -10,6 +10,8 @@
   (assert_ __LOC__ true (= 1 1))
   (assert_ __LOC__ false (= 1 2))
   (assert_ __LOC__ "12" (re-find (re-pattern "^\\d+") "12bb"))
+  (assert_ __LOC__ nil (re-find (re-pattern "^\\d+$") "12bb"))
+  (assert_ __LOC__ "1234" (re-find (re-pattern "^\\d+$") "1234"))
   (println  "1" "2")
   (eprintln "1" "2")
   (let t1 (println  "1" "2"))
