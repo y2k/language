@@ -315,14 +315,27 @@ public static /* final */ Object get;
 static {
 get=y2k.RT.fn((xs,i)->{
 Object p__2;
-if (y2k.RT.toBoolean((xs instanceof java.util.Map))) {
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.Map))) {
 p__2=((java.util.Map)xs).get(i);
 } else {
 Object p__1;
-if (y2k.RT.toBoolean((xs instanceof java.util.List))) {
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.List))) {
 p__1=((java.util.List)xs).get(((int)i));
 } else {
-p__1=y2k.RT.invoke(y2k.prelude_java.fixme,"prelude/data/prelude_java.clj:63:9",java.util.Arrays.asList("Unsupported source: ",String.format("%s",xs),", key: ",String.format("%s",i)));
+p__1=y2k.RT.invoke(
+y2k.prelude_java.fixme,
+"prelude/data/prelude_java.clj:63:9",
+java.util.Arrays.asList(
+"Unsupported source: ",
+String.format(
+"%s",
+xs),
+", key: ",
+String.format(
+"%s",
+i)));
 };
 p__2=p__1;
 };
@@ -333,7 +346,13 @@ public static /* final */ Object fixme;
 static {
 fixme=y2k.RT.fn((loc,xs)->{
 
-return java.util.Objects.requireNonNull(null,String.format("%s%s%s",loc," ",xs));
+return java.util.Objects.requireNonNull(
+null,
+String.format(
+"%s%s%s",
+loc,
+" ",
+xs));
 });
 };
 }

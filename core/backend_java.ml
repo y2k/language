@@ -132,28 +132,28 @@ let rec compile (ctx : complie_context) sexp =
       failsexp __LOC__ [ x ]
   (* Function call *)
   | SList (_, fn :: args) -> (
-      let args = List.map (compile ctx) args |> String.concat "," in
+      let args = List.map (compile ctx) args |> String.concat ",\n" in
       match fn with
       | SAtom (_, name) -> (
           if String.contains name '#' then
             let name = String.map (fun x -> if x = '#' then '.' else x) name in
             match args with
-            | "" -> Printf.sprintf "y2k.RT.invoke(%s)" name
-            | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" name args
+            | "" -> Printf.sprintf "y2k.RT.invoke(\n%s)" name
+            | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" name args
           else if String.contains name '.' then
-            Printf.sprintf "%s(%s)" name args
+            Printf.sprintf "%s(\n%s)" name args
           else if String.contains name '/' then
             let name = String.map (fun x -> if x = '/' then '.' else x) name in
-            Printf.sprintf "%s(%s)" name args
+            Printf.sprintf "%s(\n%s)" name args
           else
             match args with
-            | "" -> Printf.sprintf "y2k.RT.invoke(%s)" name
-            | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" name args)
+            | "" -> Printf.sprintf "y2k.RT.invoke(\n%s)" name
+            | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" name args)
       | x -> (
           let fn = compile ctx x in
           match args with
-          | "" -> Printf.sprintf "y2k.RT.invoke(%s)" fn
-          | _ -> Printf.sprintf "y2k.RT.invoke(%s,%s)" fn args))
+          | "" -> Printf.sprintf "y2k.RT.invoke(\n%s)" fn
+          | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" fn args))
   | x -> failsexp __LOC__ [ x ]
 
 let compute_package opt =

@@ -1,15 +1,26 @@
 open Core__
+module StringMap = Map.Make (String)
+
+let map_testable =
+  Alcotest.testable
+    (fun fmt map ->
+      let map_formater =
+        StringMap.bindings map
+        |> List.map (fun (k, v) ->
+               Fmt.Dump.field k (fun _ -> v) Fmt.Dump.string)
+        |> Fmt.Dump.record
+      in
+      map_formater fmt map)
+    (StringMap.equal String.equal)
 
 let test () =
   let actual =
-    Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:true
+    Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
       {|(defn f [a b c] (+ a b) (+ b c))|}
   in
   let expected =
-    {|(
-def*
-G2m01f
-(
+    StringMap.of_list
+      [ ("G2m01f", {|(
 fn*
 a b c
 13
@@ -26,9 +37,8 @@ b
 c
 )
 )
-)
-)|}
+)|}) ]
   in
-  Alcotest.(check string) "" expected actual
+  Alcotest.(check ~pos:__POS__ map_testable) "" expected actual
 
-let tests = [ Alcotest.test_case __LOC__ `Quick test ]
+let tests = [ Alcotest.test_case "" `Quick test ]
