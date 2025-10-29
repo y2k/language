@@ -16,11 +16,11 @@ let map_testable =
 let test () =
   let actual =
     Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
-      {|(defn f [a b c] (+ a b) (+ b c))|}
+      ~filename:"app/main.clj" {|(defn f [a b c] (+ a b) (+ b c))|}
   in
   let expected =
     StringMap.of_list
-      [ ("G2m01f", {|(
+      [ ("G10m7308631371f", {|(
 fn*
 a b c
 13

@@ -31,9 +31,16 @@ let rec compile_functions (node : sexp) : string StringMap.t =
       StringMap.of_list [ (name, body) ]
   | n -> failsexp __LOC__ [ n ]
 
-let invoke ~builtin_macro ~log code =
+let invoke ~builtin_macro ~log code ~filename =
   Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
-    { log; macro = ""; filename = ""; root_dir = "" }
+    { log; macro = ""; filename; root_dir = "" }
     code
-  |> Stage_resolve_ns.do_resolve [] "" ""
+  |> Stage_resolve_ns.do_resolve [] filename ""
+  |> log_stage log "Stage_resolve_ns"
   |> compile_functions
+
+let invoke_to_line ~builtin_macro ~log code ~filename =
+  invoke ~builtin_macro ~log code ~filename
+  |> StringMap.bindings
+  |> List.map (fun (name, body) -> Printf.sprintf "%s\n=======\n%s" name body)
+  |> String.concat "\n=======\n"

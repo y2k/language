@@ -33,6 +33,13 @@ let () =
                 (code ())
               |> print_endline)
             ()
+      | "sexp2" ->
+          FileReader.with_scope
+            (fun _ ->
+              Backend_sexp2.invoke_to_line ~builtin_macro:Macro.invoke ~log:!log
+                (code ()) ~filename:!src
+              |> print_endline)
+            ()
       | "java" ->
           FileReader.with_scope
             (fun _ ->

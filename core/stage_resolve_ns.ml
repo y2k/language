@@ -46,8 +46,8 @@ let rec resolve (ctx : resolve_ctx) node =
       let name =
         NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
       in
-      (* prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
-      ^ " -> " ^ name; *)
+      prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
+      ^ " -> " ^ name;
       let _, value = resolve ctx value in
       (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
