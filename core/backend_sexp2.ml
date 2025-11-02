@@ -2,7 +2,7 @@ open Common
 module StringMap = Map.Make (String)
 
 let rec convert = function
-  | SList (m, (SAtom (_, "fn*") as fn) :: SList (ma, args) :: body) ->
+  (* | SList (m, (SAtom (_, "fn*") as fn) :: SList (ma, args) :: body) ->
       let args = args |> List.map convert |> String.concat " " in
       let cnt =
         body |> List.map convert |> String.concat "\n"
@@ -14,7 +14,7 @@ let rec convert = function
           :: SAtom (ma, args)
           :: SAtom (meta_empty, string_of_int cnt)
           :: body )
-      |> convert
+      |> convert *)
   | SAtom (_, x) -> x
   | SList (_, xs) ->
       xs |> List.map convert |> String.concat "\n" |> Printf.sprintf "(\n%s\n)"
@@ -35,8 +35,8 @@ let invoke ~builtin_macro ~log code ~filename =
   Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
     { log; macro = ""; filename; root_dir = "" }
     code
-  |> Stage_resolve_ns.do_resolve [] filename ""
-  |> log_stage log "Stage_resolve_ns"
+  |> Stage_resolve_ns2.do_resolve [] filename ""
+  |> log_stage log "Stage_resolve_ns2"
   |> compile_functions
 
 let invoke_to_line ~builtin_macro ~log code ~filename =

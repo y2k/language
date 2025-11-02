@@ -13,7 +13,7 @@ module NamespaceUtils = struct
   (* |> trace __LOC__ Fun.id *)
 end
 
-type ns_opt = { root_dir : string; filename : string }
+type ns_opt = { root_dir : string; filename : string; namespace : string }
 
 let handle_require ctx requires =
   let aliases =
@@ -85,12 +85,30 @@ let invoke m (ctx : ns_opt) args =
                   | x -> failsexp __LOC__ [ x ])
          | x -> failsexp __LOC__ [ x ])
   in
-  SList (m, SAtom (meta_empty, "do") :: args)
+  let ns_node =
+    if ctx.namespace = "_" then []
+    else
+      [
+        SList
+          ( meta_empty,
+            [
+              SAtom (meta_empty, "def*");
+              SAtom (meta_empty, "__namespace");
+              SAtom (meta_empty, ctx.namespace);
+            ] );
+      ]
+  in
+  SList (m, SAtom (meta_empty, "do") :: (ns_node @ args))
 (* |> trace __LOC__ show_sexp2 *)
 
 let invoke (ctx : Core__.Frontent_simplify.simplify_ctx) simplify = function
-  | SList (m, SAtom (_, "ns") :: _ :: args) ->
+  | SList (m, SAtom (_, "ns") :: SAtom (_, namespace) :: args) ->
       args
-      |> invoke m { root_dir = ctx.otp.root_dir; filename = ctx.otp.filename }
+      |> invoke m
+           {
+             root_dir = ctx.otp.root_dir;
+             filename = ctx.otp.filename;
+             namespace;
+           }
       |> simplify |> Option.some
   | _ -> None

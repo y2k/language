@@ -16,18 +16,23 @@ let map_testable =
 let test () =
   let actual =
     Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
-      ~filename:"app/main.clj" {|(defn f [a b c] (+ a b) (+ b c))|}
+      ~filename:"app/main.clj"
+      {|(ns g) (defn f2 [a b] a) (defn f [a b c] (f2 a b) (+ b c))|}
   in
   let expected =
     StringMap.of_list
-      [ ("G10m7308631371f", {|(
+      [
+        ("g.f", {|(
 fn*
-a b c
-13
+(
+a
+b
+c
+)
 (
 do*
 (
-+
+g.f2
 a
 b
 )
@@ -37,7 +42,16 @@ b
 c
 )
 )
-)|}) ]
+)|});
+        ("g.f2", {|(
+fn*
+(
+a
+b
+)
+a
+)|});
+      ]
   in
   Alcotest.(check ~pos:__POS__ map_testable) "" expected actual
 
