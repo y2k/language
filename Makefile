@@ -30,7 +30,7 @@ ee_test: deploy_force
 
 .PHONY: restore
 restore:
-	@ dune build
+	@ dune build clj2js.opam
 	@ opam install . --deps-only --with-test -y
 
 .PHONY: prelude
