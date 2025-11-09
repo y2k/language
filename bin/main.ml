@@ -26,14 +26,14 @@ let () =
   | _ -> (
       let code _ = In_channel.(with_open_bin !src input_all) in
       match !target with
-      | "sexp" ->
+      | "sexp_legacy" ->
           FileReader.with_scope
             (fun _ ->
               Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:!log
                 (code ())
               |> print_endline)
             ()
-      | "sexp2" ->
+      | "sexp" ->
           FileReader.with_scope
             (fun _ ->
               Backend_sexp2.invoke_to_line ~builtin_macro:Macro.invoke ~log:!log

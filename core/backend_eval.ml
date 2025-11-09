@@ -83,10 +83,10 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
     (* if then else *)
     | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) -> (
         match eval_ ctx cond with
-        | ctx, OBool (_, true) -> eval_ ctx then_
         | ctx, OBool (_, false) -> eval_ ctx else_
         | ctx, ONil _ -> eval_ ctx else_
-        | _, r -> Utils.failobj __LOC__ r)
+        | ctx, OBool (_, true) -> eval_ ctx then_
+        | _ -> eval_ ctx then_)
     | SList (_, [ SAtom (_, "fn*"); SList (_, args_names); body ]) ->
         let l =
           OLambda

@@ -97,7 +97,10 @@ let rec compile (ctx : complie_context) sexp =
       in
       unpack_string value
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
-      let cond = compile ctx cond in
+      let cond =
+        compile ctx
+          (SList (meta_empty, [ SAtom (meta_empty, "y2k.RT.toBoolean"); cond ]))
+      in
       let then_ = compile ctx then_ in
       let else_ = compile ctx else_ in
       Printf.sprintf "if (%s) {\n%s;\n} else {\n%s;\n}" cond then_ else_

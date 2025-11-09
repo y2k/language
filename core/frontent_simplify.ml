@@ -62,10 +62,7 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
       |> simplify ctx
   | SList (m, SAtom (mif, "if") :: cond_ :: then_ :: else_) ->
       let else_ = match else_ with [] -> [ SAtom (m, "nil") ] | xs -> xs in
-      let if_args =
-        [ SList (meta_empty, [ SAtom (meta_empty, "boolean"); cond_ ]); then_ ]
-        @ else_
-      in
+      let if_args = [ cond_; then_ ] @ else_ in
       SList (m, SAtom (mif, "if*") :: List.map (simplify ctx) if_args)
   | SList (m, SAtom (mdo, "do") :: body) ->
       SList (m, SAtom (mdo, "do*") :: List.map (simplify ctx) body)
