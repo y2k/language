@@ -7,6 +7,15 @@ import java.util.*;
 
 public class RT {
 
+    public static Object hash_map_from(Object xs) {
+        var result = new HashMap<Object, Object>();
+        var items = (java.util.List<Object>) xs;
+        for (int i = 0; i < items.size(); i += 2) {
+            result.put(items.get(i), items.get(i + 1));
+        }
+        return result;
+    }
+
     public static Object nop() {
         return null;
     }
@@ -160,7 +169,7 @@ public class RT {
         return result;
     }
 
-    // Lambda
+    // region Lambda
 
     public interface Fn0 {
         public Object invoke() throws Exception;
@@ -304,6 +313,8 @@ public class RT {
             return throwSilent(e);
         }
     }
+
+    // endregion
 }
 |}
 
@@ -326,7 +337,7 @@ p__1=((java.util.List)xs).get(((int)i));
 } else {
 p__1=y2k.RT.invoke(
 y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:63:9",
+"prelude/data/prelude_java.clj:66:9",
 java.util.Arrays.asList(
 "Unsupported source: ",
 String.format(
@@ -414,6 +425,9 @@ let prelude_java_macro = {|
 
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
+
+(defn macro_hash-map-from [xs]
+  (list 'y2k.RT.hash_map_from xs))
 
 (defn macro_eprintln [& xs]
   (concat (list 'y2k.RT.eprintln) xs))

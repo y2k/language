@@ -17,7 +17,7 @@ let test () =
   let actual =
     Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
       ~filename:"app/main.clj"
-      {|(ns g) (defn f2 [a b] a) (defn f [a b c] (f2 a b) (+ b c))|}
+      {|(ns g) (defn f2 [a b] (str a)) (defn f [a b c] (f2 :a "b") (+ b c))|}
   in
   let expected =
     StringMap.of_list
@@ -33,8 +33,8 @@ c
 do*
 (
 g.f2
-a
-b
+"a"
+"b"
 )
 (
 +
@@ -49,7 +49,10 @@ fn*
 a
 b
 )
+(
+str
 a
+)
 )|});
       ]
   in

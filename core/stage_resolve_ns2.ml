@@ -6,6 +6,7 @@ type resolve_ctx = {
   aliases : (string * string) list;
   namespace : string;
   prelude_fns : StringSet.t;
+  registered_defs : StringSet.t;
 }
 
 let mangle_from_path ns fname = Printf.sprintf "%s.%s" ns fname
@@ -33,8 +34,8 @@ let rec resolve (ctx : resolve_ctx) node =
         (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
         |> List.split_into_pairs
         |> List.map (function
-             | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
-             | k, v -> failsexp __LOC__ [ k; v ])
+          | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+          | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in
       (* (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ])) *)
@@ -50,11 +51,14 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      let name = mangle_from_path ctx.namespace name in
-      (* prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
-      ^ " -> " ^ name; *)
+      (* prerr_endline @@ "[ResolveNS:def*][1] " ^ name; *)
+      let mng_name = mangle_from_path ctx.namespace name in
+      (* prerr_endline @@ "[ResolveNS:def*][2] " ^ name; *)
       let _, value = resolve ctx value in
-      (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
+      let ctx =
+        { ctx with registered_defs = StringSet.add name ctx.registered_defs }
+      in
+      (ctx, SList (m, [ def_; SAtom (mn, mng_name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; args; body ]))
@@ -66,8 +70,8 @@ let rec resolve (ctx : resolve_ctx) node =
       let body =
         body
         |> List.filter_map (function
-             | SList (_, [ SAtom (_, "do*") ]) -> None
-             | x -> Some x)
+          | SList (_, [ SAtom (_, "do*") ]) -> None
+          | x -> Some x)
       in
       (ctx, SList (m, do_ :: body))
   | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
@@ -85,16 +89,17 @@ let rec resolve (ctx : resolve_ctx) node =
           String.get fun_name 0 < 'a'
           || String.get fun_name 0 > 'z'
           || StringSet.mem fun_name ctx.prelude_fns
+          || not (StringSet.mem fun_name ctx.registered_defs)
         then fun_name
         else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
           ctx.aliases |> List.assoc_opt alias_name
           |> Option.map (fun x ->
-                 let fun_name =
-                   String.split_on_char '/' fun_name
-                   |> List.tl |> String.concat "/"
-                 in
-                 NamespaceUtils.path_to_namespace fun_name x)
+              let fun_name =
+                String.split_on_char '/' fun_name
+                |> List.tl |> String.concat "/"
+              in
+              NamespaceUtils.path_to_namespace fun_name x)
           |> Option.value ~default:fun_name
         else mangle_from_path ctx.namespace fun_name
       in
@@ -114,6 +119,7 @@ let do_resolve functions filename _ node =
         aliases = [];
         namespace = "user";
         prelude_fns = StringSet.of_list functions;
+        registered_defs = StringSet.empty;
       }
     in
     resolve ctx node |> snd

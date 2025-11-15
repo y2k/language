@@ -1,4 +1,4 @@
-module E = Core__.Functions_eval
+module E = Core__.Backend_eval_functions
 
 let tests =
   [
@@ -9,8 +9,8 @@ let tests =
     (__POS__, "^\\d+", "12bb", Some [ "12" ]);
   ]
   |> List.map (fun (pos, pattern, input, expected) ->
-         Alcotest.test_case (Printf.sprintf "'%s' '%s'" pattern input) `Quick
-           (fun () ->
-             let actual = E.re_find pattern input in
-             Alcotest.(check ?pos:(Some pos) (option (list string)))
-               "" expected actual))
+      Alcotest.test_case (Printf.sprintf "'%s' '%s'" pattern input) `Quick
+        (fun () ->
+          let actual = E.re_find pattern input in
+          Alcotest.(check ?pos:(Some pos) (option (list string)))
+            "" expected actual))

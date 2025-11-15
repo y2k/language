@@ -4,6 +4,15 @@ import java.util.*;
 
 public class RT {
 
+    public static Object hash_map_from(Object xs) {
+        var result = new HashMap<Object, Object>();
+        var items = (java.util.List<Object>) xs;
+        for (int i = 0; i < items.size(); i += 2) {
+            result.put(items.get(i), items.get(i + 1));
+        }
+        return result;
+    }
+
     public static Object nop() {
         return null;
     }
@@ -157,7 +166,7 @@ public class RT {
         return result;
     }
 
-    // Lambda
+    // region Lambda
 
     public interface Fn0 {
         public Object invoke() throws Exception;
@@ -301,4 +310,6 @@ public class RT {
             return throwSilent(e);
         }
     }
+
+    // endregion
 }

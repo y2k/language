@@ -40,6 +40,9 @@
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
 
+(defn macro_hash-map-from [xs]
+  (list 'y2k.RT.hash_map_from xs))
+
 (defn macro_eprintln [& xs]
   (concat (list 'y2k.RT.eprintln) xs))
 

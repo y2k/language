@@ -17,3 +17,14 @@
   (java.util.Objects.requireNonNull
    nil
    (str loc " " xs)))
+
+;; (defn- hash_map_from_rec )
+
+;; (defn hash_map_from [xs]
+;;   (let [hm {}]
+;;     (loop [i 0 items (cast java.util.List xs)]
+;;       (if (< i (.size items))
+;;         (do
+;;           (.put hm i (.get items i))
+;;           (recur (+ i 1) items))
+;;         hm))))

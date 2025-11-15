@@ -184,7 +184,7 @@ let create_prelude_context ~builtin_macro =
       "" false (Fun.const []) "[PRELUDE]" "" "prelude.clj" Prelude.prelude_eval
   in
   empty_eval_context ~builtin_macro
-  |> Functions_eval.attach reg_val reg_fun
+  |> Backend_eval_functions.attach reg_val reg_fun
   |> Fun.flip eval_ prelude_sexp
   |> fst
 

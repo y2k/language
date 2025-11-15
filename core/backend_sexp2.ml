@@ -2,6 +2,8 @@ open Common
 module StringMap = Map.Make (String)
 
 let rec convert = function
+  | SAtom (_, x) when String.starts_with ~prefix:":" x ->
+      "\"" ^ String.sub x 1 (String.length x - 1) ^ "\""
   | SAtom (_, x) -> x
   | SList (_, xs) ->
       xs |> List.map convert |> String.concat "\n" |> Printf.sprintf "(\n%s\n)"

@@ -4,6 +4,7 @@
     (FIXME loc actual)))
 
 (defn test []
+  (assert_ __LOC__ {:a 1 :b 2 :c 3} (hash-map-from [:a 1 :b 2 :c 3]))
   (assert_ __LOC__ (count {:a 1 :b 2 :c 4}) (count (merge {:a 1 :b 3} {:b 2 :c 4})))
   (assert_ __LOC__ true (not= 1 2))
   (assert_ __LOC__ false (not= 1 1))
