@@ -1,7 +1,9 @@
+(ns test_common)
+
 (defn- assert_ [loc expected actual]
-  (if (= (str expected) (str actual))
+  (if (assert expected actual)
     nil
-    (FIXME loc actual)))
+    (FIXME loc " - " expected " != " actual)))
 
 (defn test []
   (assert_ __LOC__ {:a 1 :b 2 :c 3} (hash-map-from [:a 1 :b 2 :c 3]))

@@ -8,6 +8,7 @@ let () =
   let namespace = ref "" in
   let root_dir = ref "" in
   let log = ref false in
+  let prelude_path = ref "" in
   Arg.parse
     [
       ("-target", Arg.Set_string target, "Target: js, java, eval, bytecode");
@@ -15,6 +16,7 @@ let () =
       ("-namespace", Arg.Set_string namespace, "Namespace");
       ("-root", Arg.Set_string root_dir, "Root directory");
       ("-log", Arg.Bool (( := ) log), "Show log");
+      ("-prelude_path", Arg.Set_string prelude_path, "Prelude path");
     ]
     (( := ) command) "ly2k";
   match !command with
@@ -51,7 +53,7 @@ let () =
           FileReader.with_scope
             (fun _ ->
               Backend_js.compile ~builtin_macro:Macro.invoke ~log:!log (code ())
-                ~filename:!src
+                ~filename:!src ~prelude_path:!prelude_path
               |> print_endline)
             ()
       | "eval" | "repl" ->

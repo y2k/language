@@ -1,13 +1,12 @@
 .PHONY: test
 test: prelude build
 	@ dune build
-# 	@ clear && export OCAMLRUNPARAM=b && dune test -f
 	@ clear && export OCAMLRUNPARAM=b && cd _build/default/test && ./test.exe -q
 
 .PHONY: test_slow
 test_slow: prelude build
 	@ dune build
-	@ clear && export OCAMLRUNPARAM=b && dune test -f
+	@ clear && export ALCOTEST_BAIL=true && export OCAMLRUNPARAM=b && dune test -f
 
 .PHONY: build
 build: prelude

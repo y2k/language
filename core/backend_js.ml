@@ -1,7 +1,12 @@
 open Common
 module Ng = Common.NameGenerator
 
-type context = { filename : string; root_dir : string; namespace : string }
+type context = {
+  filename : string;
+  root_dir : string;
+  namespace : string;
+  prelude_path : string;
+}
 
 let compile_fn do_compile args body =
   let vararg =
@@ -66,12 +71,12 @@ let rec do_compile (ctx : context) = function
         ] ) ->
       items |> List.split_into_pairs
       |> List.map (function
-           | SAtom (_, name), SList (_, [ _; SAtom (_, path) ])
-             when String.starts_with ~prefix:"." path ->
-               Printf.sprintf "import * as %s from '%s.js'" name path
-           | SAtom (_, name), SList (_, [ _; SAtom (_, path) ]) ->
-               Printf.sprintf "import * as %s from '%s'" name path
-           | k, v -> failsexp __LOC__ [ k; v ])
+        | SAtom (_, name), SList (_, [ _; SAtom (_, path) ])
+          when String.starts_with ~prefix:"." path ->
+            Printf.sprintf "import * as %s from '%s.js'" name path
+        | SAtom (_, name), SList (_, [ _; SAtom (_, path) ]) ->
+            Printf.sprintf "import * as %s from '%s'" name path
+        | k, v -> failsexp __LOC__ [ k; v ])
       |> String.concat ";\n"
   (* not *)
   | SList (_, [ SAtom (_, "not"); x ]) ->
@@ -144,7 +149,11 @@ let rec do_compile (ctx : context) = function
   (* Function call *)
   | SList (_, SAtom (_, fn) :: args) ->
       let args = List.map (do_compile ctx) args in
-      let fn = fn |> String.map (function '/' -> '.' | c -> c) in
+      let fn =
+        fn
+        |> String.map (function '/' -> '.' | c -> c)
+        |> String.map (fun x -> if x = '-' then '_' else x)
+      in
       Printf.sprintf "%s(%s)" fn (String.concat "," args)
   | SList (_, fn :: args) ->
       let args = List.map (do_compile ctx) args in
@@ -156,7 +165,7 @@ let get_macro ~builtin_macro node =
   Backend_eval.eval_ (Backend_eval.create_prelude_context ~builtin_macro) node
   |> fst |> Backend_eval.get_all_functions
 
-let compile ~builtin_macro ~log ~filename code =
+let compile ~builtin_macro ~log ~filename ~prelude_path code =
   let root_dir = "" in
   let namespace = "" in
   Ng.with_scope (fun () ->
@@ -168,4 +177,5 @@ let compile ~builtin_macro ~log ~filename code =
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"
-      |> do_compile { filename; root_dir; namespace })
+      |> do_compile { filename; root_dir; namespace; prelude_path }
+      |> Printf.sprintf "import * as prelude from '%s';\n%s" prelude_path)

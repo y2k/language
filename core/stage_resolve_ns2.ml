@@ -17,10 +17,11 @@ let rec resolve (ctx : resolve_ctx) node =
   | SAtom (m, name) -> (
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x))
-      | None -> (ctx, SAtom (m, name)) (* (def* user.__namespace g) *))
+      | None -> (ctx, SAtom (m, name)))
   | SList
       (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); SAtom (_, namespace) ])
     ->
+      let namespace = unpack_symbol namespace in
       (* prerr_endline @@ "[LOG][ResolveNS] " ^ namespace; *)
       ({ ctx with namespace }, SList (meta_empty, [ SAtom (meta_empty, "do*") ]))
   | SList

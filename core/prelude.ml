@@ -337,7 +337,7 @@ p__1=((java.util.List)xs).get(((int)i));
 } else {
 p__1=y2k.RT.invoke(
 y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:66:9",
+"prelude/data/prelude_java.clj:69:9",
 java.util.Arrays.asList(
 "Unsupported source: ",
 String.format(
@@ -383,6 +383,9 @@ let prelude_java_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_assert [a b]
+  (list '= a b))
 
 (defn macro_parse-int [s]
   (list 'Integer/parseInt
@@ -670,6 +673,12 @@ let prelude_js_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_hash-map-from [xs]
+  (list 'prelude/hash_map_from xs))
+
+(defn macro_assert [a b]
+  (list 'prelude/debug_assert a b))
+
 (defn macro_not= [x y]
   (list 'not (list '= x y)))
 
@@ -745,8 +754,11 @@ let prelude_js_macro = {|
 (defn macro_re-pattern [x]
   (list 'RegExp. x))
 
+;; (defn macro_re-find [p i]
+;;   (list '.exec p i))
+
 (defn macro_re-find [p i]
-  (list '.exec p i))
+  (list 'prelude/re_find p i))
 
 ;; Collections
 

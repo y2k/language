@@ -1,3 +1,6 @@
+(defn macro_assert [a b]
+  (list '= a b))
+
 (defn macro_parse-int [s]
   (list 'Integer/parseInt
         (list 'cast 'String s)))

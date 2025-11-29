@@ -1,3 +1,9 @@
+(defn macro_hash-map-from [xs]
+  (list 'prelude/hash_map_from xs))
+
+(defn macro_assert [a b]
+  (list 'prelude/debug_assert a b))
+
 (defn macro_not= [x y]
   (list 'not (list '= x y)))
 
@@ -73,8 +79,11 @@
 (defn macro_re-pattern [x]
   (list 'RegExp. x))
 
+;; (defn macro_re-find [p i]
+;;   (list '.exec p i))
+
 (defn macro_re-find [p i]
-  (list '.exec p i))
+  (list 'prelude/re_find p i))
 
 ;; Collections
 

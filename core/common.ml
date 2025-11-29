@@ -56,8 +56,7 @@ module FileReader = struct
   let resolve_env_in_path path =
     let var = ".+\\$LY2K_PACKAGES_DIR" in
     match Sys.getenv_opt "LY2K_PACKAGES_DIR" with
-    | Some value ->
-        Str.global_replace (Str.regexp var) value path
+    | Some value -> Str.global_replace (Str.regexp var) value path
     | None -> path
 
   let with_scope f arg =
@@ -154,8 +153,8 @@ module StringMap = struct
     Format.fprintf fmt "@[<v>{";
     bindings
     |> List.iter (fun (key, value) ->
-           Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
-             value);
+        Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
+          value);
     Format.fprintf fmt "@,}@]"
 end
 
@@ -191,6 +190,8 @@ module Obj = struct
     | OVector (_, xs), OVector (_, ys) -> List.for_all2 equal xs ys
     | ONil _, ONil _ -> true
     | ONil _, _ | _, ONil _ -> false
+    | OMap (_, xs), OMap (_, ys) ->
+        List.for_all2 (fun (a, b) (c, d) -> equal a c && equal b d) xs ys
     | a, b -> failobj __LOC__ [ a; b ]
 end
 
@@ -512,9 +513,8 @@ module OUtils = struct
     | OMap (_, xs) ->
         xs
         |> List.map (fun (k, v) ->
-               Printf.sprintf "%s %s" (obj_to_string k) (obj_to_string v))
-        |> String.concat " "
-        |> Printf.sprintf "{%s}"
+            Printf.sprintf "%s %s" (obj_to_string k) (obj_to_string v))
+        |> String.concat " " |> Printf.sprintf "{%s}"
     | OQuote (_, SAtom (_, x)) -> x
     | ONil _ -> "nil"
     | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""

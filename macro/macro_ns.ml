@@ -19,24 +19,24 @@ let handle_require ctx requires =
   let aliases =
     requires
     |> List.concat_map (function
-         | SList (_, [ _; SAtom (_, path); _; SAtom (ma, alias) ]) ->
-             let path = unpack_string path in
-             (* prerr_endline @@ "LOG[NS]3: " ^ alias ^ " -> " ^ path; *)
-             [
-               SAtom (meta_empty, alias);
-               SList
-                 ( meta_empty,
-                   [
-                     SAtom
-                       ( ma,
-                         NamespaceUtils.convert_path_to_ns ctx.root_dir
-                           ctx.filename path );
-                     SAtom (ma, path);
-                   ] )
-               (* |> trace __LOC__ show_sexp2 *);
-             ]
-         | SList (_, [ SAtom (_, "vector"); _; SAtom (_, ":refer"); _ ]) -> []
-         | x -> failsexp __LOC__ [ x ])
+      | SList (_, [ _; SAtom (_, path); _; SAtom (ma, alias) ]) ->
+          let path = unpack_string path in
+          (* prerr_endline @@ "LOG[NS]3: " ^ alias ^ " -> " ^ path; *)
+          [
+            SAtom (meta_empty, alias);
+            SList
+              ( meta_empty,
+                [
+                  SAtom
+                    ( ma,
+                      NamespaceUtils.convert_path_to_ns ctx.root_dir
+                        ctx.filename path );
+                  SAtom (ma, path);
+                ] )
+            (* |> trace __LOC__ show_sexp2 *);
+          ]
+      | SList (_, [ SAtom (_, "vector"); _; SAtom (_, ":refer"); _ ]) -> []
+      | x -> failsexp __LOC__ [ x ])
   in
   match aliases with
   | [] -> []
@@ -59,31 +59,30 @@ let invoke m (ctx : ns_opt) args =
   let args =
     args
     |> List.concat_map (function
-         | SList (_, SAtom (_, ":require") :: requires) ->
-             handle_require ctx requires
-         | SList (_, SAtom (_, ":import") :: imports) ->
-             imports
-             |> List.concat_map (function
-                  | SList (_, _ :: SAtom (_, pkg) :: classes) ->
-                      classes
-                      |> List.map (function
-                           | SAtom (_, class_name) ->
-                               SList
-                                 ( meta_empty,
-                                   [
-                                     SAtom (meta_empty, "def*");
-                                     SAtom (meta_empty, class_name);
-                                     SList
-                                       ( meta_empty,
-                                         [
-                                           SAtom (meta_empty, "quote*");
-                                           SAtom
-                                             (meta_empty, pkg ^ "." ^ class_name);
-                                         ] );
-                                   ] )
-                           | x -> failsexp __LOC__ [ x ])
+      | SList (_, SAtom (_, ":require") :: requires) ->
+          handle_require ctx requires
+      | SList (_, SAtom (_, ":import") :: imports) ->
+          imports
+          |> List.concat_map (function
+            | SList (_, _ :: SAtom (_, pkg) :: classes) ->
+                classes
+                |> List.map (function
+                  | SAtom (_, class_name) ->
+                      SList
+                        ( meta_empty,
+                          [
+                            SAtom (meta_empty, "def*");
+                            SAtom (meta_empty, class_name);
+                            SList
+                              ( meta_empty,
+                                [
+                                  SAtom (meta_empty, "quote*");
+                                  SAtom (meta_empty, pkg ^ "." ^ class_name);
+                                ] );
+                          ] )
                   | x -> failsexp __LOC__ [ x ])
-         | x -> failsexp __LOC__ [ x ])
+            | x -> failsexp __LOC__ [ x ])
+      | x -> failsexp __LOC__ [ x ])
   in
   let ns_node =
     if ctx.namespace = "_" then []
@@ -94,7 +93,7 @@ let invoke m (ctx : ns_opt) args =
             [
               SAtom (meta_empty, "def*");
               SAtom (meta_empty, "__namespace");
-              SAtom (meta_empty, ctx.namespace);
+              SAtom (meta_empty, ":" ^ ctx.namespace);
             ] );
       ]
   in

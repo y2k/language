@@ -1,8 +1,9 @@
 module A = Alcotest
 module Js = Core__.Backend_js
 
-let compile code =
-  Js.compile ~builtin_macro:Macro.invoke ~log:true ~filename:"main.clj" code
+let compile ~filename code =
+  let prelude_path = Unix.realpath "../../../prelude/data/y2k/rt.js" in
+  Js.compile ~builtin_macro:Macro.invoke ~log:true ~filename ~prelude_path code
   |> Printf.sprintf "%s;\n\nprocess.exit(test());"
 
 let run_code code =
@@ -11,10 +12,10 @@ let run_code code =
   Out_channel.(with_open_bin path (fun f -> output_string f code));
   Sys.command (Printf.sprintf "node %s" path) |> string_of_int
 
-let create_test speed =
+let create_test ~filename speed =
   List.map (fun (loc, (input : string), expected) ->
       A.test_case loc speed (fun () ->
-          let compiled = compile input in
+          let compiled = compile ~filename input in
           let actual = run_code compiled in
           A.check A.string "" expected actual))
 
@@ -97,4 +98,4 @@ let tests =
       "42" );
     (__LOC__, {|(defn test [] 42)|}, "42");
   ]
-  |> create_test `Slow
+  |> create_test ~filename:"main.clj" `Slow

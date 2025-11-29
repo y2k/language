@@ -124,6 +124,10 @@ let attach reg_val reg_fun ctx =
       match xs with
       | [ OMap _ ] -> OBool (meta_empty, true)
       | _ -> OBool (meta_empty, false))
+  |> reg_fun "assert" (fun xs ->
+      match xs with
+      | [ x; y ] -> OBool (meta_empty, Obj.equal x y)
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "=" (fun xs ->
       match xs with
       | [ x; y ] -> OBool (meta_empty, Obj.equal x y)
