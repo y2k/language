@@ -1,3 +1,5 @@
+(ns prelude)
+
 ;; Collections
 
 (defn get [xs i]

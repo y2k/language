@@ -6,6 +6,7 @@ type ctx = {
   root : string;
   base_ns : string;
 }
+[@@deriving show]
 
 let compute_name ctx name =
   let parts = String.split_on_char '/' name in
@@ -43,11 +44,13 @@ let rec invoke (ctx : ctx) = function
         :: _ ) ->
       let items =
         items
+        (* |> trace "__ns_aliases:" (fun xs ->
+            xs |> List.map show_sexp2 |> String.concat ", ") *)
         (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
         |> List.split_into_pairs
         |> List.map (function
-             | SAtom (_, k), SList (_, [ _; SAtom (_, v) ]) -> (k, v)
-             | k, v -> failsexp __LOC__ [ k; v ])
+          | SAtom (_, k), SList (_, [ _; SAtom (_, v) ]) -> (k, v)
+          | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in
       (* (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ])) *)

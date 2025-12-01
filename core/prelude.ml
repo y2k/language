@@ -322,6 +322,10 @@ let java_runtime2 = {|
 package y2k;
 
 public class prelude_java {
+public static final Object __namespace;
+static {
+__namespace="prelude";
+};
 public static /* final */ Object get;
 static {
 get=y2k.RT.fn((xs,i)->{
