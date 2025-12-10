@@ -172,7 +172,7 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       (* prerr_endline @@ "LOG: code: " ^ code; *)
       code
       |> Frontent_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
-           { log; macro = Prelude.prelude_js_macro; filename; root_dir }
+           { log; macro = Prelude.prelude_js_macro; filename }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke

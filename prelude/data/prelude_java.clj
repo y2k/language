@@ -1,4 +1,4 @@
-(ns prelude)
+(ns prelude_java)
 
 ;; Collections
 

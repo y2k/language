@@ -1,11 +1,6 @@
 open Common
 
-type compile_opt = {
-  filename : string;
-  root_dir : string;
-  namespace_root : string;
-}
-
+type compile_opt = { namespace_root : string }
 type complie_context = unit
 
 let convert_namespace_to_class_name (ns : string) =
@@ -164,27 +159,30 @@ let rec compile (ctx : complie_context) sexp =
           | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" fn args))
   | x -> failsexp __LOC__ [ x ]
 
+let rec get_namespace : sexp -> string option = function
+  | SList (_, SAtom (_, "do*") :: childs) ->
+      childs |> List.find_map get_namespace
+  | SList (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); SAtom (_, name) ])
+    ->
+      Some (unpack_symbol name)
+  | _ -> None
+
 let compute_package opt sexp =
-  let rec find_packge : sexp -> string option = function
-    | SList (_, SAtom (_, "do*") :: childs) ->
-        childs |> List.find_map find_packge
-    | SList (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); SAtom (_, name) ])
-      ->
-        Some (unpack_symbol name)
-    | x -> failsexp __LOC__ [ x ]
-  in
   let pkg =
-    find_packge sexp |> Option.get |> String.split_on_char '.' |> List.rev
-    |> List.tl |> List.rev |> String.concat "."
+    get_namespace sexp
+    |> Option.value ~default:"user"
+    |> String.split_on_char '.' |> List.rev |> List.tl |> List.rev
+    |> String.concat "."
   in
   if pkg = "" then opt.namespace_root else opt.namespace_root ^ "." ^ pkg
 
 let do_compile (opt : compile_opt) sexp =
   let pkg = compute_package opt sexp in
   let clazz =
-    opt.filename
-    |> Str.global_replace (Str.regexp "\\.clj") ""
-    |> Str.global_replace (Str.regexp ".+/") ""
+    let ns = get_namespace sexp in
+    ns
+    |> Option.value ~default:"user"
+    |> String.split_on_char '.' |> List.rev |> List.hd
   in
   let body = compile () sexp in
   Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
@@ -196,21 +194,21 @@ let get_macro ~builtin_macro node =
   in
   Backend_eval.get_all_functions ctx
 
-let compile ~builtin_macro (namespace : string) (log : bool) (filename : string)
-    (root_dir : string) code =
+let compile ~builtin_macro ~(namespace : string) (log : bool)
+    (filename : string) code =
   (* let log = log || true in *)
   Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontent_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
-           { log; macro = Prelude.prelude_java_macro; filename; root_dir }
+           { log; macro = Prelude.prelude_java_macro; filename }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
-      |> Stage_resolve_import.do_resolve filename root_dir
+      |> Stage_resolve_import.do_resolve
       |> log_stage log "Stage_resolve_import"
-      |> Stage_alias_to_class.do_invoke namespace root_dir filename
+      |> Stage_alias_to_class.do_invoke namespace
       |> log_stage log "Stage_alias_to_class"
       |> Stage_fun_args_type.invoke
       |> log_stage log "Stage_fun_args_type"
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"
-      |> do_compile { filename; root_dir; namespace_root = namespace })
+      |> do_compile { namespace_root = namespace })

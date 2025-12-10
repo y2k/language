@@ -22,7 +22,7 @@ let rec compile_functions (node : sexp) : string StringMap.t =
 
 let invoke ~builtin_macro ~log code ~filename =
   Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
-    { log; macro = ""; filename; root_dir = "" }
+    { log; macro = ""; filename }
     code
   |> Stage_resolve_ns2.do_resolve [] filename ""
   |> log_stage log "Stage_resolve_ns2"

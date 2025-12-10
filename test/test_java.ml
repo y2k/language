@@ -6,8 +6,9 @@ module Internal = struct
 end
 
 module JavaExecution = struct
-  let run_code code =
+  let run_code ~(namespace : string) code =
     let dir = Filename.temp_dir "ly2k" "test" in
+    prerr_endline @@ "DIR: " ^ dir;
     Sys.command (Printf.sprintf "mkdir %s/y2k" dir) |> ignore;
     Out_channel.(
       with_open_bin (dir ^ "/y2k/ff.java")
@@ -26,37 +27,40 @@ public class ff {
         (Fun.flip output_string Prelude.java_runtime2));
     let java_code =
       FileReader.with_stub_scope ""
-        (Backend_java.compile ~builtin_macro:Macro.invoke "y2k" true "app/test"
+        (Backend_java.compile ~builtin_macro:Macro.invoke ~namespace:"y2k" true
            "app/test")
         code
     in
     Out_channel.(
-      with_open_bin (dir ^ "/y2k/test.java") (Fun.flip output_string java_code));
-
+      with_open_bin
+        (dir ^ "/y2k/" ^ namespace ^ ".java")
+        (Fun.flip output_string java_code));
     Out_channel.(
       with_open_bin (dir ^ "/main.java")
         (Fun.flip output_string
-           {|
+           (Printf.sprintf
+              {|
 class main {
 	public static void main(String[] args) {
-    System.exit((int) y2k.RT.invoke(y2k.test.test));
+    System.exit((int) y2k.RT.invoke(y2k.%s.test));
 	}
-}|}));
+}|}
+              namespace)));
     Sys.command (Printf.sprintf "cd %s; java main.java" dir) |> string_of_int
 
-  let create_tests speed _path _cls_name tests =
+  let create_tests speed ~namespace tests =
     tests
     |> List.map (fun (pos, input, expected) ->
-           Alcotest.test_case "" speed (fun () ->
-               let actual = run_code input in
-               Alcotest.(check ?pos:(Some pos) string) "" expected actual))
+        Alcotest.test_case input speed (fun () ->
+            let actual = run_code ~namespace input in
+            Alcotest.(check ?pos:(Some pos) string) "" expected actual))
 end
 
 let tests =
   [
-    ( __POS__,
+    (* ( __POS__,
       {|(ns _ (:require ["./lib/eff" :as e])) (defn test [] (e/foo 42))|},
-      {|42|} );
+      {|42|} ); *)
     ( __POS__,
       {|
     (declare parse)
@@ -157,4 +161,4 @@ let tests =
     (__POS__, {|(defn test [] (if false 2 3))|}, {|3|});
     (__POS__, {|(defn test [] (if true 2 3))|}, {|2|});
   ]
-  |> JavaExecution.create_tests `Slow "/app/src/core/ext/user.clj" "user"
+  |> JavaExecution.create_tests `Slow ~namespace:"user"

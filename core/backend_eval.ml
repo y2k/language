@@ -27,7 +27,7 @@ let get_all_functions (ctx : eval_context) =
   ctx.ns
   |> List.map (fun (x, y) -> (x, !y))
   |> List.filter_map (fun (x, y) ->
-         match y with OLambda (_, f) -> Some (x, f) | _ -> None)
+      match y with OLambda (_, f) -> Some (x, f) | _ -> None)
 
 let resolve_value ctx name =
   if name = "true" then OBool (meta_empty, true)
@@ -160,16 +160,16 @@ let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =
   code
   |> Frontent_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
-       { log; macro = Prelude.prelude_eval_macro; filename; root_dir }
+       { log; macro = Prelude.prelude_eval_macro; filename }
   |> Stage_resolve_ns.do_resolve (ctx.ns |> List.map fst) filename root_dir
   |> log_stage log (type_ ^ " Stage_resolve_ns")
   |> Stage_load_require.do_invoke (fun path ->
-         let path2 =
-           Filename.concat (Filename.dirname origin_filename) (path ^ ".clj")
-           |> FileReader.realpath
-         in
-         let code = FileReader.read path2 in
-         compile ctx origin_filename log get_macro "  [REQ]" "" path2 code)
+      let path2 =
+        Filename.concat (Filename.dirname origin_filename) (path ^ ".clj")
+        |> FileReader.realpath
+      in
+      let code = FileReader.read path2 in
+      compile ctx origin_filename log get_macro "  [REQ]" "" path2 code)
   |> log_stage log (type_ ^ " Stage_load_require")
   |> Stage_flat_do.invoke
   |> log_stage log (type_ ^ " Stage_flat_do")

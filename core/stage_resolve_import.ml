@@ -1,10 +1,6 @@
 open Common
 
-type resolve_ctx = {
-  links : (string * string) list;
-  filename : string;
-  root_dir : string;
-}
+type resolve_ctx = { links : (string * string) list }
 
 let resolve_type_for_node ctx = function
   | SAtom (m, n) when m.symbol <> "" ->
@@ -36,7 +32,7 @@ let rec resolve (ctx : resolve_ctx) node =
           SAtom (_, name);
           SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]);
         ] ) ->
-      let ctx = { ctx with links = (name, value) :: ctx.links } in
+      let ctx = { links = (name, value) :: ctx.links } in
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "fn*") as fn_); SList (ma, args); body ]) ->
@@ -50,8 +46,8 @@ let rec resolve (ctx : resolve_ctx) node =
       let body =
         body
         |> List.filter_map (function
-             | SList (_, [ SAtom (_, "do*") ]) -> None
-             | x -> Some x)
+          | SList (_, [ SAtom (_, "do*") ]) -> None
+          | x -> Some x)
       in
       (ctx, SList (m, do_ :: body))
   | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
@@ -75,6 +71,6 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, SList (m, fn :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_resolve filename root_dir node =
-  let ctx = { links = [ ("String", "String") ]; filename; root_dir } in
+let do_resolve node =
+  let ctx = { links = [ ("String", "String") ] } in
   resolve ctx node |> snd

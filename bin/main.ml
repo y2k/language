@@ -6,19 +6,21 @@ let () =
   let target = ref "" in
   let src = ref "" in
   let namespace = ref "" in
-  let root_dir = ref "" in
   let log = ref false in
   let prelude_path = ref "" in
-  Arg.parse
+  let speclist =
     [
       ("-target", Arg.Set_string target, "Target: js, java, eval, bytecode");
       ("-src", Arg.Set_string src, "Source file (use :stdin for standard input)");
       ("-namespace", Arg.Set_string namespace, "Namespace");
-      ("-root", Arg.Set_string root_dir, "Root directory");
       ("-log", Arg.Bool (( := ) log), "Show log");
       ("-prelude_path", Arg.Set_string prelude_path, "Prelude path");
     ]
-    (( := ) command) "ly2k";
+  in
+  (try Arg.parse_argv Sys.argv speclist (( := ) command) "ly2k"
+   with Arg.Bad msg | Arg.Help msg ->
+     print_string msg;
+     exit 1);
   match !command with
   | "generate" -> (
       match !target with
@@ -45,8 +47,8 @@ let () =
       | "java" ->
           FileReader.with_scope
             (fun _ ->
-              Backend_java.compile ~builtin_macro:Macro.invoke !namespace !log
-                !src !root_dir (code ())
+              Backend_java.compile ~builtin_macro:Macro.invoke
+                ~namespace:!namespace !log !src (code ())
               |> print_endline)
             ()
       | "js" ->

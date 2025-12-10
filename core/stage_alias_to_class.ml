@@ -1,19 +1,13 @@
 open Common
 
-type ctx = {
-  aliases : (string * string) list;
-  filename : string;
-  root : string;
-  base_ns : string;
-}
+type ctx = { aliases : (string * string) list; base_ns : string }
 [@@deriving show]
 
 let compute_name ctx name =
   let parts = String.split_on_char '/' name in
-  let pkg = List.assoc_opt (List.hd parts) ctx.aliases in
-  match pkg with
+  match List.assoc_opt (List.hd parts) ctx.aliases with
   | Some pkg ->
-      let path =
+      (* let path =
         Filename.concat
           (Filename.dirname (FileReader.realpath ctx.filename))
           (pkg ^ ".clj")
@@ -27,7 +21,8 @@ let compute_name ctx name =
       in
       let clazz = Str.global_replace (Str.regexp "/") "." path in
       let fun_name = List.nth parts 1 in
-      Some (Printf.sprintf "%s.%s#%s" ctx.base_ns clazz fun_name)
+      Some (Printf.sprintf "%s.%s#%s" ctx.base_ns clazz fun_name) *)
+      Some pkg
   | _ -> None
 
 let rec invoke (ctx : ctx) = function
@@ -70,6 +65,6 @@ let rec invoke (ctx : ctx) = function
       (ctx, SList (m, name :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_invoke base_ns root filename node =
-  let ctx = { aliases = []; filename; root; base_ns } in
+let do_invoke base_ns node =
+  let ctx = { aliases = []; base_ns } in
   invoke ctx node |> snd

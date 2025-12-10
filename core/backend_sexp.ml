@@ -20,7 +20,7 @@ let rec convert = function
 
 let invoke ~builtin_macro ~log code =
   Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
-    { log; macro = ""; filename = ""; root_dir = "" }
+    { log; macro = ""; filename = "" }
     code
   |> Stage_resolve_ns.do_resolve [] "" ""
   |> convert

@@ -1,11 +1,6 @@
 open Common
 
-type simplify_opt = {
-  log : bool;
-  macro : string;
-  filename : string;
-  root_dir : string;
-}
+type simplify_opt = { log : bool; macro : string; filename : string }
 
 type simplify_ctx = {
   otp : simplify_opt;
@@ -30,16 +25,16 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   (* TODO move to prelude *)
   | SList (m, SAtom (_, "or") :: x :: xs) ->
       (match xs with
-      | [] -> x
-      | xs ->
-          SList
-            ( m,
-              [
-                SAtom (m, "if");
-                x;
-                x;
-                SList (meta_empty, SAtom (meta_empty, "or") :: xs);
-              ] ))
+        | [] -> x
+        | xs ->
+            SList
+              ( m,
+                [
+                  SAtom (m, "if");
+                  x;
+                  x;
+                  SList (meta_empty, SAtom (meta_empty, "or") :: xs);
+                ] ))
       |> simplify ctx
   | SList (_, [ SAtom (_, "and"); a1 ]) -> a1 |> simplify ctx
   | SList (m2, SAtom (m, "and") :: a1 :: args) ->
@@ -72,18 +67,18 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
   | SList (_, SAtom (_, "->") :: body) ->
       body
       |> List.reduce __LOC__ (fun acc x ->
-             match x with
-             | SAtom (l, z) -> SList (l, [ SAtom (l, z); acc ])
-             | SList (m, a :: bs) -> SList (m, a :: acc :: bs)
-             | xs -> failsexp __LOC__ [ xs ])
+          match x with
+          | SAtom (l, z) -> SList (l, [ SAtom (l, z); acc ])
+          | SList (m, a :: bs) -> SList (m, a :: acc :: bs)
+          | xs -> failsexp __LOC__ [ xs ])
       |> simplify ctx
   | SList (_, SAtom (_, "->>") :: body) ->
       body
       |> List.reduce __LOC__ (fun acc x ->
-             match x with
-             | SAtom (l, z) -> SList (l, [ acc; SAtom (l, z) ])
-             | SList (m, a :: bs) -> SList (m, (a :: bs) @ [ acc ])
-             | xs -> failsexp __LOC__ [ xs ])
+          match x with
+          | SAtom (l, z) -> SList (l, [ acc; SAtom (l, z) ])
+          | SList (m, a :: bs) -> SList (m, (a :: bs) @ [ acc ])
+          | xs -> failsexp __LOC__ [ xs ])
       |> simplify ctx
   | SList (m, SAtom (mq, "quote") :: x) -> SList (m, SAtom (mq, "quote*") :: x)
   | SList (m, SAtom (md, "defn-") :: name :: args :: body) ->
@@ -156,8 +151,8 @@ let do_simplify ~builtin_macro eval_macro (opt : simplify_opt) (code : string) :
            get_macro = [];
          }
   in
-  let do_simplify_inner root_dir filename type_ macro node =
-    let opt = { opt with filename; root_dir } in
+  let do_simplify_inner filename type_ macro node =
+    let opt = { opt with filename } in
     let log_stage = log_stage opt.log in
     node
     |> log_stage (type_ ^ "Parse ")
@@ -171,6 +166,6 @@ let do_simplify ~builtin_macro eval_macro (opt : simplify_opt) (code : string) :
     |> log_stage (type_ ^ "Simplify ")
   in
   let macro_fn_list =
-    eval_macro (do_simplify_inner "" "macro.clj" "  [MACRO] " [] macro)
+    eval_macro (do_simplify_inner "macro.clj" "  [MACRO] " [] macro)
   in
-  node |> do_simplify_inner opt.root_dir opt.filename "[SIMPLE] " macro_fn_list
+  node |> do_simplify_inner opt.filename "[SIMPLE] " macro_fn_list

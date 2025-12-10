@@ -1,7 +1,7 @@
 open Core__.Common
 
 module NamespaceUtils = struct
-  let convert_path_to_ns _ filename path =
+  let convert_path_to_ns filename path =
     (* prerr_endline @@ "LOG[NS]: base_path: '" ^ "???" ^ "'" ^ " | filename: '"
     ^ filename ^ "'" ^ " | path: '" ^ path ^ "'\n"; *)
     Filename.concat (Filename.dirname filename) (path ^ ".clj")
@@ -13,7 +13,7 @@ module NamespaceUtils = struct
   (* |> trace __LOC__ Fun.id *)
 end
 
-type ns_opt = { root_dir : string; filename : string; namespace : string }
+type ns_opt = { filename : string; namespace : string }
 
 let handle_require ctx requires =
   let aliases =
@@ -27,10 +27,7 @@ let handle_require ctx requires =
             SList
               ( meta_empty,
                 [
-                  SAtom
-                    ( ma,
-                      NamespaceUtils.convert_path_to_ns ctx.root_dir
-                        ctx.filename path );
+                  SAtom (ma, NamespaceUtils.convert_path_to_ns ctx.filename path);
                   SAtom (ma, path);
                 ] )
             (* |> trace __LOC__ show_sexp2 *);
@@ -103,11 +100,6 @@ let invoke m (ctx : ns_opt) args =
 let invoke (ctx : Core__.Frontent_simplify.simplify_ctx) simplify = function
   | SList (m, SAtom (_, "ns") :: SAtom (_, namespace) :: args) ->
       args
-      |> invoke m
-           {
-             root_dir = ctx.otp.root_dir;
-             filename = ctx.otp.filename;
-             namespace;
-           }
+      |> invoke m { filename = ctx.otp.filename; namespace }
       |> simplify |> Option.some
   | _ -> None
