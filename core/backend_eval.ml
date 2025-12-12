@@ -1,8 +1,8 @@
 open Common
-module F = Functions
 
 module Utils = struct
-  let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith
+  let failobj loc x =
+    Printf.sprintf "%s %s" loc (OUtils.obj_to_string x) |> failwith
 
   let rec serialize_to_string = function
     | SAtom (_, x) -> x

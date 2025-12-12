@@ -13,16 +13,6 @@ module Files = struct
   (* |> trace "LOG[realpath]" (Printf.sprintf "%s -> %s" path) *)
 end
 
-type config = {
-  no_lint : bool;
-  virtual_src : string;
-  log : bool;
-  no_deps : bool;
-}
-
-let config_default =
-  { no_lint = false; virtual_src = ""; log = false; no_deps = false }
-
 module FileReader = struct
   type _ Effect.t += Load : string -> string Effect.t
   type _ Effect.t += Realpath : string -> string Effect.t
@@ -109,41 +99,9 @@ let unpack_string x =
 let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")
 let unpack_symbol x = String.sub x 1 (String.length x - 1)
 
-let get_type meta =
-  if meta.symbol = "" || meta.symbol = ":private" then "Object" else meta.symbol
-
-let get_type_or_var meta =
-  if meta.symbol = "" || meta.symbol = ":private" then "var" else meta.symbol
-
-let change_meta m node =
-  match node with
-  | Atom (_, x) -> Atom (m, x)
-  | RBList (_, xs) -> RBList (m, xs)
-  | CBList (_, xs) -> CBList (m, xs)
-  | SBList (_, xs) -> SBList (m, xs)
-
-let change_smeta m (node : sexp) =
-  match node with SAtom (_, x) -> SAtom (m, x) | SList (_, xs) -> SList (m, xs)
-
-let get_symbol = function
-  | Atom (m, _) -> m.symbol
-  | RBList (m, _) -> m.symbol
-  | SBList (m, _) -> m.symbol
-  | CBList (m, _) -> m.symbol
-
-let get_sexp_symbol = function
-  | SAtom (m, _) -> m.symbol
-  | SList (m, _) -> m.symbol
-
-let unwrap_do = function RBList (_, Atom (_, "do*") :: xs) -> xs | x -> [ x ]
-
 let unwrap_sexp_do = function
   | SList (_, SAtom (_, "do*") :: xs) -> xs
   | x -> [ x ]
-
-let unwrap_single_do = function
-  | RBList (_, [ Atom (_, "do*"); xs ]) -> xs
-  | x -> x
 
 module StringMap = struct
   include Map.Make (String)
@@ -157,9 +115,6 @@ module StringMap = struct
           value);
     Format.fprintf fmt "@,}@]"
 end
-
-type function_decl = { params : cljexp list; body : cljexp list }
-[@@deriving show]
 
 type obj =
   | OVector of meta * obj list
@@ -211,40 +166,6 @@ type context = {
 }
 [@@deriving show]
 
-let show_error_location filename m =
-  Printf.sprintf "%s:%d:%d" filename m.line m.pos
-
-let debug_show_scope ctx =
-  StringMap.bindings ctx.scope
-  |> List.map (fun (k, _) -> k)
-  |> String.concat ", "
-
-let debug_show_macro ctx =
-  StringMap.bindings ctx.macros
-  |> List.map (fun (k, _) -> k)
-  |> String.concat ", "
-
-let debug_show_imports ctx =
-  StringMap.bindings ctx.imports
-  |> List.map (fun (k, _) -> k)
-  |> String.concat ", "
-
-let empty_context =
-  {
-    log = false;
-    filename = "";
-    loc = unknown_location;
-    start_line = 0;
-    macros = StringMap.empty;
-    scope = StringMap.empty;
-    prelude_scope = StringMap.empty;
-    interpreter = (fun _ _ -> failwith __LOC__);
-    base_ns = "";
-    imports = StringMap.empty;
-    eval = (fun _ _ -> failwith __LOC__);
-    functions = StringMap.empty;
-  }
-
 module NameGenerator = struct
   type _ Effect.t += CreateVal : string Effect.t
 
@@ -284,20 +205,6 @@ module List = struct
 
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
-
-let rec debug_show_cljexp1 = function
-  | Atom (m, x) when m.symbol = "" -> x
-  | Atom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-  | RBList (m, xs) when m.symbol = "" ->
-      "(" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ ")"
-  | RBList (m, xs) ->
-      "^" ^ m.symbol ^ " ("
-      ^ String.concat " " (List.map debug_show_cljexp1 xs)
-      ^ ")"
-  | SBList (_, xs) ->
-      "[" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "]"
-  | CBList (_, xs) ->
-      "{" ^ String.concat " " (List.map debug_show_cljexp1 xs) ^ "}"
 
 let rec debug_show_sexp1 = function
   | SAtom (m, x) when m.symbol = "" -> x
@@ -349,14 +256,6 @@ let debug_show_sexp_for_error ?(show_pos = false) (nodes : sexp list) =
   in
   nodes |> List.map show_rec |> String.concat " "
 
-let log_sexp prefix node =
-  prerr_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
-  node
-
-let log_sexp2 prefix (node : sexp) =
-  prerr_endline @@ prefix ^ " " ^ debug_show_sexp [ node ];
-  node
-
 let failnode prefix es =
   es
   |> List.map (fun x -> debug_show_cljexp [ x ])
@@ -375,18 +274,6 @@ let failsexp ?(show_pos = false) prefix (es : sexp list) =
   |> prerr_endline;
   failwith ("Invalid node [" ^ prefix ^ "]")
 
-let rec show_sexp sexp =
-  let format template xs =
-    xs |> List.map show_sexp
-    |> List.reduce_opt (Printf.sprintf "%s %s")
-    |> Option.value ~default:"" |> Printf.sprintf template
-  in
-  match sexp with
-  | Atom (_, x) -> x
-  | RBList (_, xs) -> format "(%s)" xs
-  | SBList (_, xs) -> format "[%s]" xs
-  | CBList (_, xs) -> format "{%s}" xs
-
 let rec show_sexp2 (sexp : sexp) =
   let format template xs =
     xs |> List.map show_sexp2
@@ -395,27 +282,7 @@ let rec show_sexp2 (sexp : sexp) =
   in
   match sexp with SAtom (_, x) -> x | SList (_, xs) -> format "(%s)" xs
 
-let try_log prefix (log : bool) (node : cljexp) =
-  if log then print_endline @@ prefix ^ " " ^ debug_show_cljexp [ node ];
-  node
-
-let try_slog prefix (log : bool) (node : sexp) =
-  if log then print_endline @@ prefix ^ " " ^ debug_show_sexp [ node ];
-  node
-
 module Functions = struct
-  let rec sexp_to_string = function
-    | SAtom (_, s) -> s
-    | SList (_, xs) ->
-        "(" ^ String.concat " " (List.map sexp_to_string xs) ^ ")"
-
-  let rec sexp_to_string2 = function
-    | SAtom (_, s) when String.starts_with ~prefix:":" s -> unpack_symbol s
-    | SAtom (_, s) when String.starts_with ~prefix:"\"" s -> unpack_string s
-    | SAtom (_, s) -> s
-    | SList (_, xs) ->
-        "(" ^ String.concat " " (List.map sexp_to_string2 xs) ^ ")"
-
   let rec debug_obj_to_string = function
     | OList (_, xs) ->
         "(" ^ String.concat " " (List.map debug_obj_to_string xs) ^ ")"
@@ -436,38 +303,6 @@ module Functions = struct
     | ONil _ -> "nil"
     | OLambda _ -> "lambda"
     | OQuote (_, n) -> "(quote " ^ debug_show_sexp1 n ^ ")"
-
-  let rec obj_to_string = function
-    | OList (_, xs) -> "(" ^ String.concat " " (List.map obj_to_string xs) ^ ")"
-    | OVector (_, xs) ->
-        "[" ^ String.concat " " (List.map obj_to_string xs) ^ "]"
-    | OMap (_, xs) ->
-        "{"
-        ^ String.concat " "
-            (List.map
-               (fun (k, v) -> obj_to_string k ^ " " ^ obj_to_string v)
-               xs)
-        ^ "}"
-    | OString (_, s) -> "\"" ^ s ^ "\""
-    | OInt (_, i) -> string_of_int i
-    | OFloat (_, f) -> string_of_float f
-    | OBool (_, b) -> string_of_bool b
-    | ONil _ -> "nil"
-    | OLambda _ -> "lambda"
-    | OQuote (_, n) -> "(quote " ^ debug_show_sexp [ n ] ^ ")"
-
-  let failobj loc objs =
-    failwith @@ loc ^ " - "
-    ^ String.concat " " (List.map debug_obj_to_string objs)
-
-  let obj_equal a b =
-    match (a, b) with
-    | OInt (_, a), OInt (_, b) -> a = b
-    | OBool (_, a), OBool (_, b) -> a = b
-    | OString (_, a), OString (_, b) -> a = b
-    | ONil _, ONil _ -> true
-    | OQuote (_, a), OQuote (_, b) -> a = b
-    | a, b -> failwith @@ debug_obj_to_string a ^ " != " ^ debug_obj_to_string b
 end
 
 module SexpUtil = struct
@@ -484,9 +319,25 @@ module SexpUtil = struct
 end
 
 module OUtils = struct
-  module F = Functions
+  let rec obj_to_string = function
+    (* *)
+    | OInt (_, x) -> string_of_int x
+    | OString (_, x) -> "\"" ^ x ^ "\""
+    | OList (_, xs) -> List.map obj_to_string xs |> String.concat ""
+    | OMap (_, xs) ->
+        xs
+        |> List.map (fun (k, v) ->
+            Printf.sprintf "%s %s" (obj_to_string k) (obj_to_string v))
+        |> String.concat " " |> Printf.sprintf "{%s}"
+    | OQuote (_, SAtom (_, x)) -> x
+    | ONil _ -> "nil"
+    | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""
+    | OBool (_, x) -> string_of_bool x
+    | OQuote (_, m) -> "(quote" ^ debug_show_sexp_for_error [ m ] ^ ")"
+    | OFloat _ -> failwith __LOC__
+    | OLambda _ -> failwith __LOC__
 
-  let failobj loc x = Printf.sprintf "%s %s" loc (F.obj_to_string x) |> failwith
+  let failobj loc x = Printf.sprintf "%s %s" loc (obj_to_string x) |> failwith
 
   let rec obj_to_sexp = function
     (* *)
@@ -503,23 +354,6 @@ module OUtils = struct
           List.concat_map (fun (k, v) -> [ obj_to_sexp k; obj_to_sexp v ]) xs
         in
         SList (m, SAtom (m, "hash-map") :: items)
-    | x -> failobj __LOC__ x
-
-  let rec obj_to_string = function
-    (* *)
-    | OInt (_, x) -> string_of_int x
-    | OString (_, x) -> "\"" ^ x ^ "\""
-    | OList (_, xs) -> List.map obj_to_string xs |> String.concat ""
-    | OMap (_, xs) ->
-        xs
-        |> List.map (fun (k, v) ->
-            Printf.sprintf "%s %s" (obj_to_string k) (obj_to_string v))
-        |> String.concat " " |> Printf.sprintf "{%s}"
-    | OQuote (_, SAtom (_, x)) -> x
-    | ONil _ -> "nil"
-    | OVector (_, xs) -> List.map obj_to_string xs |> String.concat ""
-    | OBool (_, x) -> string_of_bool x
-    | OQuote (_, m) -> "(quote" ^ debug_show_sexp_for_error [ m ] ^ ")"
     | x -> failobj __LOC__ x
 
   let rec debug_obj_to_string = function
@@ -547,49 +381,17 @@ module NamespaceUtils = struct
     let result =
       Printf.sprintf "G%i%s%i%s" (String.length ns) ns (String.length name) name
     in
-    (* prerr_endline @@ "LOG[mangle_name] " ^ ns ^ " | " ^ name ^ " -> " ^ result; *)
     result
 
   let mangle_from_path root path name =
     let ns = get_ns_from_path root path in
     let result = mangle_name ns name in
-    (* prerr_endline @@ "LOG[mangle_from_path] (" ^ ns ^ ") " ^ root ^ " | " ^ path
-    ^ " | " ^ name ^ " -> " ^ result; *)
     result
-
-  let unmangle_symbol x =
-    if String.starts_with ~prefix:"G" x then
-      let nstr =
-        Str.string_match (Str.regexp "G[0-9]+") x 0 |> ignore;
-        let s = Str.matched_string x in
-        String.sub s 1 (String.length s - 1)
-      in
-      (* prerr_endline @@ "LOG: '" ^ x ^ "' -> '" ^ a ^ "'"; *)
-      let l1 = int_of_string nstr in
-      (* let l1 = String.get x 1 |> String.make 1 |> int_of_string in *)
-      let ns = String.sub x (1 + String.length nstr) l1 in
-      (* let ns = "|" ^ ns ^ "|" in *)
-      let name =
-        (* let n = String.length nstr in *)
-        if not (Str.string_match (Str.regexp "[0-9]+") x (l1 + 3)) then
-          failwith (x ^ "|" ^ string_of_int l1) |> ignore;
-        let l2str = Str.matched_string x in
-        (* let l2 = l2str |> int_of_string in *)
-        let start = l1 + 3 + String.length l2str in
-        (* String.sub x (l1 + 2 + n) (String.length x - l1 - 2 - n) *)
-        String.sub x start (String.length x - start)
-      in
-      (* let name = "|" ^ name ^ "|" in *)
-      (ns, name)
-    else ("", x)
 
   let path_to_namespace name path =
     let path = unpack_string path in
-    (* prerr_endline @@ "LOG: path=" ^ path; *)
     let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
-    (* prerr_endline @@ "LOG: path=" ^ path; *)
     let path = String.map (fun x -> if x = '/' then '.' else x) path in
-    (* prerr_endline @@ "LOG: path=" ^ path; *)
     let path = mangle_name path name in
     path
 end
