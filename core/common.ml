@@ -75,7 +75,6 @@ end
 
 let last xs = List.nth xs (List.length xs - 1)
 let butlast xs = List.rev (List.tl (List.rev xs))
-let loc (a, b, c, _) = Printf.sprintf "%s:%i:%i" a b c
 
 type meta = { line : int; pos : int; symbol : string } [@@deriving show]
 
@@ -149,22 +148,6 @@ module Obj = struct
         List.for_all2 (fun (a, b) (c, d) -> equal a c && equal b d) xs ys
     | a, b -> failobj __LOC__ [ a; b ]
 end
-
-type context = {
-  log : bool;
-  filename : string;
-  loc : meta;
-  start_line : int;
-  macros : cljexp StringMap.t;
-  scope : (obj * context ref) StringMap.t;
-  functions : (cljexp * context ref) StringMap.t;
-  prelude_scope : unit StringMap.t;
-  interpreter : context -> cljexp -> context * cljexp;
-  base_ns : string;
-  imports : context StringMap.t;
-  eval : context -> cljexp -> cljexp;
-}
-[@@deriving show]
 
 module NameGenerator = struct
   type _ Effect.t += CreateVal : string Effect.t
@@ -281,29 +264,6 @@ let rec show_sexp2 (sexp : sexp) =
     |> Option.value ~default:"" |> Printf.sprintf template
   in
   match sexp with SAtom (_, x) -> x | SList (_, xs) -> format "(%s)" xs
-
-module Functions = struct
-  let rec debug_obj_to_string = function
-    | OList (_, xs) ->
-        "(" ^ String.concat " " (List.map debug_obj_to_string xs) ^ ")"
-    | OVector (_, xs) ->
-        "[" ^ String.concat " " (List.map debug_obj_to_string xs) ^ "]"
-    | OMap (_, xs) ->
-        "{"
-        ^ String.concat " "
-            (List.map
-               (fun (k, v) ->
-                 debug_obj_to_string k ^ ": " ^ debug_obj_to_string v)
-               xs)
-        ^ "}"
-    | OString (_, s) -> "\"" ^ Scanf.unescaped s ^ "\""
-    | OInt (_, i) -> string_of_int i ^ "i"
-    | OFloat (_, f) -> string_of_float f ^ "f"
-    | OBool (_, b) -> string_of_bool b ^ "b"
-    | ONil _ -> "nil"
-    | OLambda _ -> "lambda"
-    | OQuote (_, n) -> "(quote " ^ debug_show_sexp1 n ^ ")"
-end
 
 module SexpUtil = struct
   let butlast node =

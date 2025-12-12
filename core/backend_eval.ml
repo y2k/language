@@ -18,11 +18,6 @@ type eval_context = {
 }
 [@@deriving show]
 
-let get_function (ctx : eval_context) (name : string) =
-  let scope = ctx.ns |> List.map (fun (x, y) -> (x, !y)) in
-  List.assoc_opt name scope
-  |> Option.map (function OLambda (_, f) -> f | _ -> failwith __LOC__)
-
 let get_all_functions (ctx : eval_context) =
   ctx.ns
   |> List.map (fun (x, y) -> (x, !y))
@@ -148,13 +143,6 @@ let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }
 
 let reg_fun name f ctx =
   { ctx with ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns }
-
-let gensym_id = Atomic.make 1
-
-let convert_to_ns path =
-  path |> String.split_on_char '/'
-  |> List.filter (fun x -> x <> "" && x <> ".")
-  |> String.concat "."
 
 let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =

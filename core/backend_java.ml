@@ -3,12 +3,6 @@ open Common
 type compile_opt = { namespace_root : string }
 type complie_context = unit
 
-let convert_namespace_to_class_name (ns : string) =
-  let parts = String.split_on_char '.' ns in
-  let pkg = parts |> List.rev |> List.tl |> List.rev in
-  let cls = parts |> List.rev |> List.hd |> String.capitalize_ascii in
-  String.concat "." (pkg @ [ cls ])
-
 let fix_class_name clazz =
   if String.ends_with ~suffix:".class" clazz then
     String.sub clazz 0 (String.length clazz - 6)
