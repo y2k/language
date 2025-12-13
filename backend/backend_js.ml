@@ -77,7 +77,7 @@ let rec do_compile (ctx : context) = function
           when String.starts_with ~prefix:"." path ->
             Printf.sprintf "import * as %s from '%s.js'" name path
         | SAtom (_, name), SList (_, [ _; SAtom (_, path) ]) ->
-            Printf.sprintf "import * as %s from '%s'" name path
+            Printf.sprintf "import * as %s from './%s.js'" name path
         | k, v -> failsexp __LOC__ [ k; v ])
       |> String.concat ";\n"
   (* not *)
