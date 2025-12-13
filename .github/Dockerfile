@@ -22,5 +22,4 @@ FROM scratch
 
 WORKDIR /app
 
-COPY --from=build /app/_build/default/bin/main.exe clj2js
 COPY --from=build /app/_build/default/bin/main.exe ly2k

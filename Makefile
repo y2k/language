@@ -48,3 +48,7 @@ test_e2e: test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_ban_bot test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/relax_cats_bot test
 	@ PATH=$$PWD/_build/default/bin:$$PATH && $(MAKE) -C ~/Projects/declarative_notify test e2e_test
+
+.PHONY: docker
+docker:
+	docker build -f .github/Dockerfile -t y2khub/clj2js .
