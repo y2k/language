@@ -2,7 +2,16 @@ open Core__.Common
 open Core__
 open Backend__
 
-let () =
+type config = {
+  command : string;
+  target : string;
+  src : string;
+  namespace : string;
+  log : bool;
+  prelude_path : string;
+}
+
+let parse_args () =
   let command = ref "" in
   let target = ref "" in
   let src = ref "" in
@@ -11,59 +20,62 @@ let () =
   let prelude_path = ref "" in
   let speclist =
     [
-      ("-target", Arg.Set_string target, "Target: js, java, eval, bytecode");
-      ("-src", Arg.Set_string src, "Source file (use :stdin for standard input)");
+      ("-target", Arg.Set_string target, "Target: js, java, eval, sexp");
+      ("-src", Arg.Set_string src, "Source file");
       ("-namespace", Arg.Set_string namespace, "Namespace");
-      ("-log", Arg.Bool (( := ) log), "Show log");
+      ("-log", Arg.Set log, "Show log");
       ("-prelude_path", Arg.Set_string prelude_path, "Prelude path");
     ]
   in
-  (try Arg.parse_argv Sys.argv speclist (( := ) command) "ly2k"
+  let usage = Sys.argv.(0) ^ " [options]" in
+  if Array.length Sys.argv = 1 then (
+    Arg.usage speclist usage;
+    exit 0);
+  (try Arg.parse_argv Sys.argv speclist (( := ) command) usage
    with Arg.Bad msg | Arg.Help msg ->
      print_string msg;
      exit 1);
-  match !command with
-  | "generate" -> (
-      match !target with
-      | "java" -> print_endline @@ Prelude.java_runtime
-      | "java_prelude" -> print_endline @@ Prelude.java_runtime2
-      | _ -> failwith @@ "Invalid target " ^ !target)
-  | _ -> (
-      let code _ = In_channel.(with_open_bin !src input_all) in
-      match !target with
-      | "sexp_legacy" ->
-          FileReader.with_scope
-            (fun _ ->
-              Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:!log
-                (code ())
-              |> print_endline)
-            ()
-      | "sexp" ->
-          FileReader.with_scope
-            (fun _ ->
-              Backend_sexp2.invoke_to_line ~builtin_macro:Macro.invoke ~log:!log
-                (code ()) ~filename:!src
-              |> print_endline)
-            ()
-      | "java" ->
-          FileReader.with_scope
-            (fun _ ->
-              Backend_java.compile ~builtin_macro:Macro.invoke
-                ~namespace:!namespace !log !src (code ())
-              |> print_endline)
-            ()
-      | "js" ->
-          FileReader.with_scope
-            (fun _ ->
-              Backend_js.compile ~builtin_macro:Macro.invoke ~log:!log (code ())
-                ~filename:!src ~prelude_path:!prelude_path
-              |> print_endline)
-            ()
-      | "eval" | "repl" ->
-          FileReader.with_scope
-            (fun () ->
-              Backend_eval.invoke ~builtin_macro:Macro.invoke !log !src
-                (code ())
-              |> print_endline)
-            ()
-      | t -> failwith @@ "Invalid target " ^ t)
+  {
+    command = !command;
+    target = !target;
+    src = !src;
+    namespace = !namespace;
+    log = !log;
+    prelude_path = !prelude_path;
+  }
+
+let read_source src = In_channel.(with_open_bin src input_all)
+let with_file_scope f = FileReader.with_scope (fun _ -> f ()) ()
+
+let compile_source cfg =
+  let code = read_source cfg.src in
+  let result =
+    match cfg.target with
+    | "sexp_legacy" ->
+        Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:cfg.log code
+    | "sexp" ->
+        Backend_sexp2.invoke_to_line ~builtin_macro:Macro.invoke ~log:cfg.log
+          code ~filename:cfg.src
+    | "java" ->
+        Backend_java.compile ~builtin_macro:Macro.invoke
+          ~namespace:cfg.namespace cfg.log cfg.src code
+    | "js" ->
+        Backend_js.compile ~builtin_macro:Macro.invoke ~log:cfg.log code
+          ~filename:cfg.src ~prelude_path:cfg.prelude_path
+    | "eval" | "repl" ->
+        Backend_eval.invoke ~builtin_macro:Macro.invoke cfg.log cfg.src code
+    | t -> failwith @@ "Invalid target: " ^ t
+  in
+  print_endline result
+
+let run_generate target =
+  match target with
+  | "java" -> print_endline Prelude.java_runtime
+  | "java_prelude" -> print_endline Prelude.java_runtime2
+  | t -> failwith @@ "Invalid generate target: " ^ t
+
+let () =
+  let cfg = parse_args () in
+  match cfg.command with
+  | "generate" -> run_generate cfg.target
+  | _ -> with_file_scope (fun () -> compile_source cfg)
