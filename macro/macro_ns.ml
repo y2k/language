@@ -97,7 +97,7 @@ let invoke m (ctx : ns_opt) args =
   SList (m, SAtom (meta_empty, "do") :: (ns_node @ args))
 (* |> trace __LOC__ show_sexp2 *)
 
-let invoke (ctx : Core__.Frontent_simplify.simplify_ctx) simplify = function
+let invoke (ctx : Core__.Frontend_simplify.simplify_ctx) simplify = function
   | SList (m, SAtom (_, "ns") :: SAtom (_, namespace) :: args) ->
       args
       |> invoke m { filename = ctx.otp.filename; namespace }

@@ -21,7 +21,7 @@ let rec compile_functions (node : sexp) : string StringMap.t =
   | n -> failsexp __LOC__ [ n ]
 
 let invoke ~builtin_macro ~log code ~filename =
-  Frontent_simplify.do_simplify ~builtin_macro (Fun.const [])
+  Frontend_simplify.do_simplify ~builtin_macro (Fun.const [])
     { log; macro = ""; filename }
     code
   |> Stage_resolve_ns2.do_resolve [] filename ""

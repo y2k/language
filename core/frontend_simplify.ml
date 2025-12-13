@@ -140,9 +140,9 @@ let rec simplify (ctx : simplify_ctx) (sexp : sexp) : sexp =
 
 let do_simplify ~builtin_macro eval_macro (opt : simplify_opt) (code : string) :
     sexp =
-  let node = Frontent_parser.parse_text code in
+  let node = Frontend_parser.parse_text code in
   let macro =
-    Frontent_parser.parse_text opt.macro
+    Frontend_parser.parse_text opt.macro
     |> simplify
          {
            run_builtin_macro = builtin_macro;

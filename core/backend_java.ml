@@ -193,7 +193,7 @@ let compile ~builtin_macro ~(namespace : string) (log : bool)
   (* let log = log || true in *)
   Common.NameGenerator.with_scope (fun () ->
       code
-      |> Frontent_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
+      |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Prelude.prelude_java_macro; filename }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "

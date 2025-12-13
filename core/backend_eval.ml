@@ -14,7 +14,7 @@ type eval_context = {
   scope : (string * obj) list;
   level : int;
   builtin_macro :
-    (sexp -> sexp) -> Frontent_simplify.simplify_ctx -> sexp -> sexp option;
+    (sexp -> sexp) -> Frontend_simplify.simplify_ctx -> sexp -> sexp option;
 }
 [@@deriving show]
 
@@ -147,7 +147,7 @@ let reg_fun name f ctx =
 let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =
   code
-  |> Frontent_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
+  |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
        { log; macro = Prelude.prelude_eval_macro; filename }
   |> Stage_resolve_ns.do_resolve (ctx.ns |> List.map fst) filename root_dir
   |> log_stage log (type_ ^ " Stage_resolve_ns")
