@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 type resolve_ctx = { links : (string * string) list }
 

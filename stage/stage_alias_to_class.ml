@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 type ctx = { aliases : (string * string) list; base_ns : string }
 [@@deriving show]

@@ -1,5 +1,6 @@
 open Core__.Common
 open Core__
+open Stage__
 
 module Utils = struct
   let failobj loc x =

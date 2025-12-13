@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 type options = { compile : string -> sexp } [@@deriving show]
 type context = { opt : options } [@@deriving show]
@@ -19,8 +19,8 @@ let rec invoke (ctx : context) = function
         (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
         |> List.split_into_pairs
         |> List.map (function
-             | _, SList (_, [ _; SAtom (_, path) ]) -> ctx.opt.compile path
-             | k, v -> failsexp __LOC__ [ k; v ])
+          | _, SList (_, [ _; SAtom (_, path) ]) -> ctx.opt.compile path
+          | k, v -> failsexp __LOC__ [ k; v ])
       in
       (* let ctx = { ctx with aliases = items } in *)
       (* show_context ctx |> failwith |> ignore; *)

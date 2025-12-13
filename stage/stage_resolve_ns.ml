@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 module StringSet = Set.Make (String)
 
 type resolve_ctx = {
@@ -26,8 +26,8 @@ let rec resolve (ctx : resolve_ctx) node =
         (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
         |> List.split_into_pairs
         |> List.map (function
-             | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
-             | k, v -> failsexp __LOC__ [ k; v ])
+          | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+          | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in
       (* (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ])) *)
@@ -60,8 +60,8 @@ let rec resolve (ctx : resolve_ctx) node =
       let body =
         body
         |> List.filter_map (function
-             | SList (_, [ SAtom (_, "do*") ]) -> None
-             | x -> Some x)
+          | SList (_, [ SAtom (_, "do*") ]) -> None
+          | x -> Some x)
       in
       (ctx, SList (m, do_ :: body))
   | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
@@ -84,11 +84,11 @@ let rec resolve (ctx : resolve_ctx) node =
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
           ctx.aliases |> List.assoc_opt alias_name
           |> Option.map (fun x ->
-                 let fun_name =
-                   String.split_on_char '/' fun_name
-                   |> List.tl |> String.concat "/"
-                 in
-                 NamespaceUtils.path_to_namespace fun_name x)
+              let fun_name =
+                String.split_on_char '/' fun_name
+                |> List.tl |> String.concat "/"
+              in
+              NamespaceUtils.path_to_namespace fun_name x)
           |> Option.value ~default:fun_name
         else NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename fun_name
       in

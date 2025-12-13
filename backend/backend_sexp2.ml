@@ -1,5 +1,6 @@
 open Core__.Common
 open Core__
+open Stage__
 module StringMap = Map.Make (String)
 
 let rec convert = function

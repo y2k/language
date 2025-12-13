@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 module StringSet = Set.Make (String)
 
 type resolve_ctx = {
