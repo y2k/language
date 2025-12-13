@@ -84,7 +84,7 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "not"); x ]) ->
       Printf.sprintf "!(%s)" (do_compile ctx x)
   (* hash-map *)
-  | SList (_, SAtom (_, "hash-map") :: args) ->
+  | SList (_, SAtom (_, "hash_map") :: args) ->
       List.map (do_compile ctx) args
       |> List.split_into_pairs
       |> List.map (fun (k, v) -> Printf.sprintf "%s:%s" k v)
@@ -179,5 +179,7 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"
+      |> Stage_underscore_name.invoke
+      |> log_stage log "Stage_underscore_name"
       |> do_compile { filename; root_dir; namespace; prelude_path }
       |> Printf.sprintf "import * as prelude from '%s';\n%s" prelude_path)
