@@ -1,4 +1,4 @@
-FROM ocaml/opam:ubuntu-20.04-ocaml-5.1 AS build
+FROM ocaml/opam:ubuntu-24.04-ocaml-5.4 AS build
 
 WORKDIR /app
 
@@ -7,7 +7,11 @@ RUN opam update
 COPY clj2js.opam .
 COPY dune-project .
 COPY bin bin
-COPY lib lib
+COPY backend backend
+COPY core core
+COPY macro macro
+COPY prelude prelude
+COPY stage stage
 COPY test test
 
 RUN opam install --deps-only --with-test . && \
