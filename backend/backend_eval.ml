@@ -1,4 +1,5 @@
-open Common
+open Core__.Common
+open Core__
 
 module Utils = struct
   let failobj loc x =

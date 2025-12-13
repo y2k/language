@@ -1,5 +1,6 @@
 open Core__.Common
 open Core__
+open Backend__
 
 module Internal = struct
   let pos_to_loc (pos, line, _, _) = Printf.sprintf "%s:%d" pos line

@@ -1,5 +1,5 @@
 open Core__.Common
-open Core__
+open Backend__
 
 module EvalExecution : sig
   val create_tests :
@@ -11,14 +11,14 @@ end = struct
   let create_tests speed path tests =
     tests
     |> List.map (fun (loc, input, expected) ->
-           Alcotest.test_case loc speed (fun () ->
-               let input = input ^ "\n(test)" in
-               let actual =
-                 FileReader.with_stub_scope "(defn foo [x] x)"
-                   (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
-                   input
-               in
-               Alcotest.(check string) "" expected actual))
+        Alcotest.test_case loc speed (fun () ->
+            let input = input ^ "\n(test)" in
+            let actual =
+              FileReader.with_stub_scope "(defn foo [x] x)"
+                (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
+                input
+            in
+            Alcotest.(check string) "" expected actual))
 end
 
 let tests =

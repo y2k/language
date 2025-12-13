@@ -1,4 +1,4 @@
-open Common
+open Core__.Common
 
 let re_find pattern str : string list option =
   let re = Re.Pcre.re pattern |> Re.compile in

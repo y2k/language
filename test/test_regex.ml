@@ -1,4 +1,4 @@
-module E = Core__.Backend_eval_functions
+module E = Backend__.Backend_eval_functions
 
 let tests =
   [

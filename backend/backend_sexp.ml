@@ -1,4 +1,5 @@
-open Common
+open Core__.Common
+open Core__
 
 let rec convert = function
   | SList (m, (SAtom (_, "fn*") as fn) :: SList (ma, args) :: body) ->

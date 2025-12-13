@@ -1,4 +1,4 @@
-open Core__
+open Backend__
 module StringMap = Map.Make (String)
 
 let map_testable =
@@ -7,7 +7,7 @@ let map_testable =
       let map_formater =
         StringMap.bindings map
         |> List.map (fun (k, v) ->
-               Fmt.Dump.field k (fun _ -> v) Fmt.Dump.string)
+            Fmt.Dump.field k (fun _ -> v) Fmt.Dump.string)
         |> Fmt.Dump.record
       in
       map_formater fmt map)

@@ -1,4 +1,5 @@
-open Common
+open Core__.Common
+open Core__
 module Ng = Common.NameGenerator
 
 type context = {

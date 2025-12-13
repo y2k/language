@@ -1,5 +1,5 @@
 module A = Alcotest
-module Js = Core__.Backend_js
+module Js = Backend__.Backend_js
 
 let compile ~filename code =
   let prelude_path = Unix.realpath "../../../prelude/data/y2k/rt.js" in

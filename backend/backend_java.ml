@@ -1,4 +1,5 @@
-open Common
+open Core__.Common
+open Core__
 
 type compile_opt = { namespace_root : string }
 type complie_context = unit

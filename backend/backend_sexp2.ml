@@ -1,4 +1,5 @@
-open Common
+open Core__.Common
+open Core__
 module StringMap = Map.Make (String)
 
 let rec convert = function
