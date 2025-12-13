@@ -43,10 +43,8 @@ let rec invoke (node : sexp) : sexp =
       let body = List.map invoke body in
       SList (m, fn_ :: args :: body)
   | SList (m, args) ->
-      (* let fname = invoke fname in *)
       let args = List.map invoke args in
       SList (m, args)
-(* | n -> failsexp __LOC__ [ n ] *)
 
 let rec invoke_up_do (node : sexp) : sexp =
   (* print_endline @@ "LOG[2.1]:: " ^ debug_show_cljexp [ node ]; *)
@@ -82,7 +80,6 @@ let rec invoke_up_do (node : sexp) : sexp =
           then_;
           else_;
         ] ) ->
-      (* failsexp __LOC__ [ node ] |> ignore; *)
       let cond =
         match invoke_up_do cond with
         | SList (_, SAtom (_, "do*") :: body) -> body
@@ -99,7 +96,6 @@ let rec invoke_up_do (node : sexp) : sexp =
               [ SList (meta_empty, [ if_; last cond; then_; else_ ]) ];
             ] )
   | SList (m, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
-      (* failsexp __LOC__ [ node ] |> ignore; *)
       SList
         (m, [ if_; invoke_up_do cond; invoke_up_do then_; invoke_up_do else_ ])
   | SList (m, (SAtom (_, "___raw_template") as rt) :: body) ->

@@ -10,7 +10,6 @@ module Files = struct
     |> Str.global_replace (Str.regexp "/\\./") "/"
     |> Str.global_replace (Str.regexp "/[^/\\..]+/\\.\\./") "/"
     |> Str.global_replace (Str.regexp "/[^/\\..]+/\\.\\./") "/"
-  (* |> trace "LOG[realpath]" (Printf.sprintf "%s -> %s" path) *)
 end
 
 module FileReader = struct
@@ -280,7 +279,6 @@ end
 
 module OUtils = struct
   let rec obj_to_string = function
-    (* *)
     | OInt (_, x) -> string_of_int x
     | OString (_, x) -> "\"" ^ x ^ "\""
     | OList (_, xs) -> List.map obj_to_string xs |> String.concat ""
@@ -300,7 +298,6 @@ module OUtils = struct
   let failobj loc x = Printf.sprintf "%s %s" loc (obj_to_string x) |> failwith
 
   let rec obj_to_sexp = function
-    (* *)
     | OInt (m, x) -> SAtom (m, string_of_int x)
     | OFloat (m, x) -> SAtom (m, string_of_float x)
     | OString (m, x) -> SAtom (m, "\"" ^ x ^ "\"")

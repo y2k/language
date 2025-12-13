@@ -22,15 +22,12 @@ let rec resolve (ctx : resolve_ctx) node =
         :: SList (_, [ SAtom (_, "quote*"); SList (_, items) ])
         :: _ ) as x ->
       let items =
-        items
-        (* |> List.map (function SAtom (_, x) -> x | x -> failsexp __LOC__ [ x ]) *)
-        |> List.split_into_pairs
+        items |> List.split_into_pairs
         |> List.map (function
           | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in
-      (* (ctx, SList (meta_empty, [ SAtom (meta_empty, "do*") ])) *)
       (ctx, x)
   | SList
       ( _,

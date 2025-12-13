@@ -103,7 +103,6 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
                   | [], [] -> ctx
                   | _names, _ ->
                       debug_show_sexp [ node ] |> failwith |> ignore;
-                      (* Obj.failobj __LOC__ args |> ignore; *)
                       failsexp __LOC__ [ node ]
                 in
                 let ctx = loop args_names args ctx in

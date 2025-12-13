@@ -23,7 +23,6 @@ let rec resolve (ctx : resolve_ctx) node =
       (* prerr_endline @@ "LOG[__resolve]: " ^ name; *)
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x ^ ".class"))
-      (* | Some _ -> (ctx, SAtom (m, name)) *)
       | None -> (ctx, SAtom (m, name)))
   | SList
       ( _,

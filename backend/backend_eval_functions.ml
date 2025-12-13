@@ -19,7 +19,6 @@ let re_find pattern str : string list option =
 
 module Builtin = struct
   let rec to_string = function
-    (* *)
     | ONil _ -> "nil"
     | OInt (_, x) -> string_of_int x
     | OString (_, x) -> x
@@ -188,7 +187,6 @@ let attach reg_val reg_fun ctx =
       match xs with
       | [ OString (_, x); OString (_, sep) ] ->
           (* FIXME: This is a hack *)
-          (* let sep = Str.global_replace (Str.regexp "\\\\n") "\n" sep in *)
           (* prerr_endline @@ "|" ^ sep ^ "|"; *)
           OVector
             ( meta_empty,

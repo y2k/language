@@ -192,7 +192,6 @@ let get_macro ~builtin_macro node =
 
 let compile ~builtin_macro ~(namespace : string) (log : bool)
     (filename : string) code =
-  (* let log = log || true in *)
   Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)

@@ -59,9 +59,6 @@ end
 
 let tests =
   [
-    (* ( __POS__,
-      {|(ns _ (:require ["./lib/eff" :as e])) (defn test [] (e/foo 42))|},
-      {|42|} ); *)
     ( __POS__,
       {|
     (declare parse)

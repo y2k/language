@@ -3,8 +3,8 @@ open Core__.Common
 let convert_opts opts =
   opts |> List.split_into_pairs
   |> List.map (function
-       | SAtom (_, k), v -> (k, v)
-       | k, v -> failsexp __LOC__ [ k; v ])
+    | SAtom (_, k), v -> (k, v)
+    | k, v -> failsexp __LOC__ [ k; v ])
 
 let generate_method annot args ret_type prefix name =
   let method_annot, is_static =
@@ -28,7 +28,6 @@ let generate_method annot args ret_type prefix name =
       args |> List.mapi (fun i _ -> Printf.sprintf ",p%i" i) |> String.concat ""
     in
     if is_static then
-      (* let args = if args == "" then args else "," ^ args in *)
       match ret_type with
       | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s%s)" prefix name args
       | _ ->
@@ -44,19 +43,18 @@ let generate_method annot args ret_type prefix name =
   let args2 =
     args
     |> List.mapi (fun i a ->
-           match a with
-           | SAtom (_, a) ->
-               (* Printf.sprintf "%s p%i" a i *)
-               [
-                 SList
-                   ( meta_empty,
-                     [
-                       SAtom (meta_empty, "__compiler_resolve_type");
-                       pack_string (unpack_string a);
-                     ] );
-                 pack_string (Printf.sprintf " p%i" i);
-               ]
-           | x -> failsexp __LOC__ [ x ])
+        match a with
+        | SAtom (_, a) ->
+            [
+              SList
+                ( meta_empty,
+                  [
+                    SAtom (meta_empty, "__compiler_resolve_type");
+                    pack_string (unpack_string a);
+                  ] );
+              pack_string (Printf.sprintf " p%i" i);
+            ]
+        | x -> failsexp __LOC__ [ x ])
     |> ( function
     | [] -> []
     | [ x ] -> [ x ]
@@ -89,35 +87,34 @@ let generate_methods prefix methods =
   in
   methods
   |> List.concat_map (function
-       | SList (_, [ _; SAtom (m, name); SList (_, args); SAtom (_, ret_type) ])
-         ->
-           generate_method m.symbol (List.tl args) ret_type prefix name
-       | x -> failsexp __LOC__ [ x ])
+    | SList (_, [ _; SAtom (m, name); SList (_, args); SAtom (_, ret_type) ]) ->
+        generate_method m.symbol (List.tl args) ret_type prefix name
+    | x -> failsexp __LOC__ [ x ])
 
 let generate_constructors args cls_name prefix =
   List.assoc_opt ":init" args
   |> Option.map (function
-       | SAtom (_, x) ->
-           let x = unpack_string x in
-           [
-             pack_string
-               (Printf.sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n"
-                  cls_name prefix x);
-           ]
-       | x -> failsexp __LOC__ [ x ])
+    | SAtom (_, x) ->
+        let x = unpack_string x in
+        [
+          pack_string
+            (Printf.sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n"
+               cls_name prefix x);
+        ]
+    | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
 let generate_fields args =
   List.assoc_opt ":fields" args
   |> Option.map (function
-       | SList (_, SAtom (_, "vector") :: fields) ->
-           fields
-           |> List.map (function
-                | SAtom (_, name) ->
-                    pack_string
-                      (Printf.sprintf "public Object %s;\n" (unpack_string name))
-                | x -> failsexp __LOC__ [ x ])
-       | x -> failsexp __LOC__ [ x ])
+    | SList (_, SAtom (_, "vector") :: fields) ->
+        fields
+        |> List.map (function
+          | SAtom (_, name) ->
+              pack_string
+                (Printf.sprintf "public Object %s;\n" (unpack_string name))
+          | x -> failsexp __LOC__ [ x ])
+    | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
 let invoke = function
@@ -126,8 +123,8 @@ let invoke = function
       let get_value name default =
         List.assoc_opt (":" ^ name) args
         |> Option.map (function
-             | SAtom (_, v) -> unpack_string v
-             | x -> failsexp __LOC__ [ x ])
+          | SAtom (_, v) -> unpack_string v
+          | x -> failsexp __LOC__ [ x ])
         |> Option.value ~default
       in
       let prefix = get_value "prefix" "_" in
