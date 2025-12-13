@@ -24,5 +24,5 @@ let invoke ~builtin_macro ~log code =
   Frontend_simplify.do_simplify ~builtin_macro (Fun.const [])
     { log; macro = ""; filename = "" }
     code
-  |> Stage_resolve_ns.do_resolve [] "" ""
+  |> Stage_resolve_ns_legacy.do_resolve [] "" ""
   |> convert

@@ -26,8 +26,8 @@ let invoke ~builtin_macro ~log code ~filename =
   Frontend_simplify.do_simplify ~builtin_macro (Fun.const [])
     { log; macro = ""; filename }
     code
-  |> Stage_resolve_ns2.do_resolve [] filename ""
-  |> log_stage log "Stage_resolve_ns2"
+  |> Stage_resolve_ns.do_resolve [] filename ""
+  |> log_stage log "Stage_resolve_ns"
   |> compile_functions
 
 let invoke_to_line ~builtin_macro ~log code ~filename =

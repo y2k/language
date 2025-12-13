@@ -4,17 +4,26 @@ module StringSet = Set.Make (String)
 type resolve_ctx = {
   links : (string * string) list;
   aliases : (string * string) list;
-  filename : string;
-  root_dir : string;
+  namespace : string;
   prelude_fns : StringSet.t;
+  registered_defs : StringSet.t;
 }
 
+let mangle_from_path ns fname = Printf.sprintf "%s.%s" ns fname
+
 let rec resolve (ctx : resolve_ctx) node =
+  (* prerr_endline @@ "[LOG][resolve] " ^ show_sexp2 node; *)
   match node with
   | SAtom (m, name) -> (
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x))
       | None -> (ctx, SAtom (m, name)))
+  | SList
+      (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); SAtom (_, namespace) ])
+    ->
+      let namespace = unpack_symbol namespace in
+      (* prerr_endline @@ "[LOG][ResolveNS] " ^ namespace; *)
+      ({ ctx with namespace }, SList (meta_empty, [ SAtom (meta_empty, "do*") ]))
   | SList
       ( _,
         SAtom (_, "def*")
@@ -40,17 +49,19 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      let name =
-        NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
-      in
-      prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
-      ^ " -> " ^ name;
+      (* prerr_endline @@ "[ResolveNS:def*][1] " ^ name; *)
+      let mng_name = mangle_from_path ctx.namespace name in
+      (* prerr_endline @@ "[ResolveNS:def*][2] " ^ name; *)
       let _, value = resolve ctx value in
-      (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
+      let ctx =
+        { ctx with registered_defs = StringSet.add name ctx.registered_defs }
+      in
+      (ctx, SList (m, [ def_; SAtom (mn, mng_name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; args; body ]))
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->
+      (* prerr_endline @@ "[LOG][do*]"; *)
       let ctx, body =
         List.fold_left_map (fun ctx x -> resolve ctx x) ctx body
       in
@@ -76,6 +87,7 @@ let rec resolve (ctx : resolve_ctx) node =
           String.get fun_name 0 < 'a'
           || String.get fun_name 0 > 'z'
           || StringSet.mem fun_name ctx.prelude_fns
+          || not (StringSet.mem fun_name ctx.registered_defs)
         then fun_name
         else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
@@ -87,7 +99,7 @@ let rec resolve (ctx : resolve_ctx) node =
               in
               NamespaceUtils.path_to_namespace fun_name x)
           |> Option.value ~default:fun_name
-        else NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename fun_name
+        else mangle_from_path ctx.namespace fun_name
       in
       (ctx, SList (m, SAtom (m, fun_name) :: args))
   | SList (m, fn :: args) ->
@@ -96,16 +108,16 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, SList (m, fn :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_resolve functions filename root_dir node =
+let do_resolve functions filename _ node =
   if filename = "prelude.clj" then node
   else
     let ctx =
       {
         links = [];
         aliases = [];
-        filename;
-        root_dir;
+        namespace = "user";
         prelude_fns = StringSet.of_list functions;
+        registered_defs = StringSet.empty;
       }
     in
     resolve ctx node |> snd

@@ -150,8 +150,10 @@ let rec compile (ctx : eval_context) origin_filename log get_macro type_
   code
   |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
        { log; macro = Prelude.prelude_eval_macro; filename }
-  |> Stage_resolve_ns.do_resolve (ctx.ns |> List.map fst) filename root_dir
-  |> log_stage log (type_ ^ " Stage_resolve_ns")
+  |> Stage_resolve_ns_legacy.do_resolve
+       (ctx.ns |> List.map fst)
+       filename root_dir
+  |> log_stage log (type_ ^ " Stage_resolve_ns_legacy")
   |> Stage_load_require.do_invoke (fun path ->
       let path2 =
         Filename.concat (Filename.dirname origin_filename) (path ^ ".clj")
