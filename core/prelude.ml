@@ -318,6 +318,28 @@ public class RT {
 }
 |}
 
+let js_runtime = {|
+export const hash_map_from = (xs) => {
+    const result = {};
+    for (let i = 0; i < xs.length; i += 2) {
+        result[xs[i]] = xs[i + 1];
+    }
+    return result;
+};
+
+export const debug_assert = (a, b) => {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export const re_find = (p, i) => {
+    const result = p.exec(i);
+    if (result == null) {
+        return null;
+    }
+    return result[0];
+}
+|}
+
 let java_runtime2 = {|
 package y2k;
 

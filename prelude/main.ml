@@ -29,11 +29,17 @@ let () =
     |> List.cons (generate_java_runtime ())
     |> List.append
          [
-           "(* THIS FILE IS GENERATED *)\n";
+           "let js_runtime = {|\n"
+           ^ In_channel.(with_open_bin "prelude/data/y2k/rt.js" input_all)
+           ^ "\n|}\n";
+         ]
+    |> List.append
+         [
            "let java_runtime = {|\n"
            ^ In_channel.(with_open_bin "prelude/data/y2k/RT.java" input_all)
            ^ "\n|}\n";
          ]
+    |> List.cons "(* THIS FILE IS GENERATED *)\n"
     |> String.concat "\n"
   in
   Out_channel.(
