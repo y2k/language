@@ -1,11 +1,17 @@
 (ns test_common)
 
 (defn- assert_ [loc expected actual]
-  (if (assert expected actual)
-    nil
+  (if (not (assert expected actual))
     (FIXME loc " - " expected " != " actual)))
 
+(defn- assert_not [loc expected actual]
+  (if (assert expected actual)
+    (FIXME loc " - " expected " == " actual)))
+
 (defn test []
+  (assert_not __LOC__ "a-b" "a_b")
+  (assert_not __LOC__ "a-b" :a_b)
+  (assert_ __LOC__ "a_b" :a_b)
   (assert_ __LOC__ {:a 1 :b 2 :c 3} (hash-map-from [:a 1 :b 2 :c 3]))
   (assert_ __LOC__ (count {:a 1 :b 2 :c 4}) (count (merge {:a 1 :b 3} {:b 2 :c 4})))
   (assert_ __LOC__ true (not= 1 2))
