@@ -61,7 +61,7 @@ let rec do_compile (ctx : context) = function
   | SList (_, SAtom (_, "%") :: args) ->
       List.map (do_compile ctx) args
       |> String.concat " % " |> Printf.sprintf "(%s)"
-  | SList (_, [ SAtom (_, "export-default"); x ]) ->
+  | SList (_, [ SAtom (_, "export_default"); x ]) ->
       Printf.sprintf "export default %s" (do_compile ctx x)
   (* TODO: /end *)
   | SList
