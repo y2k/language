@@ -1,5 +1,6 @@
-.DS_Store
 _build/
+.DS_Store
 .vscode/
-playground/
 AGENTS.md
+CLAUDE.md
+playground/
