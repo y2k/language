@@ -9,8 +9,9 @@
     (FIXME loc " - " expected " == " actual)))
 
 (defn test []
-  ;; (assert __LOC__ (if (clojure.string/ends-with? "foo.txt" ".txt") 1 2) 1)
-  ;; (assert __LOC__ (if (clojure.string/ends-with? "foo.bin" ".txt") 1 2) 2)
+  ;; (assert_ __LOC__ ["1" "2"] (map (fn [x] (str x)) [1 2]))
+  (assert_ __LOC__ 1 (if (clojure.string/ends-with? "foo.txt" ".txt") 1 2))
+  (assert_ __LOC__ 2 (if (clojure.string/ends-with? "foo.bin" ".txt") 1 2))
   (assert_not __LOC__ "a-b" "a_b")
   (assert_not __LOC__ "a-b" :a_b)
   (assert_ __LOC__ "a_b" :a_b)

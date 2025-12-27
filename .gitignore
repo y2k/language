@@ -1,6 +1,7 @@
-_build/
-.DS_Store
-.vscode/
-AGENTS.md
-CLAUDE.md
-playground/
+/_build/
+/.claude/
+/.DS_Store
+/.vscode/
+/AGENTS.md
+/CLAUDE.md
+/playground/

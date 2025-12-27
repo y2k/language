@@ -74,6 +74,9 @@
 (defn macro_string/starts-with? [s prefix]
   (list '.startsWith s prefix))
 
+(defn macro_clojure.string/ends-with? [s suffix]
+  (list '.endsWith s suffix))
+
 ;; Regex
 
 (defn macro_re-pattern [x]

@@ -73,14 +73,17 @@ let rec do_compile (ctx : context) = function
         ] ) ->
       items |> List.split_into_pairs
       |> List.map (function
-        | SAtom (_, name), SList (_, [ _; SAtom (_, path) ])
+        | SAtom (_, name), SList (_, [ _; SAtom (_, path); _ ])
           when String.starts_with ~prefix:"js." path ->
             let path =
               String.sub path 3 (String.length path - 3)
               |> String.map (function '.' -> '/' | x -> x)
             in
             Printf.sprintf "import * as %s from '%s'" name path
-        | SAtom (_, name), SList (_, [ _; SAtom (_, path) ]) ->
+        | SAtom (_, name), SList (_, [ _; _; SAtom (_, path) ])
+          when String.starts_with ~prefix:"\"" path ->
+            Printf.sprintf "import * as %s from %s" name path
+        | SAtom (_, name), SList (_, [ _; SAtom (_, path); _ ]) ->
             Printf.sprintf "import * as %s from './%s.js'" name path
         | k, v -> failsexp __LOC__ [ k; v ])
       |> String.concat ";\n"

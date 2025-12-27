@@ -24,7 +24,7 @@ let rec resolve (ctx : resolve_ctx) node =
       let items =
         items |> List.split_into_pairs
         |> List.map (function
-          | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+          | SAtom (_, k), SList (_, [ SAtom (_, v); _; _ ]) -> (k, v)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in

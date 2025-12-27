@@ -27,6 +27,11 @@
         (list 'cast 'String s)
         (list 'cast 'String prefix)))
 
+(defn macro_clojure.string/ends-with? [s suffix]
+  (list '.endsWith
+        (list 'cast 'String s)
+        (list 'cast 'String suffix)))
+
 (defn macro_declare [x] (list 'do))
 
 (defn macro_boolean [x]

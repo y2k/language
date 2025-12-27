@@ -19,15 +19,18 @@ let handle_require ctx requires =
   let aliases =
     requires
     |> List.concat_map (function
-      | SList (_, [ _; SAtom (_, path); _; SAtom (ma, alias) ]) ->
-          let path = unpack_string path in
+      | SList (_, [ _; SAtom (_, path); SAtom (_, ":as"); SAtom (ma, alias) ])
+        ->
+          let path2 = unpack_string path in
           (* prerr_endline @@ "LOG[NS]3: " ^ alias ^ " -> " ^ path; *)
           [
             SAtom (meta_empty, alias);
             SList
               ( meta_empty,
                 [
-                  SAtom (ma, NamespaceUtils.convert_path_to_ns ctx.filename path);
+                  SAtom
+                    (ma, NamespaceUtils.convert_path_to_ns ctx.filename path2);
+                  SAtom (ma, path2);
                   SAtom (ma, path);
                 ] )
             (* |> trace __LOC__ show_sexp2 *);

@@ -141,6 +141,11 @@ let attach reg_val reg_fun ctx =
       | [ OString (_, str); OString (_, prefix) ] ->
           OBool (meta_empty, String.starts_with ~prefix str)
       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "clojure.string/ends-with?" (fun xs ->
+      match xs with
+      | [ OString (_, str); OString (_, suffix) ] ->
+          OBool (meta_empty, String.ends_with ~suffix str)
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "filter" (fun xs ->
       match xs with
       | [ OLambda (_, f); OList (_, xs) ] ->

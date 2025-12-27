@@ -17,7 +17,7 @@ let rec invoke (ctx : context) = function
       let items =
         items |> List.split_into_pairs
         |> List.map (function
-          | _, SList (_, [ _; SAtom (_, path) ]) -> ctx.opt.compile path
+          | _, SList (_, [ _; SAtom (_, path); _ ]) -> ctx.opt.compile path
           | k, v -> failsexp __LOC__ [ k; v ])
       in
       (ctx, SList (meta_empty, SAtom (meta_empty, "do*") :: items))
