@@ -155,6 +155,13 @@ let attach reg_val reg_fun ctx =
                 (fun x ->
                   match f [ x ] with OBool (_, true) -> true | _ -> false)
                 xs )
+      | [ OLambda (_, f); OVector (_, xs) ] ->
+          OVector
+            ( meta_empty,
+              List.filter
+                (fun x ->
+                  match f [ x ] with OBool (_, true) -> true | _ -> false)
+                xs )
       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "hash-map" (fun xs -> OMap (meta_empty, List.split_into_pairs xs))
   |> reg_fun "string/trim" (fun xs ->

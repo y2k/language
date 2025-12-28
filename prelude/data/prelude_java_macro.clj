@@ -48,6 +48,9 @@
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
 
+(defn macro_filter [f xs]
+  (list 'y2k.RT.filter f xs))
+
 (defn macro_hash-map-from [xs]
   (list 'y2k.RT.hash_map_from xs))
 

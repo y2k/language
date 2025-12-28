@@ -135,6 +135,18 @@ public class RT {
         return result;
     }
 
+    public static List<Object> filter(Object f, Object xs) {
+        var func = (java.util.function.Function<Object, Object>) f;
+        var col = (Collection<Object>) xs;
+        var result = new ArrayList<Object>();
+        for (Object x : col) {
+            if (toBoolean(func.apply(x))) {
+                result.add(x);
+            }
+        }
+        return result;
+    }
+
     public static Object drop(Object n, Object xs) {
         var col = (List<Object>) xs;
         return col.subList((Integer) n, col.size());
@@ -363,7 +375,7 @@ p__1=((java.util.List)xs).get(((int)i));
 } else {
 p__1=y2k.RT.invoke(
 y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:74:9",
+"prelude/data/prelude_java.clj:77:9",
 java.util.Arrays.asList(
 "Unsupported source: ",
 String.format(
@@ -459,6 +471,9 @@ let prelude_java_macro = {|
 
 (defn macro_map [f xs]
   (list 'y2k.RT.map f xs))
+
+(defn macro_filter [f xs]
+  (list 'y2k.RT.filter f xs))
 
 (defn macro_hash-map-from [xs]
   (list 'y2k.RT.hash_map_from xs))
@@ -805,6 +820,9 @@ let prelude_js_macro = {|
 
 (defn macro_map [f xs]
   (list '.map xs f))
+
+(defn macro_filter [f xs]
+  (list '.filter xs f))
 
 (defn macro_second [xs]
   (list 'get xs 1))

@@ -100,6 +100,9 @@
 (defn macro_map [f xs]
   (list '.map xs f))
 
+(defn macro_filter [f xs]
+  (list '.filter xs f))
+
 (defn macro_second [xs]
   (list 'get xs 1))
 

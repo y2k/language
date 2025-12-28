@@ -132,6 +132,18 @@ public class RT {
         return result;
     }
 
+    public static List<Object> filter(Object f, Object xs) {
+        var func = (java.util.function.Function<Object, Object>) f;
+        var col = (Collection<Object>) xs;
+        var result = new ArrayList<Object>();
+        for (Object x : col) {
+            if (toBoolean(func.apply(x))) {
+                result.add(x);
+            }
+        }
+        return result;
+    }
+
     public static Object drop(Object n, Object xs) {
         var col = (List<Object>) xs;
         return col.subList((Integer) n, col.size());
