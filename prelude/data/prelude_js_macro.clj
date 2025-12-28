@@ -97,6 +97,9 @@
    (list 'vector)
    xs))
 
+(defn macro_map [f xs]
+  (list '.map xs f))
+
 (defn macro_second [xs]
   (list 'get xs 1))
 
