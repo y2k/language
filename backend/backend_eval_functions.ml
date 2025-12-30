@@ -146,6 +146,13 @@ let attach reg_val reg_fun ctx =
       | [ OString (_, str); OString (_, suffix) ] ->
           OBool (meta_empty, String.ends_with ~suffix str)
       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "clojure.string/replace" (fun xs ->
+      match xs with
+      | [ OString (_, s); OString (_, match_); OString (_, replacement) ] ->
+          OString
+            ( meta_empty,
+              Re.replace_string (Re.compile (Re.str match_)) ~by:replacement s )
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "filter" (fun xs ->
       match xs with
       | [ OLambda (_, f); OList (_, xs) ] ->

@@ -32,6 +32,12 @@
         (list 'cast 'String s)
         (list 'cast 'String suffix)))
 
+(defn macro_clojure.string/replace [s match replacement]
+  (list '.replace
+        (list 'cast 'String s)
+        (list 'cast 'String match)
+        (list 'cast 'String replacement)))
+
 (defn macro_declare [x] (list 'do))
 
 (defn macro_boolean [x]

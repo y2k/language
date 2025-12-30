@@ -77,6 +77,9 @@
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith s suffix))
 
+(defn macro_clojure.string/replace [s match replacement]
+  (list '.replaceAll s match replacement))
+
 ;; Regex
 
 (defn macro_re-pattern [x]

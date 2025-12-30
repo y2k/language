@@ -375,7 +375,7 @@ p__1=((java.util.List)xs).get(((int)i));
 } else {
 p__1=y2k.RT.invoke(
 y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:77:9",
+"prelude/data/prelude_java.clj:83:9",
 java.util.Arrays.asList(
 "Unsupported source: ",
 String.format(
@@ -455,6 +455,12 @@ let prelude_java_macro = {|
   (list '.endsWith
         (list 'cast 'String s)
         (list 'cast 'String suffix)))
+
+(defn macro_clojure.string/replace [s match replacement]
+  (list '.replace
+        (list 'cast 'String s)
+        (list 'cast 'String match)
+        (list 'cast 'String replacement)))
 
 (defn macro_declare [x] (list 'do))
 
@@ -797,6 +803,9 @@ let prelude_js_macro = {|
 
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith s suffix))
+
+(defn macro_clojure.string/replace [s match replacement]
+  (list '.replaceAll s match replacement))
 
 ;; Regex
 
