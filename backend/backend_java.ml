@@ -106,7 +106,7 @@ let rec compile (ctx : complie_context) sexp =
       let value = compile ctx value in
       Printf.sprintf "((%s)%s)" type_ value
   (* instanceof *)
-  | SList (_, [ SAtom (_, "instance?"); SAtom (_, type_); instance ]) ->
+  | SList (_, [ SAtom (_, "instance_QMARK_"); SAtom (_, type_); instance ]) ->
       let instance = compile ctx instance in
       let type_ = Str.global_replace (Str.regexp "\\.class$") "" type_ in
       Printf.sprintf "(%s instanceof %s)" instance type_

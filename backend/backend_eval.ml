@@ -33,7 +33,9 @@ let resolve_value ctx name =
     let scope = ctx.scope @ (ctx.ns |> List.map (fun (x, y) -> (x, !y))) in
     match List.assoc_opt name scope with
     | Some v -> v
-    | None -> failwith @@ __LOC__ ^ " - Can't find value: '" ^ name ^ "'"
+    | None ->
+        failwith @@ __LOC__ ^ " - Can't find value: '" ^ name ^ "' in "
+        ^ show_eval_context ctx
 
 let rec eval_ (ctx : eval_context) (node : sexp) =
   let ctx = { ctx with level = ctx.level + 1 } in

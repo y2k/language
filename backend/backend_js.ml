@@ -107,7 +107,7 @@ let rec do_compile (ctx : context) = function
       List.map (do_compile ctx) args
       |> String.concat "," |> Printf.sprintf "[%s]"
   (* assoc! *)
-  | SList (_, [ SAtom (_, "assoc!"); name; key; value ]) ->
+  | SList (_, [ SAtom (_, "assoc_BANG_"); name; key; value ]) ->
       Printf.sprintf "%s[%s]=%s" (do_compile ctx name) (do_compile ctx key)
         (do_compile ctx value)
   (* assoc *)
@@ -131,7 +131,7 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "throw"); e ]) ->
       Printf.sprintf "throw %s" (do_compile ctx e)
   (* set! *)
-  | SList (_, [ SAtom (_, "set!"); name; value ]) ->
+  | SList (_, [ SAtom (_, "set_BANG_"); name; value ]) ->
       Printf.sprintf "%s=%s" (do_compile ctx name) (do_compile ctx value)
   | SList (_, [ SAtom (_, "type"); x ]) ->
       Printf.sprintf "typeof %s" (do_compile ctx x)
