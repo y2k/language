@@ -5,6 +5,7 @@ package y2k;
 
 import java.util.*;
 
+@SuppressWarnings("unchecked")
 public class RT {
 
     public static Object hash_map_from(Object xs) {
@@ -349,6 +350,12 @@ export const re_find = (p, i) => {
         return null;
     }
     return result[0];
+}
+
+export const swap_BANG_ = (atom, f) => {
+    const result = atom[0];
+    atom[0] = (result);
+    return result;
 }
 |}
 
@@ -883,9 +890,7 @@ let prelude_js_macro = {|
 ;; Atoms
 
 (defn macro_swap! [a f]
-  (list 'do
-        (list 'assoc! a 0 (list f (list 'get a 0)))
-        (list 'get a 0)))
+  (list 'prelude/swap! a f))
 
 (defn macro_reset! [a x]
   (list 'assoc! a 0 x))

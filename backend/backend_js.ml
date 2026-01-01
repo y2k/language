@@ -35,7 +35,9 @@ let rec do_compile (ctx : context) = function
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
   | SAtom (_, x) when not (String.starts_with ~prefix:"\"" x) ->
-      x |> String.map (fun x -> if x = '/' then '.' else x)
+      x
+      |> String.map (fun x -> if x = '/' then '.' else x)
+      |> Re.replace (Re.Pcre.re "_QMARK_" |> Re.compile) ~f:(Fun.const "?")
   | SAtom (_, x) -> x
   (* TODO: move to macro *)
   | SList (_, [ SAtom (_, "<="); a; b ]) ->
@@ -114,10 +116,9 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "assoc"); map; key; value ]) ->
       Printf.sprintf "{ ...%s, [%s]: %s }" (do_compile ctx map)
         (do_compile ctx key) (do_compile ctx value)
-  | SList (_, [ SAtom (m, "def*"); name; value ]) ->
+  | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
       let export = if m.symbol = "private" then "" else "export " in
-      Printf.sprintf "%sconst %s=%s" export (do_compile ctx name)
-        (do_compile ctx value)
+      Printf.sprintf "%sconst %s=%s" export name (do_compile ctx value)
   (* let *)
   | SList (_, [ SAtom (_, "let*"); name; value ]) ->
       Printf.sprintf "const %s=%s" (do_compile ctx name) (do_compile ctx value)

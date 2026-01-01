@@ -125,6 +125,7 @@ type obj =
   | ONil of meta
   | OLambda of meta * (obj list -> obj)
   | OQuote of meta * sexp
+  | OAtom of meta * obj ref
 [@@deriving show]
 
 module Obj = struct
@@ -294,6 +295,7 @@ module OUtils = struct
     | OQuote (_, m) -> "(quote" ^ debug_show_sexp_for_error [ m ] ^ ")"
     | OFloat _ -> failwith __LOC__
     | OLambda _ -> failwith __LOC__
+    | OAtom (_, r) -> Printf.sprintf "(atom %s)" (obj_to_string !r)
 
   let failobj loc x = Printf.sprintf "%s %s" loc (obj_to_string x) |> failwith
 
@@ -329,6 +331,7 @@ module OUtils = struct
     | OQuote (_, m) -> "(quote '" ^ debug_show_sexp_for_error [ m ] ^ "')"
     | OMap _ -> failwith "OMap"
     | OLambda _ -> failwith "OLambda"
+    | OAtom (_, r) -> Printf.sprintf "(atom %s)" (debug_obj_to_string !r)
 end
 
 module NamespaceUtils = struct

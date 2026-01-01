@@ -2,6 +2,7 @@ package y2k;
 
 import java.util.*;
 
+@SuppressWarnings("unchecked")
 public class RT {
 
     public static Object hash_map_from(Object xs) {

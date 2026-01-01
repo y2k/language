@@ -99,7 +99,8 @@ let attach reg_val reg_fun ctx =
           | OFloat (m, f) -> OFloat ({ m with symbol }, f)
           | OBool (m, b) -> OBool ({ m with symbol }, b)
           | OLambda (m, f) -> OLambda ({ m with symbol }, f)
-          | OQuote (m, n) -> OQuote ({ m with symbol }, n))
+          | OQuote (m, n) -> OQuote ({ m with symbol }, n)
+          | OAtom (m, r) -> OAtom ({ m with symbol }, r))
       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "boolean" (function
     | [ OBool (_, x) ] -> OBool (meta_empty, x)
@@ -267,4 +268,16 @@ let attach reg_val reg_fun ctx =
         OList (meta_empty, List.map (fun x -> f [ x ]) xs)
     | [ OLambda (_, f); OVector (_, xs) ] ->
         OVector (meta_empty, List.map (fun x -> f [ x ]) xs)
+    | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "atom" (function
+    | [ x ] -> OAtom (meta_empty, ref x)
+    | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "swap!" (function
+    | [ OAtom (_, r); OLambda (_, f) ] ->
+        let old_val = !r in
+        r := f [ old_val ];
+        old_val
+    | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "deref" (function
+    | [ OAtom (_, r) ] -> !r
     | x -> Obj.failobj __LOC__ x)

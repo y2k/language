@@ -156,9 +156,7 @@
 ;; Atoms
 
 (defn macro_swap! [a f]
-  (list 'do
-        (list 'assoc! a 0 (list f (list 'get a 0)))
-        (list 'get a 0)))
+  (list 'prelude/swap! a f))
 
 (defn macro_reset! [a x]
   (list 'assoc! a 0 x))

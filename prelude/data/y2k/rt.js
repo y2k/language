@@ -17,3 +17,9 @@ export const re_find = (p, i) => {
     }
     return result[0];
 }
+
+export const swap_BANG_ = (atom, f) => {
+    const result = atom[0];
+    atom[0] = (result);
+    return result;
+}
