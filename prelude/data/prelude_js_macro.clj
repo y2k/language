@@ -1,3 +1,6 @@
+(defn macro_update [m k f]
+  (list 'prelude/update m k f))
+
 (defn macro_inc [a]
   (list 'prelude/inc a))
 

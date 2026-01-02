@@ -9,6 +9,7 @@ type context = {
   namespace : string;
   prelude_path : string;
 }
+[@@deriving show]
 
 let compile_fn do_compile args body =
   let vararg =
@@ -51,6 +52,10 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "export_default"); x ]) ->
       Printf.sprintf "export default %s" (do_compile ctx x)
   (* TODO: /end *)
+  | SList (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); _ ]) ->
+      (* let ns = unpack_symbol ns in
+      prerr_endline @@ "LOG:NS: " ^ ns; *)
+      ""
   | SList
       ( _,
         [
@@ -70,7 +75,10 @@ let rec do_compile (ctx : context) = function
         | SAtom (_, name), SList (_, [ _; _; SAtom (_, path) ])
           when String.starts_with ~prefix:"\"" path ->
             Printf.sprintf "import * as %s from %s" name path
-        | SAtom (_, name), SList (_, [ _; SAtom (_, path); _ ]) ->
+        | SAtom (_, name), SList (_, [ _a; SAtom (_, path); _b ]) ->
+            prerr_endline @@ "LOG: " ^ show_sexp2 _a ^ " | " ^ path ^ " | "
+            ^ show_sexp2 _b ^ " | " ^ name ^ " | " ^ show_context ctx;
+            let path = String.map (function '.' -> '/' | x -> x) path in
             Printf.sprintf "import * as %s from './%s.js'" name path
         | k, v -> failsexp __LOC__ [ k; v ])
       |> String.concat ";\n"
@@ -175,4 +183,5 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       |> Stage_escape_names.invoke
       |> log_stage log "Stage_escape_names"
       |> do_compile { filename; root_dir; namespace; prelude_path }
-      |> Printf.sprintf "import * as prelude from '%s';\n%s" prelude_path)
+      |> Printf.sprintf "\"use strict\";\nimport * as prelude from '%s';\n%s"
+           prelude_path)

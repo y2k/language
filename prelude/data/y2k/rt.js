@@ -35,3 +35,7 @@ export const _MINUS_ = (a, b) => {
 export const inc = (a) => {
     return a + 1;
 }
+
+export const update = (m, k, f) => {
+    return { ...m, [k]: f(m[k]) };
+}

@@ -51,6 +51,22 @@ let attach reg_val reg_fun ctx =
           in
           OMap (meta_empty, r)
       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "update" (fun xs ->
+      match xs with
+      | [ OMap (_, m); k; OLambda (_, f) ] ->
+          let old_val =
+            List.find_opt (fun (k', _) -> Obj.equal k k') m
+            |> Option.map snd
+            |> Option.value ~default:(ONil meta_empty)
+          in
+          let new_val = f [ old_val ] in
+          let new_m =
+            m
+            |> List.filter (fun (k', _) -> not (Obj.equal k k'))
+            |> List.cons (k, new_val)
+          in
+          OMap (meta_empty, new_m)
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "FIXME" (fun xs ->
       xs
       |> List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x)

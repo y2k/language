@@ -23,7 +23,7 @@ let parse_args () =
       ("-target", Arg.Set_string target, "Target: js, java, eval, sexp");
       ("-src", Arg.Set_string src, "Source file");
       ("-namespace", Arg.Set_string namespace, "Namespace");
-      ("-log", Arg.Set log, "Show log");
+      ("-log", Arg.Bool (( := ) log), "Show log");
       ("-prelude_path", Arg.Set_string prelude_path, "Prelude path");
     ]
   in

@@ -1,3 +1,9 @@
+(defn macro_update [m k f]
+  (list
+   'y2k.RT.invoke
+   'y2k.prelude_java.update
+   m k f))
+
 (defn macro_assert [a b]
   (list '= a b))
 

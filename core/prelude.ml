@@ -369,6 +369,10 @@ export const _MINUS_ = (a, b) => {
 export const inc = (a) => {
     return a + 1;
 }
+
+export const update = (m, k, f) => {
+    return { ...m, [k]: f(m[k]) };
+}
 |}
 
 let java_runtime2 = {|
@@ -379,37 +383,6 @@ public class prelude_java {
 public static final Object __namespace;
 static {
 __namespace="prelude_java";
-};
-public static /* final */ Object get;
-static {
-get=y2k.RT.fn((xs,i)->{
-Object p__2;
-if (y2k.RT.toBoolean(
-(xs instanceof java.util.Map))) {
-p__2=((java.util.Map)xs).get(i);
-} else {
-Object p__1;
-if (y2k.RT.toBoolean(
-(xs instanceof java.util.List))) {
-p__1=((java.util.List)xs).get(((int)i));
-} else {
-p__1=y2k.RT.invoke(
-y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:86:9",
-java.util.Arrays.asList(
-"Unsupported source: ",
-String.format(
-"%s",
-xs),
-", key: ",
-String.format(
-"%s",
-i)));
-};
-p__2=p__1;
-};
-return p__2;
-});
 };
 public static /* final */ Object inc;
 static {
@@ -431,6 +404,52 @@ loc,
 xs));
 });
 };
+public static /* final */ Object get;
+static {
+get=y2k.RT.fn((xs,i)->{
+Object p__2;
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.Map))) {
+p__2=((java.util.Map)xs).get(i);
+} else {
+Object p__1;
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.List))) {
+p__1=((java.util.List)xs).get(((int)i));
+} else {
+p__1=y2k.RT.invoke(
+y2k.prelude_java.fixme,
+"prelude/data/prelude_java.clj:94:9",
+java.util.Arrays.asList(
+"Unsupported source: ",
+String.format(
+"%s",
+xs),
+", key: ",
+String.format(
+"%s",
+i)));
+};
+p__2=p__1;
+};
+return p__2;
+});
+};
+public static /* final */ Object update;
+static {
+update=y2k.RT.fn((m,k,f)->{
+
+return y2k.RT.assoc(
+m,
+k,
+y2k.RT.invoke(
+f,
+y2k.RT.invoke(
+y2k.prelude_java.get,
+m,
+k)));
+});
+};
 }
 
 |}
@@ -448,6 +467,12 @@ let prelude_java_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_update [m k f]
+  (list
+   'y2k.RT.invoke
+   'y2k.prelude_java.update
+   m k f))
 
 (defn macro_assert [a b]
   (list '= a b))
@@ -756,6 +781,9 @@ let prelude_js_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_update [m k f]
+  (list 'prelude/update m k f))
 
 (defn macro_inc [a]
   (list 'prelude/inc a))
