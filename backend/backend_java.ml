@@ -196,8 +196,8 @@ let compile ~builtin_macro ~(namespace : string) (log : bool)
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Prelude.prelude_java_macro; filename }
-      |> Stage_underscore_name.invoke
-      |> log_stage log "Stage_underscore_name"
+      |> Stage_escape_names.invoke
+      |> log_stage log "Stage_escape_names"
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve

@@ -187,7 +187,7 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"
-      |> Stage_underscore_name.invoke
-      |> log_stage log "Stage_underscore_name"
+      |> Stage_escape_names.invoke
+      |> log_stage log "Stage_escape_names"
       |> do_compile { filename; root_dir; namespace; prelude_path }
       |> Printf.sprintf "import * as prelude from '%s';\n%s" prelude_path)
