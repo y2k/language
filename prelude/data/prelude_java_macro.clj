@@ -63,6 +63,11 @@
 (defn macro_eprintln [& xs]
   (concat (list 'y2k.RT.eprintln) xs))
 
+(defn macro_inc [x]
+  (list 'y2k.RT.invoke
+        'y2k.prelude_java.inc
+        x))
+
 (defn macro_FIXME [& xs]
   (list 'y2k.RT.invoke
         'y2k.prelude_java.fixme

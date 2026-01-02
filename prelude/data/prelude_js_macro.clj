@@ -1,3 +1,6 @@
+(defn macro_inc [a]
+  (list 'prelude/inc a))
+
 (defn macro_* [a b]
   (list '__inline_op__ "*" a b))
 

@@ -365,6 +365,10 @@ export const _PLUS_ = (...xs) => {
 export const _MINUS_ = (a, b) => {
     return a - b
 }
+
+export const inc = (a) => {
+    return a + 1;
+}
 |}
 
 let java_runtime2 = {|
@@ -391,7 +395,7 @@ p__1=((java.util.List)xs).get(((int)i));
 } else {
 p__1=y2k.RT.invoke(
 y2k.prelude_java.fixme,
-"prelude/data/prelude_java.clj:83:9",
+"prelude/data/prelude_java.clj:86:9",
 java.util.Arrays.asList(
 "Unsupported source: ",
 String.format(
@@ -405,6 +409,13 @@ i)));
 p__2=p__1;
 };
 return p__2;
+});
+};
+public static /* final */ Object inc;
+static {
+inc=y2k.RT.fn((p__3)->{
+int x=(int)((int)p__3);
+return (x + 1);
 });
 };
 public static /* final */ Object fixme;
@@ -502,6 +513,11 @@ let prelude_java_macro = {|
 
 (defn macro_eprintln [& xs]
   (concat (list 'y2k.RT.eprintln) xs))
+
+(defn macro_inc [x]
+  (list 'y2k.RT.invoke
+        'y2k.prelude_java.inc
+        x))
 
 (defn macro_FIXME [& xs]
   (list 'y2k.RT.invoke
@@ -740,6 +756,9 @@ let prelude_js_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_inc [a]
+  (list 'prelude/inc a))
 
 (defn macro_* [a b]
   (list '__inline_op__ "*" a b))

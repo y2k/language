@@ -31,3 +31,7 @@ export const _PLUS_ = (...xs) => {
 export const _MINUS_ = (a, b) => {
     return a - b
 }
+
+export const inc = (a) => {
+    return a + 1;
+}

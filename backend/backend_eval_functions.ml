@@ -32,6 +32,9 @@ end
 
 let attach reg_val reg_fun ctx =
   ctx
+  |> reg_fun "inc" (function
+    | [ OInt (_, x) ] -> OInt (meta_empty, x + 1)
+    | x -> Obj.failobj __LOC__ x)
   |> reg_fun "hash-map-from" (function
     | [ OVector (_, xs) ] -> OMap (meta_empty, List.split_into_pairs xs)
     | x -> Obj.failobj __LOC__ x)

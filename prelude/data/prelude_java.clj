@@ -15,6 +15,9 @@
 ;;               " "
 ;;               (concat (list 'vector) xs))))
 
+(defn inc [^int x]
+  (+ x 1))
+
 (defn fixme [loc xs]
   (java.util.Objects.requireNonNull
    nil

@@ -11,6 +11,8 @@
 (defn- ?!- [x] x)
 
 (defn test []
+  (assert_ __LOC__ 7 (inc 6))
+  ;; (assert_ __LOC__ 3 (:a (update {:a 2} :a inc)))
   (assert_ __LOC__ 7 (/ 21 3))
   (assert_ __LOC__ 21 (* 3 7))
   (assert_ __LOC__ 6 (+ 1 2 3))
