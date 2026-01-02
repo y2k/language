@@ -1,26 +1,27 @@
 open Core__.Common
 
+let mk_get v key = SList (meta_empty, [ SAtom (meta_empty, "get"); v; key ])
+
+let expand_vector_destructure v kps =
+  kps
+  |> List.mapi (fun i k -> (k, mk_get v (SAtom (meta_empty, string_of_int i))))
+
+let expand_map_destructure v kps =
+  kps |> List.split_into_pairs
+  |> List.map (fun (var, key) -> (var, mk_get v key))
+
 let rec loop = function
   | [] -> []
   | (SAtom (_, "_"), _) :: tail -> loop tail
   | ((SAtom _, _) as kv) :: tail -> kv :: loop tail
-  | ((SList (_, SAtom (_, "vector") :: _) as k), (SList _ as v)) :: tail ->
+  | ((SList (_, SAtom (_, ("vector" | "hash-map")) :: _) as k), (SList _ as v))
+    :: tail ->
       let nv = SAtom (meta_empty, NameGenerator.get_new_var ()) in
       loop ((nv, v) :: (k, nv) :: tail)
   | (SList (_, SAtom (_, "vector") :: kps), (SAtom _ as v)) :: tail ->
-      let xs =
-        kps
-        |> List.mapi (fun i k ->
-               ( k,
-                 SList
-                   ( meta_empty,
-                     [
-                       SAtom (meta_empty, "get");
-                       v;
-                       SAtom (meta_empty, string_of_int i);
-                     ] ) ))
-      in
-      loop (xs @ tail)
+      loop (expand_vector_destructure v kps @ tail)
+  | (SList (_, SAtom (_, "hash-map") :: kps), (SAtom _ as v)) :: tail ->
+      loop (expand_map_destructure v kps @ tail)
   | xs -> failsexp __LOC__ (List.concat_map (fun (k, v) -> [ k; v ]) xs)
 
 let mk_let k v = SList (meta_empty, [ SAtom (meta_empty, "let*"); k; v ])

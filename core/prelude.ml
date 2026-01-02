@@ -354,7 +354,7 @@ export const re_find = (p, i) => {
 
 export const swap_BANG_ = (atom, f) => {
     const result = atom[0];
-    atom[0] = (result);
+    atom[0] = f(result);
     return result;
 }
 |}
