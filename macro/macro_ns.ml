@@ -64,6 +64,26 @@ let expand_import imports =
           | x -> failsexp __LOC__ [ x ])
     | x -> failsexp __LOC__ [ x ])
 
+let expand_require2 requires =
+  requires
+  |> List.concat_map (function
+    | SList (_, [ _; SAtom (mp, path); SAtom (_, ":as"); SAtom (ma, alias) ]) ->
+        [
+          SAtom
+            ( mp,
+              if String.starts_with ~prefix:"\"" path then path else ":" ^ path
+            );
+          SAtom (ma, ":" ^ alias);
+        ]
+    | x -> failsexp __LOC__ [ x ])
+
+let compute_ns_requires args =
+  args
+  |> List.concat_map (function
+    | SList (_, SAtom (_, ":require") :: requires) -> expand_require2 requires
+    | SList (_, SAtom (_, ":import") :: _imports) -> []
+    | x -> failsexp __LOC__ [ x ])
+
 let expand_ns m ctx args =
   let expanded_args =
     args
@@ -86,7 +106,41 @@ let expand_ns m ctx args =
             ] );
       ]
   in
-  SList (m, SAtom (meta_empty, "do") :: (ns_def @ expanded_args))
+  let _ns2_def =
+    SList
+      ( meta_empty,
+        [
+          SAtom (meta_empty, "def");
+          SAtom (meta_empty, "__NS__");
+          SList
+            ( meta_empty,
+              SAtom (meta_empty, "__BUILD_NS__")
+              :: SAtom (meta_empty, "\"" ^ ctx.namespace ^ "\"")
+              :: compute_ns_requires args );
+        ] )
+  in
+  (* let _ns2_def =
+    SList
+      ( meta_empty,
+        [
+          SAtom (meta_empty, "def");
+          SAtom (meta_empty, "__NS__");
+          SList
+            ( meta_empty,
+              [
+                SAtom (meta_empty, "RT.build_ns");
+                SList
+                  ( meta_empty,
+                    [
+                      (* SAtom (meta_empty, ":ns"); *)
+                      SAtom (meta_empty, "\"" ^ ctx.namespace ^ "\"");
+                      (* SAtom (meta_empty, ":require"); *)
+                      SList (meta_empty, compute_ns_requires args);
+                    ] );
+              ] );
+        ] )
+  in *)
+  SList (m, SAtom (meta_empty, "do") :: _ns2_def :: (ns_def @ expanded_args))
 
 let invoke (ctx : Core__.Frontend_simplify.simplify_ctx) simplify = function
   | SList (m, SAtom (_, "ns") :: SAtom (_, namespace) :: args) ->

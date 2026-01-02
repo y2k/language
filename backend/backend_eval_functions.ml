@@ -32,6 +32,7 @@ end
 
 let attach reg_val reg_fun ctx =
   ctx
+  |> reg_fun "__BUILD_NS__" (fun _ -> ONil meta_empty)
   |> reg_fun "inc" (function
     | [ OInt (_, x) ] -> OInt (meta_empty, x + 1)
     | x -> Obj.failobj __LOC__ x)

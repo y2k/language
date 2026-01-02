@@ -17,6 +17,8 @@ let rec compile (ctx : complie_context) sexp =
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
   | SAtom (_, x) -> x
+  (* TODO: handle new namespaces *)
+  | SList (_, [ SAtom (_, "def*"); SAtom (_, "__NS__"); _ ]) -> ""
   (* Operators *)
   | SList (_, SAtom (_, op) :: args) when op = "_PLUS_" ->
       List.map (compile ctx) args

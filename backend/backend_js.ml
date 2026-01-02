@@ -60,6 +60,48 @@ let rec do_compile (ctx : context) = function
       ( _,
         [
           SAtom (_, "def*");
+          SAtom (_, ns_tag);
+          SList (_, _ :: SAtom (_, ns) :: items);
+        ] )
+    when String.ends_with ~suffix:"__NS__" ns_tag ->
+      let ns = unpack_string ns in
+      items |> List.split_into_pairs
+      |> List.map (function
+        | SAtom (_, path), SAtom (_, name)
+          when String.starts_with ~prefix:":" path ->
+            let name = unpack_symbol name in
+            let path =
+              unpack_symbol path |> String.map (function '.' -> '/' | x -> x)
+            in
+            (* prerr_endline @@ "[LOG][JS]: " ^ ns ^ " | " ^ path ^ " | " ^ name; *)
+            let count1 =
+              ns
+              |> String.fold_left
+                   (fun acc x -> if x = '.' then acc + 1 else acc)
+                   0
+            in
+            let count2 =
+              path
+              |> String.fold_left
+                   (fun acc x -> if x = '.' then acc + 1 else acc)
+                   0
+            in
+            let count = count1 - count2 in
+            let prefix = List.init count (fun _ -> "../") |> String.concat "" in
+            (* let suffix =  *)
+            Printf.sprintf "import * as %s from '%s./%s.js'" name prefix path
+        | SAtom (_, path), SAtom (_, name)
+          when String.starts_with ~prefix:"\"" path ->
+            let name = unpack_symbol name in
+            let path = unpack_string path in
+            Printf.sprintf "import * as %s from '%s'" name path
+        | _ -> failwith __LOC__)
+      |> String.concat ";\n"
+  | SList (_, [ SAtom (_, "def*"); SAtom (_, "__ns_aliases"); _ ]) -> ""
+  (* | SList
+      ( _,
+        [
+          SAtom (_, "def*");
           SAtom (_, "__ns_aliases");
           SList (_, [ SAtom (_, "quote*"); SList (_, items) ]);
         ] ) ->
@@ -81,7 +123,7 @@ let rec do_compile (ctx : context) = function
             let path = String.map (function '.' -> '/' | x -> x) path in
             Printf.sprintf "import * as %s from './%s.js'" name path
         | k, v -> failsexp __LOC__ [ k; v ])
-      |> String.concat ";\n"
+      |> String.concat ";\n" *)
   (* not *)
   | SList (_, [ SAtom (_, "not"); x ]) ->
       Printf.sprintf "!(%s)" (do_compile ctx x)

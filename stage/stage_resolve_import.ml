@@ -11,6 +11,7 @@ let resolve_type_for_node ctx = function
   | x -> x
 
 let rec resolve (ctx : resolve_ctx) node =
+  prerr_endline @@ "[LOG][ResolveImports]:\n" ^ show_sexp node ^ "\n";
   match node with
   | SAtom (m, name) as x when String.contains name '/' -> (
       let parts = String.split_on_char '/' name in
@@ -23,6 +24,7 @@ let rec resolve (ctx : resolve_ctx) node =
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x ^ ".class"))
       | None -> (ctx, SAtom (m, name)))
+  (* | SList (_, SAtom (_, "def*") :: SAtom (_, "__NS__") :: _) -> (ctx, node) *)
   | SList
       ( _,
         [
@@ -69,5 +71,6 @@ let rec resolve (ctx : resolve_ctx) node =
   | x -> failsexp __LOC__ [ x ]
 
 let do_resolve node =
+  (* prerr_endline @@ "[LOG][ResolveImports]:\n" ^ show_sexp node; *)
   let ctx = { links = [ ("String", "String") ] } in
   resolve ctx node |> snd
