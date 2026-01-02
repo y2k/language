@@ -1,83 +1,75 @@
 open Core__.Common
+open Printf
 
-let convert_opts opts =
+let parse_opts opts =
   opts |> List.split_into_pairs
   |> List.map (function
     | SAtom (_, k), v -> (k, v)
     | k, v -> failsexp __LOC__ [ k; v ])
 
+let get_opt_value name default opts =
+  List.assoc_opt (":" ^ name) opts
+  |> Option.map (function
+    | SAtom (_, v) -> unpack_string v
+    | x -> failsexp __LOC__ [ x ])
+  |> Option.value ~default
+
+let mk_type_resolve typ =
+  SList
+    ( meta_empty,
+      [ SAtom (meta_empty, "__compiler_resolve_type"); pack_string typ ] )
+
+let generate_method_annotation = function
+  | "Override" -> ([], false)
+  | ":static" -> ([], true)
+  | "" -> ([], false)
+  | annot ->
+      ([ pack_string "@"; mk_type_resolve annot; pack_string "\n" ], false)
+
+let generate_method_args args =
+  args
+  |> List.mapi (fun i a ->
+      match a with
+      | SAtom (_, typ) ->
+          [
+            mk_type_resolve (unpack_string typ); pack_string (sprintf " p%i" i);
+          ]
+      | x -> failsexp __LOC__ [ x ])
+  |> ( function
+  | [] -> []
+  | [ x ] -> [ x ]
+  | x :: xs -> x :: List.concat_map (fun x -> [ [ pack_string "," ]; x ]) xs )
+  |> List.flatten
+
+let generate_method_body is_static ret_type prefix name args =
+  let args_str =
+    args |> List.mapi (fun i _ -> sprintf ",p%i" i) |> String.concat ""
+  in
+  let invoke_call =
+    if is_static then sprintf "y2k.RT.invoke(%s%s%s)" prefix name args_str
+    else sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args_str
+  in
+  match ret_type with
+  | "void" -> invoke_call
+  | _ -> sprintf "return (%s)%s" ret_type invoke_call
+
 let generate_method annot args ret_type prefix name =
-  let method_annot, is_static =
-    match annot with
-    | "Override" -> ([], false)
-    | ":static" -> ([], true)
-    | "" -> ([], false)
-    | x ->
-        ( [
-            pack_string "@";
-            SList
-              ( meta_empty,
-                [ SAtom (meta_empty, "__compiler_resolve_type"); pack_string x ]
-              );
-            pack_string "\n";
-          ],
-          false )
-  in
-  let body =
-    let args =
-      args |> List.mapi (fun i _ -> Printf.sprintf ",p%i" i) |> String.concat ""
-    in
-    if is_static then
-      match ret_type with
-      | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s%s)" prefix name args
-      | _ ->
-          Printf.sprintf "return (%s)y2k.RT.invoke(%s%s%s)" ret_type prefix name
-            args
-    else
-      match ret_type with
-      | "void" -> Printf.sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args
-      | _ ->
-          Printf.sprintf "return (%s)y2k.RT.invoke(%s%s,this%s)" ret_type prefix
-            name args
-  in
-  let args2 =
-    args
-    |> List.mapi (fun i a ->
-        match a with
-        | SAtom (_, a) ->
-            [
-              SList
-                ( meta_empty,
-                  [
-                    SAtom (meta_empty, "__compiler_resolve_type");
-                    pack_string (unpack_string a);
-                  ] );
-              pack_string (Printf.sprintf " p%i" i);
-            ]
-        | x -> failsexp __LOC__ [ x ])
-    |> ( function
-    | [] -> []
-    | [ x ] -> [ x ]
-    | x :: xs -> x :: List.concat_map (fun x -> [ [ pack_string "," ]; x ]) xs )
-    |> List.flatten
-  in
-  (* prerr_endline @@ "LOG[annot] " ^ annot; *)
+  let method_annot, is_static = generate_method_annotation annot in
+  let body = generate_method_body is_static ret_type prefix name args in
+  let args_code = generate_method_args args in
   let call_super =
     if annot = "Override" then
-      let args__ =
-        args
-        |> List.mapi (fun i _ -> Printf.sprintf "p%i" i)
-        |> String.concat ","
+      let args_str =
+        args |> List.mapi (fun i _ -> sprintf "p%i" i) |> String.concat ","
       in
-      Printf.sprintf "super.%s(%s);\n" name args__
+      sprintf "super.%s(%s);\n" name args_str
     else ""
   in
-  let static_annot = if is_static then "static " else "" in
-  let prefix =
-    pack_string (Printf.sprintf "public %s%s %s(" static_annot ret_type name)
-  in
-  let suffix = pack_string (Printf.sprintf ") {\n%s%s;\n}" call_super body) in
-  method_annot @ [ prefix ] @ args2 @ [ suffix ]
+  let static_mod = if is_static then "static " else "" in
+  method_annot
+  @ [ pack_string (sprintf "public %s%s %s(" static_mod ret_type name) ]
+  @ args_code
+  @ [ pack_string (sprintf ") {\n%s%s;\n}" call_super body) ]
 
 let generate_methods prefix methods =
   let methods =
@@ -91,59 +83,43 @@ let generate_methods prefix methods =
         generate_method m.symbol (List.tl args) ret_type prefix name
     | x -> failsexp __LOC__ [ x ])
 
-let generate_constructors args cls_name prefix =
-  List.assoc_opt ":init" args
+let generate_constructors cls_name prefix opts =
+  List.assoc_opt ":init" opts
   |> Option.map (function
-    | SAtom (_, x) ->
-        let x = unpack_string x in
+    | SAtom (_, init_fn) ->
+        let fn = unpack_string init_fn in
         [
           pack_string
-            (Printf.sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n"
-               cls_name prefix x);
+            (sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n" cls_name
+               prefix fn);
         ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
-let generate_fields args =
-  List.assoc_opt ":fields" args
+let generate_fields opts =
+  List.assoc_opt ":fields" opts
   |> Option.map (function
     | SList (_, SAtom (_, "vector") :: fields) ->
         fields
         |> List.map (function
           | SAtom (_, name) ->
-              pack_string
-                (Printf.sprintf "public Object %s;\n" (unpack_string name))
+              pack_string (sprintf "public Object %s;\n" (unpack_string name))
           | x -> failsexp __LOC__ [ x ])
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
 let invoke = function
   | SList (_, SAtom (_, "gen-class") :: args) ->
-      let args = convert_opts args in
-      let get_value name default =
-        List.assoc_opt (":" ^ name) args
-        |> Option.map (function
-          | SAtom (_, v) -> unpack_string v
-          | x -> failsexp __LOC__ [ x ])
-        |> Option.value ~default
-      in
-      let prefix = get_value "prefix" "_" in
+      let opts = parse_opts args in
+      let prefix = get_opt_value "prefix" "_" opts in
+      let cls_name = get_opt_value "name" "" opts in
+      let extends = get_opt_value "extends" "Object" opts in
       let cls_code =
-        [
-          pack_string
-            (Printf.sprintf "public static class %s extends "
-               (get_value "name" ""));
-          SList
-            ( meta_empty,
-              [
-                SAtom (meta_empty, "__compiler_resolve_type");
-                pack_string (get_value "extends" "Object");
-              ] );
-          pack_string " {\n";
-        ]
-        @ generate_constructors args (get_value "name" "") prefix
-        @ generate_fields args
-        @ (List.assoc ":methods" args |> generate_methods prefix)
+        [ pack_string (sprintf "public static class %s extends " cls_name) ]
+        @ [ mk_type_resolve extends; pack_string " {\n" ]
+        @ generate_constructors cls_name prefix opts
+        @ generate_fields opts
+        @ generate_methods prefix (List.assoc ":methods" opts)
         @ [ pack_string "}\n" ]
       in
       SList (meta_empty, SAtom (meta_empty, "__compiler_emit") :: cls_code)

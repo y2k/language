@@ -36,9 +36,9 @@ let pnode find_line_and_pos =
     A.char '^'
     *> (ptext_
        <|> A.take_while1 (fun x ->
-               (x >= 'A' && x <= 'z')
-               || x = '.' || x = '(' || x = ')' || x = '-' || x = '>' || x = ':'
-               || x = '?'))
+           (x >= 'A' && x <= 'z')
+           || x = '.' || x = '(' || x = ')' || x = '-' || x = '>' || x = ':'
+           || x = '?'))
   in
   let patom_meta =
     A.map2 (pmeta <* pspace) patom ~f:(fun m (a, x) ->
@@ -80,7 +80,7 @@ let string_to_cjexp code =
   code
   |> A.parse_string ~consume:All (pnode (find_line_and_pos code))
   |> Result.fold ~ok:Fun.id ~error:(fun error ->
-         failwith ("Parse SEXP error: " ^ error))
+      failwith ("Parse SEXP error: " ^ error))
 
 let invoke (node : cljexp) : sexp =
   let rec invoke_sexp2 (replace_col : bool) (node : cljexp) : sexp =

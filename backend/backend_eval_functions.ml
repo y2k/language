@@ -152,7 +152,8 @@ let attach reg_val reg_fun ctx =
       | [ OString (_, s); OString (_, match_); OString (_, replacement) ] ->
           OString
             ( meta_empty,
-              Re.replace_string (Re.compile (Re.str match_)) ~by:replacement s )
+              Re.replace_string (Re.compile (Re.str match_)) ~by:replacement s
+            )
       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "filter" (fun xs ->
       match xs with

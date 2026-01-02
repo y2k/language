@@ -75,7 +75,8 @@ let rec resolve (ctx : resolve_ctx) node =
         if
           (* String.get fun_name 0 < 'a'
           || String.get fun_name 0 > 'z'
-          || *) StringSet.mem fun_name ctx.prelude_fns
+          || *)
+          StringSet.mem fun_name ctx.prelude_fns
         then fun_name
         else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
