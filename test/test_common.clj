@@ -11,8 +11,21 @@
 (defn- ?!- [x] x)
 
 (defn test []
-  (assert_ __LOC__ 2 (- 7 5))
+  (assert_ __LOC__ 7 (/ 21 3))
+  (assert_ __LOC__ 21 (* 3 7))
   (assert_ __LOC__ 6 (+ 1 2 3))
+  (assert_ __LOC__ 2 (- 7 5))
+  (assert_ __LOC__ 1 (mod 3 2))
+  (assert_ __LOC__ false (not true))
+  (assert_ __LOC__ true (not false))
+  (assert_ __LOC__ true (> 2 1))
+  (assert_ __LOC__ false (> 2 2))
+  (assert_ __LOC__ true (>= 2 2))
+  (assert_ __LOC__ false (>= 2 3))
+  (assert_ __LOC__ true (< 1 2))
+  (assert_ __LOC__ false (< 2 2))
+  (assert_ __LOC__ true (<= 2 2))
+  (assert_ __LOC__ false (<= 3 2))
   (let [{ma :a mb :b} {:a 1 :b 2 :c 3}]
     (assert_ __LOC__ "12" (str ma mb)))
   (let [value_atom (atom 1)]

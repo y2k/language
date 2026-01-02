@@ -248,8 +248,31 @@ let attach reg_val reg_fun ctx =
       |> List.map (function OInt (_, x) -> x | _ -> failwith __LOC__)
       |> List.fold_left ( + ) 0
       |> fun x -> OInt (meta_empty, x))
+  |> reg_fun "*" (fun xs ->
+      xs
+      |> List.map (function OInt (_, x) -> x | _ -> failwith __LOC__)
+      |> List.fold_left ( * ) 1
+      |> fun x -> OInt (meta_empty, x))
+  |> reg_fun "/" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x / y)
+    | _ -> failwith __LOC__)
   |> reg_fun "-" (function
     | [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x - y)
+    | _ -> failwith __LOC__)
+  |> reg_fun "mod" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x mod y)
+    | _ -> failwith __LOC__)
+  |> reg_fun ">" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OBool (meta_empty, x > y)
+    | _ -> failwith __LOC__)
+  |> reg_fun "<" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OBool (meta_empty, x < y)
+    | _ -> failwith __LOC__)
+  |> reg_fun ">=" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OBool (meta_empty, x >= y)
+    | _ -> failwith __LOC__)
+  |> reg_fun "<=" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OBool (meta_empty, x <= y)
     | _ -> failwith __LOC__)
   |> reg_fun "reduce" (function
     | [ OLambda (_, f); init; OList (_, xs) ] ->

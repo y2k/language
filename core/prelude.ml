@@ -741,6 +741,24 @@ let prelude_js_macro = {|
 
 ;; Specific target prelude
 
+(defn macro_* [a b]
+  (list '__inline_op__ "*" a b))
+
+(defn macro_mod [a b]
+  (list '__inline_op__ "%" a b))
+
+(defn macro_> [a b]
+  (list '__inline_op__ ">" a b))
+
+(defn macro_>= [a b]
+  (list '__inline_op__ ">=" a b))
+
+(defn macro_< [a b]
+  (list '__inline_op__ "<" a b))
+
+(defn macro_<= [a b]
+  (list '__inline_op__ "<=" a b))
+
 (defn macro_+ [& xs]
   (concat (list 'prelude/+) xs))
 
