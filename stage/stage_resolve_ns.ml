@@ -12,7 +12,6 @@ type resolve_ctx = {
 let mangle_from_path ns fname = Printf.sprintf "%s.%s" ns fname
 
 let rec resolve (ctx : resolve_ctx) node =
-  (* prerr_endline @@ "[LOG][resolve] " ^ show_sexp2 node; *)
   match node with
   | SAtom (m, name) -> (
       match ctx.links |> List.assoc_opt name with
@@ -22,7 +21,6 @@ let rec resolve (ctx : resolve_ctx) node =
       (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); SAtom (_, namespace) ])
     ->
       let namespace = unpack_symbol namespace in
-      (* prerr_endline @@ "[LOG][ResolveNS] " ^ namespace; *)
       ({ ctx with namespace }, SList (meta_empty, [ SAtom (meta_empty, "do*") ]))
   | SList
       ( _,
@@ -49,9 +47,7 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      (* prerr_endline @@ "[ResolveNS:def*][1] " ^ name; *)
       let mng_name = mangle_from_path ctx.namespace name in
-      (* prerr_endline @@ "[ResolveNS:def*][2] " ^ name; *)
       let _, value = resolve ctx value in
       let ctx =
         { ctx with registered_defs = StringSet.add name ctx.registered_defs }
@@ -61,7 +57,6 @@ let rec resolve (ctx : resolve_ctx) node =
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; args; body ]))
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->
-      (* prerr_endline @@ "[LOG][do*]"; *)
       let ctx, body =
         List.fold_left_map (fun ctx x -> resolve ctx x) ctx body
       in

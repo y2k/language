@@ -20,7 +20,6 @@ let rec resolve (ctx : resolve_ctx) node =
       | Some x -> (ctx, SAtom (m, x ^ "." ^ method_))
       | None -> (ctx, x))
   | SAtom (m, name) -> (
-      (* prerr_endline @@ "LOG[__resolve]: " ^ name; *)
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x ^ ".class"))
       | None -> (ctx, SAtom (m, name)))
@@ -61,7 +60,6 @@ let rec resolve (ctx : resolve_ctx) node =
         let name = unpack_string name in
         ctx.links |> List.assoc_opt name |> Option.value ~default:name
       in
-      (* prerr_endline @@ "LOG[__resolve_type]: " ^ name ^ " -> " ^ result; *)
       (ctx, SAtom (m, "\"" ^ result ^ "\""))
   (* Function call *)
   | SList (m, fn :: args) ->

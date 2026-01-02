@@ -1,7 +1,7 @@
 open Core__.Common
 
-type options = { compile : string -> sexp } [@@deriving show]
-type context = { opt : options } [@@deriving show]
+type options = { compile : string -> sexp }
+type context = { opt : options }
 
 let rec invoke (ctx : context) = function
   | SAtom _ as x -> (ctx, x)

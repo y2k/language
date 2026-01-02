@@ -43,8 +43,6 @@ let rec resolve (ctx : resolve_ctx) node =
       let name =
         NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
       in
-      prerr_endline @@ "[ResolveNS:def*] " ^ ctx.filename ^ " | " ^ ctx.root_dir
-      ^ " -> " ^ name;
       let _, value = resolve ctx value in
       (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
@@ -72,12 +70,7 @@ let rec resolve (ctx : resolve_ctx) node =
     when not (String.ends_with ~suffix:"*" fun_name) ->
       let _, args = List.fold_left_map (fun ctx x -> resolve ctx x) ctx args in
       let fun_name =
-        if
-          (* String.get fun_name 0 < 'a'
-          || String.get fun_name 0 > 'z'
-          || *)
-          StringSet.mem fun_name ctx.prelude_fns
-        then fun_name
+        if StringSet.mem fun_name ctx.prelude_fns then fun_name
         else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
           ctx.aliases |> List.assoc_opt alias_name

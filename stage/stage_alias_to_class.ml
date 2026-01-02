@@ -1,7 +1,6 @@
 open Core__.Common
 
-type ctx = { aliases : (string * string) list; base_ns : string }
-[@@deriving show]
+type ctx = { aliases : (string * string) list }
 
 let compute_name ctx name =
   let parts = String.split_on_char '/' name in
@@ -9,7 +8,7 @@ let compute_name ctx name =
   | Some pkg -> Some pkg
   | _ -> None
 
-let rec invoke (ctx : ctx) = function
+let rec transform (ctx : ctx) = function
   | SAtom (m, name) as x when String.contains name '/' ->
       compute_name ctx name
       |> Option.fold ~none:(ctx, x) ~some:(fun name -> (ctx, SAtom (m, name)))
@@ -26,23 +25,23 @@ let rec invoke (ctx : ctx) = function
           | SAtom (_, k), SList (_, [ _; SAtom (_, v) ]) -> (k, v)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
-      let ctx = { ctx with aliases = items } in
+      let ctx = { aliases = items } in
       (ctx, SList (m, [ SAtom (meta_empty, "do*") ]))
   | SList (m, SAtom (mdo, "do*") :: children) ->
-      let ctx, children = List.fold_left_map invoke ctx children in
+      let ctx, children = List.fold_left_map transform ctx children in
       (ctx, SList (m, SAtom (mdo, "do*") :: children))
   | SList (m, [ SAtom (mfn, "fn*"); args; body ]) ->
-      let ctx, body = invoke ctx body in
+      let ctx, body = transform ctx body in
       (ctx, SList (m, [ SAtom (mfn, "fn*"); args; body ]))
   | SList (m, [ SAtom (mdefd, "def*"); name; value ]) ->
-      let ctx, value = invoke ctx value in
+      let ctx, value = transform ctx value in
       (ctx, SList (m, [ SAtom (mdefd, "def*"); name; value ]))
   | SList (m, name :: args) ->
-      let ctx, name = invoke ctx name in
-      let ctx, args = List.fold_left_map invoke ctx args in
+      let ctx, name = transform ctx name in
+      let ctx, args = List.fold_left_map transform ctx args in
       (ctx, SList (m, name :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_invoke base_ns node =
-  let ctx = { aliases = []; base_ns } in
-  invoke ctx node |> snd
+let invoke node =
+  let ctx = { aliases = [] } in
+  transform ctx node |> snd

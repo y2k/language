@@ -1,14 +1,13 @@
 open Core__.Common
 
-let rec invoke (node : sexp) : sexp =
-  (* print_endline @@ "LOG[0.1]:: " ^ debug_show_cljexp [ node ]; *)
+let rec convert_if (node : sexp) : sexp =
   match node with
   | SAtom _ as n -> n
   | SList (_, SAtom (_, "quote*") :: _) as n -> n
   | SList (_, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
-      let cond = invoke cond in
-      let then_ = invoke then_ in
-      let else_ = invoke else_ in
+      let cond = convert_if cond in
+      let then_ = convert_if then_ in
+      let else_ = convert_if else_ in
       let var = NameGenerator.get_new_var () in
       SList
         ( meta_empty,
@@ -40,14 +39,13 @@ let rec invoke (node : sexp) : sexp =
             SAtom (meta_empty, var);
           ] )
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
-      let body = List.map invoke body in
+      let body = List.map convert_if body in
       SList (m, fn_ :: args :: body)
   | SList (m, args) ->
-      let args = List.map invoke args in
+      let args = List.map convert_if args in
       SList (m, args)
 
 let rec invoke_up_do (node : sexp) : sexp =
-  (* print_endline @@ "LOG[2.1]:: " ^ debug_show_cljexp [ node ]; *)
   match node with
   | SAtom _ as n -> n
   | SList (_, SAtom (_, "quote*") :: _) as n -> n
@@ -102,7 +100,6 @@ let rec invoke_up_do (node : sexp) : sexp =
       let body = List.map invoke_up_do body in
       SList (m, rt :: body)
   | SList (m, args) -> (
-      (* print_endline @@ "LOG[2.1.1]:: " ^ debug_show_cljexp [ SBList (fname :: args) ]; *)
       let args = List.map invoke_up_do args in
       let lets =
         args
@@ -130,6 +127,4 @@ let rec invoke_up_do_ level (node : sexp) : sexp =
   let result = invoke_up_do node in
   if result = node then node else invoke_up_do_ (level - 1) result
 
-let invoke (node : sexp) : sexp =
-  (* print_endline @@ "LOG[1]:: " ^ debug_show_cljexp [ node ]; *)
-  invoke node |> invoke_up_do_ 10
+let invoke (node : sexp) : sexp = convert_if node |> invoke_up_do_ 10
