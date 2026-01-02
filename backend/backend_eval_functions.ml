@@ -243,8 +243,13 @@ let attach reg_val reg_fun ctx =
       |> List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x)
       |> String.concat ""
       |> fun xs -> OString (meta_empty, xs))
-  |> reg_fun "+" (function
-    | [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x + y)
+  |> reg_fun "+" (fun xs ->
+      xs
+      |> List.map (function OInt (_, x) -> x | _ -> failwith __LOC__)
+      |> List.fold_left ( + ) 0
+      |> fun x -> OInt (meta_empty, x))
+  |> reg_fun "-" (function
+    | [ OInt (_, x); OInt (_, y) ] -> OInt (meta_empty, x - y)
     | _ -> failwith __LOC__)
   |> reg_fun "reduce" (function
     | [ OLambda (_, f); init; OList (_, xs) ] ->

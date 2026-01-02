@@ -357,11 +357,20 @@ export const swap_BANG_ = (atom, f) => {
     atom[0] = f(result);
     return result;
 }
+
+export const _PLUS_ = (...xs) => {
+    return xs.reduce((a, b) => a + b);
+}
+
+export const _MINUS_ = (a, b) => {
+    return a - b
+}
 |}
 
 let java_runtime2 = {|
 package y2k;
 
+@SuppressWarnings("unchecked")
 public class prelude_java {
 public static final Object __namespace;
 static {
@@ -731,6 +740,14 @@ let prelude_js_macro = {|
 ;; (defmacro not= [a b] (list 'not (list '= a b)))
 
 ;; Specific target prelude
+
+(defn macro_+ [& xs]
+  (concat (list 'prelude/+) xs))
+
+(defn macro_- [& xs]
+  (concat (list 'prelude/_MINUS_) xs))
+
+;;
 
 (defn macro_hash-map-from [xs]
   (list 'prelude/hash_map_from xs))

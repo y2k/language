@@ -39,6 +39,10 @@ let rec do_compile (ctx : context) = function
       |> String.map (fun x -> if x = '/' then '.' else x)
       |> Re.replace (Re.Pcre.re "_QMARK_" |> Re.compile) ~f:(Fun.const "?")
   | SAtom (_, x) -> x
+  (* Inline operators  *)
+  (* | SList (_, SAtom (_, "__inline_op__") :: SAtom (_, op) :: args) ->
+      List.map (do_compile ctx) args
+      |> String.concat op |> Printf.sprintf "(%s)" *)
   (* TODO: move to macro *)
   | SList (_, [ SAtom (_, "<="); a; b ]) ->
       Printf.sprintf "(%s<=%s)" (do_compile ctx a) (do_compile ctx b)
@@ -48,12 +52,9 @@ let rec do_compile (ctx : context) = function
       Printf.sprintf "(%s>%s)" (do_compile ctx a) (do_compile ctx b)
   | SList (_, [ SAtom (_, ">="); a; b ]) ->
       Printf.sprintf "(%s>=%s)" (do_compile ctx a) (do_compile ctx b)
-  | SList (_, SAtom (_, "+") :: args) ->
+  (* | SList (_, SAtom (_, "-") :: args) ->
       List.map (do_compile ctx) args
-      |> String.concat " + " |> Printf.sprintf "(%s)"
-  | SList (_, SAtom (_, "-") :: args) ->
-      List.map (do_compile ctx) args
-      |> String.concat " - " |> Printf.sprintf "(%s)"
+      |> String.concat " - " |> Printf.sprintf "(%s)" *)
   | SList (_, SAtom (_, "*") :: args) ->
       List.map (do_compile ctx) args
       |> String.concat " * " |> Printf.sprintf "(%s)"

@@ -41,7 +41,7 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
   let ctx = { ctx with level = ctx.level + 1 } in
   (* prerr_endline @@ "[EVAL  IN] "
   ^ String.init ctx.level (Fun.const ' ')
-  ^ F.sexp_to_string node; *)
+  ^ Common.show_sexp2 node; *)
   let ctx, result =
     match node with
     | SAtom (m, x) when int_of_string_opt x <> None ->
@@ -91,6 +91,8 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
           OLambda
             ( meta_empty,
               fun args ->
+                (* prerr_endline @@ show_sexp2 (SList (meta_empty, args_names));
+                prerr_endline @@ show_obj (OList (meta_empty, args)); *)
                 let rec loop args_names args ctx =
                   match (args_names, args) with
                   | [ SAtom (_, "&"); SAtom (_, args_name) ], args ->
@@ -103,7 +105,9 @@ let rec eval_ (ctx : eval_context) (node : sexp) =
                       loop args_names args
                         { ctx with scope = (name, arg) :: ctx.scope }
                   | [], [] -> ctx
-                  | _names, _ ->
+                  | _ ->
+                      (* prerr_endline @@ show_sexp2 (SList (meta_empty, names));
+                      prerr_endline @@ show_obj (OList (meta_empty, args)); *)
                       debug_show_sexp [ node ] |> failwith |> ignore;
                       failsexp __LOC__ [ node ]
                 in

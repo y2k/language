@@ -1,3 +1,11 @@
+(defn macro_+ [& xs]
+  (concat (list 'prelude/+) xs))
+
+(defn macro_- [& xs]
+  (concat (list 'prelude/_MINUS_) xs))
+
+;;
+
 (defn macro_hash-map-from [xs]
   (list 'prelude/hash_map_from xs))
 

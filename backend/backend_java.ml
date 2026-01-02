@@ -18,9 +18,15 @@ let rec compile (ctx : complie_context) sexp =
       "\"" ^ unpack_symbol x ^ "\""
   | SAtom (_, x) -> x
   (* Operators *)
+  | SList (_, SAtom (_, op) :: args) when op = "_PLUS_" ->
+      List.map (compile ctx) args
+      |> String.concat " + " |> Printf.sprintf "(%s)"
+  | SList (_, SAtom (_, op) :: args) when op = "_MINUS_" ->
+      List.map (compile ctx) args
+      |> String.concat " - " |> Printf.sprintf "(%s)"
   | SList (_, SAtom (_, op) :: args)
-    when op = "+" || op = "-" || op = "*" || op = "/" || op = "<" || op = "<="
-         || op = ">" || op = ">=" ->
+    when op = "+" || op = "*" || op = "/" || op = "<" || op = "<=" || op = ">"
+         || op = ">=" ->
       List.map (compile ctx) args
       |> String.concat (" " ^ op ^ " ")
       |> Printf.sprintf "(%s)"
@@ -181,7 +187,9 @@ let do_compile (opt : compile_opt) sexp =
     |> String.split_on_char '.' |> List.rev |> List.hd
   in
   let body = compile () sexp in
-  Printf.sprintf "package %s;\n\npublic class %s {\n%s;\n}" pkg clazz body
+  Printf.sprintf
+    "package %s;\n\n@SuppressWarnings(\"unchecked\")\npublic class %s {\n%s;\n}"
+    pkg clazz body
 
 let get_macro ~builtin_macro node =
   let ctx =

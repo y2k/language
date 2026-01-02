@@ -11,7 +11,8 @@
 (defn- ?!- [x] x)
 
 (defn test []
-  (assert_ __LOC__ 6 (+ 1 5))
+  (assert_ __LOC__ 2 (- 7 5))
+  (assert_ __LOC__ 6 (+ 1 2 3))
   (let [{ma :a mb :b} {:a 1 :b 2 :c 3}]
     (assert_ __LOC__ "12" (str ma mb)))
   (let [value_atom (atom 1)]

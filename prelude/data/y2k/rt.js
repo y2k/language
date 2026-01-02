@@ -23,3 +23,11 @@ export const swap_BANG_ = (atom, f) => {
     atom[0] = f(result);
     return result;
 }
+
+export const _PLUS_ = (...xs) => {
+    return xs.reduce((a, b) => a + b);
+}
+
+export const _MINUS_ = (a, b) => {
+    return a - b
+}
