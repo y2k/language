@@ -2,12 +2,8 @@ open Core__.Common
 open Core__
 open Backend__
 
-module Internal = struct
-  let pos_to_loc (pos, line, _, _) = Printf.sprintf "%s:%d" pos line
-end
-
 module JavaExecution = struct
-  let run_code ~(namespace : string) code =
+  let run_code ~namespace code =
     let dir = Filename.temp_dir "ly2k" "test" in
     prerr_endline @@ "DIR: " ^ dir;
     Sys.command (Printf.sprintf "mkdir %s/y2k" dir) |> ignore;
@@ -72,14 +68,11 @@ let tests =
       "127" );
     (* Atom *)
     (__POS__, {|(defn test [] (let [x (atom 0)] (reset! x 42)))|}, {|42|});
-    (* *)
     (__POS__, {|(defn test [] ((fn [^int x] (+ x x)) 21))|}, {|42|});
-    (* *)
     ( __POS__,
       {|(defn test [] (let [[_ ^int a] [1 40 3] ^int b 2] (+ a b)))|},
       {|42|} );
     (__POS__, {|(defn test [] (let [a 40 b 2] (+ a b)))|}, {|42|});
-    (* *)
     ( __POS__,
       {|(defn test [] (if (and (> (unixtime) 1700000000) (< (unixtime) 2100000000)) 42 2))|},
       "42" );
@@ -90,7 +83,6 @@ let tests =
       "42" );
     (__POS__, {|(defn test [] (count (map (fn [x] x) [1 2 3 4])))|}, "4");
     (__POS__, {|(defn test [] (if (instance? String "1") 2 3))|}, {|2|});
-    (* *)
     (__POS__, {|(defn test [] ((if true (fn [] 42) (fn [] 24))))|}, "42");
     ( __POS__,
       {|(defn f [g] ((:a g) 42)) (defn test [] (f {:a (fn [x] x)}))|},
@@ -109,17 +101,13 @@ let tests =
               42))
           |},
       {|42|} );
-    (* *)
     (__POS__, {|(defn test [] (Integer/parseInt "2"))|}, {|2|});
-    (* *)
     (__POS__, {|(defn test [] (. "2" hashCode))|}, {|50|});
     (__POS__, {|(defn test [] (.hashCode "2"))|}, {|50|});
-    (* *)
     ( __POS__,
       {|(ns _ (:import [java.util Date])) (defn test [] (.hashCode (Date. 42)))|},
       {|42|} );
     (__POS__, {|(def- a 42) (defn test [] a)|}, {|42|});
-    (* *)
     (__POS__, {|(defn f [] 3) (defn test [] (f))|}, {|3|});
     ( __POS__,
       {|(def a (atom 1)) (defn test [] (reset! a 2) (swap! a (fn [^int x] (+ x 1))) (deref a))|},
@@ -131,7 +119,6 @@ let tests =
     ( __POS__,
       {|(defn f [x] (if (= (str "1" x "3") "123") 2 3)) (defn test [] (f 2))|},
       {|2|} );
-    (* *)
     ( __POS__,
       {|(gen-class
            :name MyClass
@@ -145,10 +132,8 @@ let tests =
           (defn sample_add [self ^int a ^int b] (+ a b))
           (defn test [] (.add (MyClass.) 40 2))|},
       {|42|} );
-    (* *)
     (__POS__, {|(defn test [] (.hashCode (new String "2")))|}, {|50|});
     (__POS__, {|(defn test [] (.hashCode (String. "2")))|}, {|50|});
-    (* *)
     (__POS__, {|(defn test [] (count [10 20 30]))|}, {|3|});
     (__POS__, {|(defn test [] (count {:a 1 :b 2}))|}, {|2|});
     (__POS__, {|(defn test [] (get [10 20 30] 1))|}, {|20|});

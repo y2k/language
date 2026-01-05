@@ -1,4 +1,3 @@
-module A = Alcotest
 module Js = Backend__.Backend_js
 
 let compile ~filename code =
@@ -12,12 +11,13 @@ let run_code code =
   Out_channel.(with_open_bin path (fun f -> output_string f code));
   Sys.command (Printf.sprintf "node %s" path) |> string_of_int
 
-let create_test ~filename speed =
-  List.map (fun (loc, (input : string), expected) ->
-      A.test_case loc speed (fun () ->
+let create_test ~filename speed tests =
+  tests
+  |> List.map (fun (loc, input, expected) ->
+      Alcotest.test_case loc speed (fun () ->
           let compiled = compile ~filename input in
           let actual = run_code compiled in
-          A.check A.string "" expected actual))
+          Alcotest.(check string) "" expected actual))
 
 let tests =
   [
@@ -36,7 +36,6 @@ let tests =
     ( __LOC__,
       {|(defn f [a] (fn [] (if (= "/cat" (:b a)) 42 3))) (defn test [] ((f {:b "/cat"})))|},
       "42" );
-    (* *)
     (__LOC__, {|(defn test [] (first [42 1 2]))|}, "42");
     ( __LOC__,
       {|(def a (atom 1)) (defn test [] (reset! a 2) (swap! a (fn [x] (+ x 1))) (deref a))|},

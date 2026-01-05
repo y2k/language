@@ -1,23 +1,18 @@
 open Core__.Common
 open Backend__
 
-module EvalExecution : sig
-  val create_tests :
-    [ `Slow | `Quick ] ->
-    string ->
-    (string * string * string) list ->
-    unit Alcotest.test_case list
-end = struct
+module EvalExecution = struct
+  let run ~path input =
+    let input = input ^ "\n(test)" in
+    FileReader.with_stub_scope "(defn foo [x] x)"
+      (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
+      input
+
   let create_tests speed path tests =
     tests
     |> List.map (fun (loc, input, expected) ->
         Alcotest.test_case loc speed (fun () ->
-            let input = input ^ "\n(test)" in
-            let actual =
-              FileReader.with_stub_scope "(defn foo [x] x)"
-                (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
-                input
-            in
+            let actual = run ~path input in
             Alcotest.(check string) "" expected actual))
 end
 
