@@ -73,4 +73,6 @@
   (assert_ __LOC__ 3 (last [1 2 3]))
   (assert_ __LOC__ (str ["a" "2" "c"]) (str (string/split "a 2 c" " ")))
   (assert_ __LOC__ "a b" (string/join " " ["a" "b"]))
+  (assert_ __LOC__ 42 (:b (assoc {:a 1 :b 2 :c 3} :b 42)))
+  (assert_ __LOC__ 99 (:d (assoc {:a 1} :d 99)))
   0)

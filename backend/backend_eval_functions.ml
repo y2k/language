@@ -68,6 +68,16 @@ let attach reg_val reg_fun ctx =
           in
           OMap (meta_empty, new_m)
       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "assoc" (fun xs ->
+      match xs with
+      | [ OMap (_, m); k; v ] ->
+          let new_m =
+            m
+            |> List.filter (fun (k', _) -> not (Obj.equal k k'))
+            |> List.cons (k, v)
+          in
+          OMap (meta_empty, new_m)
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "FIXME" (fun xs ->
       xs
       |> List.map (function OString (_, x) -> x | x -> OUtils.obj_to_string x)
