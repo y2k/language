@@ -4,6 +4,7 @@ module StringSet = Set.Make (String)
 type resolve_ctx = {
   links : (string * string) list;
   aliases : (string * string) list;
+  defs : (string * string) list;
   filename : string;
   root_dir : string;
   prelude_fns : StringSet.t;
@@ -14,7 +15,10 @@ let rec resolve (ctx : resolve_ctx) node =
   | SAtom (m, name) -> (
       match ctx.links |> List.assoc_opt name with
       | Some x -> (ctx, SAtom (m, x))
-      | None -> (ctx, SAtom (m, name)))
+      | None -> (
+          match ctx.defs |> List.assoc_opt name with
+          | Some x -> (ctx, SAtom (m, x))
+          | None -> (ctx, SAtom (m, name))))
   | SList
       ( _,
         SAtom (_, "def*")
@@ -40,11 +44,12 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      let name =
+      let mangled_name =
         NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
       in
+      let ctx = { ctx with defs = (name, mangled_name) :: ctx.defs } in
       let _, value = resolve ctx value in
-      (ctx, SList (m, [ def_; SAtom (mn, name); value ]))
+      (ctx, SList (m, [ def_; SAtom (mn, mangled_name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
       let _, body = resolve ctx body in
       (ctx, SList (m, [ fn_; args; body ]))
@@ -97,6 +102,7 @@ let do_resolve functions filename root_dir node =
       {
         links = [];
         aliases = [];
+        defs = [];
         filename;
         root_dir;
         prelude_fns = StringSet.of_list functions;

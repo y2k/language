@@ -9,8 +9,10 @@
     (FIXME loc " - " expected " == " actual)))
 
 (defn- ?!- [x] x)
+(def- static_field "123")
 
 (defn test []
+  (assert_ __LOC__ "123" static_field)
   (assert_ __LOC__ 7 (inc 6))
   (assert_ __LOC__ 3 (:a (update {:a 2} :a (fn [x] (inc x)))))
   (assert_ __LOC__ 7 (/ 21 3))
