@@ -3,14 +3,13 @@ open Core__
 open Stage__
 
 type compile_opt = { namespace_root : string }
-type complie_context = unit
 
 let fix_class_name clazz =
   if String.ends_with ~suffix:".class" clazz then
     String.sub clazz 0 (String.length clazz - 6)
   else clazz
 
-let rec compile (ctx : complie_context) sexp =
+let rec compile (ctx : compile_opt) sexp =
   (* prerr_endline @@ "COMPILE: " ^ debug_show_sexp [ sexp ]; *)
   match sexp with
   | SAtom (_, "nil") -> "null"
@@ -142,7 +141,7 @@ let rec compile (ctx : complie_context) sexp =
       (* prerr_endline @@ "[CALL] " ^ show_sexp2 sexp; *)
       let sargs = List.map (compile ctx) args |> String.concat ",\n" in
       match fn with
-      | SAtom (_, name) -> (
+      | SAtom (_, name) ->
           if String.contains name '#' then
             let name = String.map (fun x -> if x = '#' then '.' else x) name in
             match sargs with
@@ -154,9 +153,8 @@ let rec compile (ctx : complie_context) sexp =
             let name = String.map (fun x -> if x = '/' then '.' else x) name in
             Printf.sprintf "%s(\n%s)" name sargs
           else
-            match sargs with
-            | "" -> Printf.sprintf "y2k.RT.invoke(\n%s)" name
-            | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" name sargs)
+            (if sargs = "" then "" else ",\n" ^ sargs)
+            |> Printf.sprintf "y2k.RT.invoke(\n%s%s)" name
       | x -> (
           let fn = compile ctx x in
           match sargs with
@@ -189,7 +187,7 @@ let do_compile (opt : compile_opt) sexp =
     |> Option.value ~default:"user"
     |> String.split_on_char '.' |> List.rev |> List.hd
   in
-  let body = compile () sexp in
+  let body = compile opt sexp in
   Printf.sprintf
     "package %s;\n\n@SuppressWarnings(\"unchecked\")\npublic class %s {\n%s;\n}"
     pkg clazz body
@@ -213,7 +211,7 @@ let compile ~builtin_macro ~(namespace : string) (log : bool)
       |> log_stage log "if_to_statement "
       |> Stage_resolve_import.do_resolve
       |> log_stage log "Stage_resolve_import"
-      |> Stage_alias_to_class.invoke
+      |> Stage_alias_to_class.invoke ~root_namespace:namespace
       |> log_stage log "Stage_alias_to_class"
       |> Stage_fun_args_type.invoke
       |> log_stage log "Stage_fun_args_type"

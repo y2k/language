@@ -380,7 +380,6 @@ package y2k;
 
 @SuppressWarnings("unchecked")
 public class prelude_java {
-;
 public static final Object __namespace;
 static {
 __namespace="prelude_java";
