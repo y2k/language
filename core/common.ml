@@ -1,6 +1,104 @@
+(* ============================================================================
+   Generic Utility Functions
+   ============================================================================ *)
+
 let trace prefix to_string x =
   prerr_endline @@ "LOG " ^ Printf.sprintf "%s %s" prefix (to_string x);
   x
+
+let last xs = List.nth xs (List.length xs - 1)
+let butlast xs = List.rev (List.tl (List.rev xs))
+
+let get_dir filename =
+  filename |> String.split_on_char '/' |> List.rev |> List.tl |> List.rev
+  |> String.concat "/"
+
+(* ============================================================================
+   Standard Library Extensions
+   ============================================================================ *)
+
+module List = struct
+  include List
+
+  let rec split_into_pairs = function
+    | a :: b :: rest -> (a, b) :: split_into_pairs rest
+    | _ -> []
+
+  let reduce loc f xs =
+    match xs with
+    | [] -> failwith loc
+    | xs -> List.fold_left f (List.hd xs) (List.tl xs)
+
+  let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
+end
+
+module StringMap = struct
+  include Map.Make (String)
+
+  let pp pp_value fmt map =
+    let bindings = bindings map in
+    Format.fprintf fmt "@[<v>{";
+    bindings
+    |> List.iter (fun (key, value) ->
+        Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
+          value);
+    Format.fprintf fmt "@,}@]"
+end
+
+(* ============================================================================
+   Core Types
+   ============================================================================ *)
+
+type meta = { line : int; pos : int; symbol : string } [@@deriving show]
+
+let unknown_location = { line = 0; pos = 0; symbol = "" }
+let meta_empty = { line = 0; pos = 0; symbol = "" }
+
+(** Normalized S-expression - used throughout compilation *)
+type sexp = SAtom of meta * string | SList of meta * sexp list
+[@@deriving show]
+
+(** Parser output - preserves bracket types *)
+type cljexp =
+  | Atom of meta * string
+  | RBList of meta * cljexp list (* Round brackets: () *)
+  | SBList of meta * cljexp list (* Square brackets: [] *)
+  | CBList of meta * cljexp list (* Curly brackets: {} *)
+[@@deriving show]
+
+(** Runtime object representation for interpreter *)
+type obj =
+  | OVector of meta * obj list
+  | OList of meta * obj list
+  | OMap of meta * (obj * obj) list
+  | OString of meta * string
+  | OInt of meta * int
+  | OFloat of meta * float
+  | OBool of meta * bool
+  | ONil of meta
+  | OLambda of meta * (obj list -> obj)
+  | OQuote of meta * sexp
+  | OAtom of meta * obj ref
+[@@deriving show]
+
+(* ============================================================================
+   String Manipulation
+   ============================================================================ *)
+
+let unpack_string x =
+  if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2)
+  else x
+
+let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")
+let unpack_symbol x = String.sub x 1 (String.length x - 1)
+
+let unwrap_sexp_do = function
+  | SList (_, SAtom (_, "do*") :: xs) -> xs
+  | x -> [ x ]
+
+(* ============================================================================
+   Effect System: File Operations
+   ============================================================================ *)
 
 module Files = struct
   let realpath ?root path =
@@ -18,6 +116,12 @@ module FileReader = struct
 
   let read filename = Effect.perform (Load filename)
   let realpath path = Effect.perform (Realpath path)
+
+  let resolve_env_in_path path =
+    let var = ".+\\$LY2K_PACKAGES_DIR" in
+    match Sys.getenv_opt "LY2K_PACKAGES_DIR" with
+    | Some value -> Str.global_replace (Str.regexp var) value path
+    | None -> path
 
   let with_stub_scope (content : string) f arg =
     let open Effect.Deep in
@@ -41,12 +145,6 @@ module FileReader = struct
                     continue k path)
             | _ -> None);
       }
-
-  let resolve_env_in_path path =
-    let var = ".+\\$LY2K_PACKAGES_DIR" in
-    match Sys.getenv_opt "LY2K_PACKAGES_DIR" with
-    | Some value -> Str.global_replace (Str.regexp var) value path
-    | None -> path
 
   let with_scope f arg =
     let open Effect.Deep in
@@ -72,85 +170,14 @@ module FileReader = struct
       }
 end
 
-let last xs = List.nth xs (List.length xs - 1)
-let butlast xs = List.rev (List.tl (List.rev xs))
-
-type meta = { line : int; pos : int; symbol : string } [@@deriving show]
-
-let unknown_location = { line = 0; pos = 0; symbol = "" }
-let meta_empty = { line = 0; pos = 0; symbol = "" }
-
-type sexp = SAtom of meta * string | SList of meta * sexp list
-[@@deriving show]
-
-type cljexp =
-  | Atom of meta * string
-  | RBList of meta * cljexp list
-  | SBList of meta * cljexp list
-  | CBList of meta * cljexp list
-[@@deriving show]
-
-let unpack_string x =
-  if String.starts_with ~prefix:"\"" x then String.sub x 1 (String.length x - 2)
-  else x
-
-let pack_string x = SAtom (meta_empty, "\"" ^ x ^ "\"")
-let unpack_symbol x = String.sub x 1 (String.length x - 1)
-
-let unwrap_sexp_do = function
-  | SList (_, SAtom (_, "do*") :: xs) -> xs
-  | x -> [ x ]
-
-module StringMap = struct
-  include Map.Make (String)
-
-  let pp pp_value fmt map =
-    let bindings = bindings map in
-    Format.fprintf fmt "@[<v>{";
-    bindings
-    |> List.iter (fun (key, value) ->
-        Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
-          value);
-    Format.fprintf fmt "@,}@]"
-end
-
-type obj =
-  | OVector of meta * obj list
-  | OList of meta * obj list
-  | OMap of meta * (obj * obj) list
-  | OString of meta * string
-  | OInt of meta * int
-  | OFloat of meta * float
-  | OBool of meta * bool
-  | ONil of meta
-  | OLambda of meta * (obj list -> obj)
-  | OQuote of meta * sexp
-  | OAtom of meta * obj ref
-[@@deriving show]
-
-module Obj = struct
-  let failobj loc xs =
-    match xs with
-    | [ x ] -> Printf.sprintf "%s %s" loc (show_obj x) |> failwith
-    | xs ->
-        Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs)))
-        |> failwith
-
-  let rec equal a b =
-    match (a, b) with
-    | OInt (_, x), OInt (_, y) -> x = y
-    | OString (_, x), OString (_, y) -> x = y
-    | OBool (_, x), OBool (_, y) -> x = y
-    | OVector (_, xs), OVector (_, ys) -> List.for_all2 equal xs ys
-    | ONil _, ONil _ -> true
-    | ONil _, _ | _, ONil _ -> false
-    | OMap (_, xs), OMap (_, ys) ->
-        List.for_all2 (fun (a, b) (c, d) -> equal a c && equal b d) xs ys
-    | a, b -> failobj __LOC__ [ a; b ]
-end
+(* ============================================================================
+   Effect System: Name Generation
+   ============================================================================ *)
 
 module NameGenerator = struct
   type _ Effect.t += CreateVal : string Effect.t
+
+  let get_new_var () = Effect.perform CreateVal
 
   let with_scope f =
     let index = ref 0 in
@@ -170,24 +197,11 @@ module NameGenerator = struct
                 Some (fun (k : (a, _) continuation) -> continue k result)
             | _ -> None);
       }
-
-  let get_new_var () = Effect.perform CreateVal
 end
 
-module List = struct
-  include List
-
-  let rec split_into_pairs = function
-    | a :: b :: rest -> (a, b) :: split_into_pairs rest
-    | _ -> []
-
-  let reduce loc f xs =
-    match xs with
-    | [] -> failwith loc
-    | xs -> List.fold_left f (List.hd xs) (List.tl xs)
-
-  let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
-end
+(* ============================================================================
+   Debug & Display Functions
+   ============================================================================ *)
 
 let rec debug_show_sexp1 = function
   | SAtom (m, x) when m.symbol = "" -> x
@@ -239,6 +253,18 @@ let debug_show_sexp_for_error ?(show_pos = false) (nodes : sexp list) =
   in
   nodes |> List.map show_rec |> String.concat " "
 
+let rec show_sexp2 (sexp : sexp) =
+  let format template xs =
+    xs |> List.map show_sexp2
+    |> List.reduce_opt (Printf.sprintf "%s %s")
+    |> Option.value ~default:"" |> Printf.sprintf template
+  in
+  match sexp with SAtom (_, x) -> x | SList (_, xs) -> format "(%s)" xs
+
+(* ============================================================================
+   Error Handling
+   ============================================================================ *)
+
 let failnode prefix es =
   es
   |> List.map (fun x -> debug_show_cljexp [ x ])
@@ -257,13 +283,9 @@ let failsexp ?(show_pos = false) prefix (es : sexp list) =
   |> prerr_endline;
   failwith ("Invalid node [" ^ prefix ^ "]")
 
-let rec show_sexp2 (sexp : sexp) =
-  let format template xs =
-    xs |> List.map show_sexp2
-    |> List.reduce_opt (Printf.sprintf "%s %s")
-    |> Option.value ~default:"" |> Printf.sprintf template
-  in
-  match sexp with SAtom (_, x) -> x | SList (_, xs) -> format "(%s)" xs
+(* ============================================================================
+   Domain Utilities: Sexp
+   ============================================================================ *)
 
 module SexpUtil = struct
   let butlast node =
@@ -276,6 +298,31 @@ module SexpUtil = struct
     | SList (_, SAtom (_, "do*") :: children) ->
         List.nth children (List.length children - 1)
     | node -> node
+end
+
+(* ============================================================================
+   Domain Utilities: Obj (Runtime Objects)
+   ============================================================================ *)
+
+module Obj = struct
+  let failobj loc xs =
+    match xs with
+    | [ x ] -> Printf.sprintf "%s %s" loc (show_obj x) |> failwith
+    | xs ->
+        Printf.sprintf "%s %s" loc (show_obj (OList (meta_empty, xs)))
+        |> failwith
+
+  let rec equal a b =
+    match (a, b) with
+    | OInt (_, x), OInt (_, y) -> x = y
+    | OString (_, x), OString (_, y) -> x = y
+    | OBool (_, x), OBool (_, y) -> x = y
+    | OVector (_, xs), OVector (_, ys) -> List.for_all2 equal xs ys
+    | ONil _, ONil _ -> true
+    | ONil _, _ | _, ONil _ -> false
+    | OMap (_, xs), OMap (_, ys) ->
+        List.for_all2 (fun (a, b) (c, d) -> equal a c && equal b d) xs ys
+    | a, b -> failobj __LOC__ [ a; b ]
 end
 
 module OUtils = struct
@@ -334,6 +381,10 @@ module OUtils = struct
     | OAtom (_, r) -> Printf.sprintf "(atom %s)" (debug_obj_to_string !r)
 end
 
+(* ============================================================================
+   Domain Utilities: Namespace
+   ============================================================================ *)
+
 module NamespaceUtils = struct
   let get_ns_from_path _ path = "m" ^ string_of_int (String.hash path)
 
@@ -356,13 +407,13 @@ module NamespaceUtils = struct
     path
 end
 
+(* ============================================================================
+   Logging
+   ============================================================================ *)
+
 let log_stage log_enabled title node =
   (if log_enabled then
      let padding = String.make (max 0 (30 - String.length title)) ' ' in
      prerr_endline @@ "* " ^ title ^ padding ^ " -> " ^ debug_show_sexp [ node ]
      ^ "\n");
   node
-
-let get_dir filename =
-  filename |> String.split_on_char '/' |> List.rev |> List.tl |> List.rev
-  |> String.concat "/"

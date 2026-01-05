@@ -11,7 +11,7 @@ let resolve_type_for_node ctx = function
   | x -> x
 
 let rec resolve (ctx : resolve_ctx) node =
-  prerr_endline @@ "[LOG][ResolveImports]:\n" ^ show_sexp node ^ "\n";
+  (* prerr_endline @@ "[LOG][ResolveImports]:\n" ^ show_sexp node ^ "\n"; *)
   match node with
   | SAtom (m, name) as x when String.contains name '/' -> (
       let parts = String.split_on_char '/' name in
