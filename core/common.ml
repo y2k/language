@@ -32,18 +32,7 @@ module List = struct
   let reduce_opt f xs = match xs with [] -> None | xs -> Some (reduce "" f xs)
 end
 
-module StringMap = struct
-  include Map.Make (String)
-
-  let pp pp_value fmt map =
-    let bindings = bindings map in
-    Format.fprintf fmt "@[<v>{";
-    bindings
-    |> List.iter (fun (key, value) ->
-        Format.fprintf fmt "@,%a -> %a;" Format.pp_print_string key pp_value
-          value);
-    Format.fprintf fmt "@,}@]"
-end
+module StringMap = Map.Make (String)
 
 (* ============================================================================
    Core Types
@@ -202,16 +191,6 @@ end
 (* ============================================================================
    Debug & Display Functions
    ============================================================================ *)
-
-let rec debug_show_sexp1 = function
-  | SAtom (m, x) when m.symbol = "" -> x
-  | SAtom (m, x) -> "^" ^ m.symbol ^ " " ^ x
-  | SList (m, xs) when m.symbol = "" ->
-      "(" ^ String.concat " " (List.map debug_show_sexp1 xs) ^ ")"
-  | SList (m, xs) ->
-      "^" ^ m.symbol ^ " ("
-      ^ String.concat " " (List.map debug_show_sexp1 xs)
-      ^ ")"
 
 let debug_show_cljexp nodes =
   let rec show_rec = function
