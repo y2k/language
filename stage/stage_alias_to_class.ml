@@ -22,7 +22,7 @@ let rec transform (ctx : ctx) = function
       let items =
         items |> List.split_into_pairs
         |> List.map (function
-          | SAtom (_, k), SList (_, [ _; SAtom (_, v) ]) -> (k, v)
+          | SAtom (_, k), SList (_, [ _; SAtom (_, v); _ ]) -> (k, v)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { aliases = items } in

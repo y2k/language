@@ -33,7 +33,7 @@ let parse_args () =
     exit 0);
   (try Arg.parse_argv Sys.argv speclist (( := ) command) usage
    with Arg.Bad msg | Arg.Help msg ->
-     print_string msg;
+     prerr_endline msg;
      exit 1);
   {
     command = !command;
