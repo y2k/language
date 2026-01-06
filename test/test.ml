@@ -9,12 +9,17 @@ let () =
         Test_common.tests
         |> Test_java.JavaExecution.create_tests `Quick ~namespace:"test_common"
       );
+      ( "Common (Java_v2)",
+        Test_common.tests
+        |> Test_java_v2.JavaV2Execution.create_tests `Quick
+             ~namespace:"test_common" );
       ( "Common (JS)",
         Test_common.tests
         |> Test_js.create_test ~filename:"test_common.clj" `Quick );
       ("Sexp", Test_sexp.tests);
       ("Eval", Test_eval.tests);
       ("Java", Test_java.tests);
+      ("Java_v2", Test_java_v2.tests);
       ("JS", Test_js.tests);
       ("Regex", Test_regex.tests);
     ]

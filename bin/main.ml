@@ -20,7 +20,7 @@ let parse_args () =
   let prelude_path = ref "" in
   let speclist =
     [
-      ("-target", Arg.Set_string target, "Target: js, java, eval, sexp");
+      ("-target", Arg.Set_string target, "Target: js, java, java_v2, eval, sexp");
       ("-src", Arg.Set_string src, "Source file");
       ("-namespace", Arg.Set_string namespace, "Namespace");
       ("-log", Arg.Bool (( := ) log), "Show log");
@@ -59,6 +59,9 @@ let compile_source cfg =
     | "java" ->
         Backend_java.compile ~builtin_macro:Macro.invoke
           ~namespace:cfg.namespace cfg.log cfg.src code
+    | "java_v2" ->
+        Backend_java_v2.compile ~builtin_macro:Macro.invoke
+          ~namespace:cfg.namespace ~log:cfg.log ~filename:cfg.src code
     | "js" ->
         Backend_js.compile ~builtin_macro:Macro.invoke ~log:cfg.log code
           ~filename:cfg.src ~prelude_path:cfg.prelude_path
