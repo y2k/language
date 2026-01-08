@@ -480,7 +480,7 @@ k)));
 let java_runtime2_v2 = {|
 package y2k;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "unchecked", "rawtypes" })
 public class prelude_java_v2 {
 public static final Object __namespace = "prelude_java_v2";
 public static Object inc(Object p__3) throws Exception {

@@ -215,7 +215,11 @@ let do_compile (opt : compile_opt) sexp =
   in
   let body = compile opt sexp in
   Printf.sprintf
-    "package %s;\n\n@SuppressWarnings(\"unchecked\")\npublic class %s {\n%s;\n}"
+    "package %s;\n\n\
+     @SuppressWarnings({ \"unchecked\", \"rawtypes\" })\n\
+     public class %s {\n\
+     %s;\n\
+     }"
     pkg clazz body
 
 let get_macro ~builtin_macro node =
