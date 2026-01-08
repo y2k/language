@@ -73,11 +73,15 @@ let generate_method annot args ret_type prefix name =
     else ""
   in
   let static_mod = if is_static then "static " else "" in
-  let throws = " throws Exception" in
+  let body_with_try =
+    sprintf
+      "try {\n%s%s;\n} catch (Exception e) { throw new RuntimeException(e); }"
+      call_super body
+  in
   method_annot
   @ [ pack_string (sprintf "public %s%s %s(" static_mod ret_type name) ]
   @ args_code
-  @ [ pack_string (sprintf ")%s {\n%s%s;\n}" throws call_super body) ]
+  @ [ pack_string (sprintf ") {\n%s\n}" body_with_try) ]
 
 let generate_methods prefix methods =
   let methods =
@@ -99,8 +103,13 @@ let generate_constructors cls_name prefix opts =
         (* For java_v2: use direct static method call *)
         [
           pack_string
-            (sprintf "public %s() throws Exception {\n%s%s(this);\n}\n" cls_name
-               prefix fn);
+            (sprintf
+               "public %s() {\n\
+                try {\n\
+                %s%s(this);\n\
+                } catch (Exception e) { throw new RuntimeException(e); }\n\
+                }\n"
+               cls_name prefix fn);
         ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
