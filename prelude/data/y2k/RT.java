@@ -324,5 +324,28 @@ public class RT {
         }
     }
 
+    public static Object apply(Object f, Object args) {
+        List<?> argList = (List<?>) args;
+        int size = argList.size();
+        try {
+            switch (size) {
+                case 0:
+                    return ((Fn0) f).invoke();
+                case 1:
+                    return ((Fn1) f).invoke(argList.get(0));
+                case 2:
+                    return ((Fn2) f).invoke(argList.get(0), argList.get(1));
+                case 3:
+                    return ((Fn3) f).invoke(argList.get(0), argList.get(1), argList.get(2));
+                case 4:
+                    return ((Fn4) f).invoke(argList.get(0), argList.get(1), argList.get(2), argList.get(3));
+                default:
+                    throw new RuntimeException("apply: too many arguments (" + size + ")");
+            }
+        } catch (Exception e) {
+            return throwSilent(e);
+        }
+    }
+
     // endregion
 }

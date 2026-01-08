@@ -235,3 +235,6 @@
 
 (defn macro_take [n xs]
   (list 'y2k.RT.take n xs))
+
+(defn macro_apply [f xs]
+  (list 'y2k.RT.apply f xs))

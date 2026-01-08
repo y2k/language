@@ -142,5 +142,11 @@ let tests =
           (defn sample_add [self ^int a ^int b] (+ a b))
           (defn test [] (.add (MyClass.) 40 2))|},
       {|42|} );
+    (* apply - call lambda with args from collection *)
+    (__POS__, {|(defn test [] (apply (fn [^int x] (+ x 2)) [40]))|}, "42");
+    ( __POS__,
+      {|(defn test [] (apply (fn [^int a ^int b] (+ a b)) [40 2]))|},
+      "42" );
+    (__POS__, {|(defn test [] (apply (fn [] 42) []))|}, "42");
   ]
   |> JavaV2Execution.create_tests `Slow ~namespace:"user"
