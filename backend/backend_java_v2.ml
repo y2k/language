@@ -80,8 +80,9 @@ let rec compile (ctx : compile_opt) sexp =
         |> List.map (fun x -> x ^ ";")
         |> String.concat "\n"
       in
-      Printf.sprintf "%s static Object %s(%s) throws Exception {\n%s\nreturn %s;\n}" visibility
-        name sargs body last_body
+      Printf.sprintf
+        "%s static Object %s(%s) throws Exception {\n%s\nreturn %s;\n}"
+        visibility name sargs body last_body
   (* Non-function def* -> static field *)
   | SList (_, [ SAtom (m, "def*"); SAtom (_, name); value ]) ->
       let visibility = if m.symbol = "private" then "private" else "public" in
@@ -229,7 +230,7 @@ let compile ~builtin_macro ~(namespace : string) ~(log : bool)
   Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
-           { log; macro = Prelude.prelude_java_macro; filename }
+           { log; macro = Prelude.prelude_java_v2_macro; filename }
       |> Stage_escape_names.invoke
       |> log_stage log "Stage_escape_names"
       |> Stage_convert_if_to_statment.invoke

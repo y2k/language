@@ -22,6 +22,10 @@ public class ff {
       with_open_bin
         (dir ^ "/y2k/prelude_java.java")
         (Fun.flip output_string Prelude.java_runtime2));
+    Out_channel.(
+      with_open_bin
+        (dir ^ "/y2k/prelude_java_v2.java")
+        (Fun.flip output_string Prelude.java_runtime2_v2));
     let temp_java_file = dir ^ "/y2k/" ^ namespace ^ ".java" in
     let java_code =
       FileReader.with_stub_scope ""

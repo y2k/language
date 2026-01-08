@@ -75,6 +75,7 @@ let run_generate target =
   match target with
   | "java" -> print_endline Prelude.java_runtime
   | "java_prelude" -> print_endline Prelude.java_runtime2
+  | "java_prelude_v2" -> print_endline Prelude.java_runtime2_v2
   | "js" -> print_endline Prelude.js_runtime
   | t -> failwith @@ "Invalid generate target: " ^ t
 

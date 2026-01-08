@@ -1,12 +1,14 @@
-let generate_java_runtime () =
+let generate_java_runtime ~target ~name ~src =
   let ic =
     Unix.open_process_in
-      "_build/default/bin/main.exe -log false -target java -namespace y2k -src \
-       'prelude/data/prelude_java.clj'"
+      (Printf.sprintf
+         "_build/default/bin/main.exe -log false -target %s -namespace y2k \
+          -src 'prelude/data/%s'"
+         target src)
   in
   let stdout = In_channel.input_all ic in
   match Unix.close_process_in ic with
-  | Unix.WEXITED 0 -> "let java_runtime2 = {|\n" ^ stdout ^ "\n|}\n"
+  | Unix.WEXITED 0 -> "let " ^ name ^ " = {|\n" ^ stdout ^ "\n|}\n"
   | Unix.WEXITED n | Unix.WSIGNALED n | Unix.WSTOPPED n ->
       prerr_endline stdout;
       failwith ("Process stopped by signal " ^ string_of_int n)
@@ -16,6 +18,7 @@ let () =
   let result =
     [
       "prelude_java_macro";
+      "prelude_java_v2_macro";
       "prelude_eval_macro";
       "prelude_eval";
       "prelude_js_macro";
@@ -26,7 +29,12 @@ let () =
           shared ^ "\n" ^ In_channel.(with_open_bin filename input_all)
         in
         "let " ^ lang ^ " = {|\n" ^ code ^ "\n|}\n")
-    |> List.cons (generate_java_runtime ())
+    |> List.cons
+         (generate_java_runtime ~target:"java_v2" ~name:"java_runtime2_v2"
+            ~src:"prelude_java_v2.clj")
+    |> List.cons
+         (generate_java_runtime ~target:"java" ~name:"java_runtime2"
+            ~src:"prelude_java.clj")
     |> List.append
          [
            "let js_runtime = {|\n"

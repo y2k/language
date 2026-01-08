@@ -454,6 +454,68 @@ k)));
 
 |}
 
+let java_runtime2_v2 = {|
+package y2k;
+
+@SuppressWarnings("unchecked")
+public class prelude_java_v2 {
+public static final Object __namespace = "prelude_java_v2";
+public static Object inc(Object p__3) throws Exception {
+int x=(int)((int)p__3);
+return (x + 1);
+};
+public static Object fixme(Object loc, Object xs) throws Exception {
+
+return java.util.Objects.requireNonNull(
+null,
+String.format(
+"%s%s%s",
+loc,
+" ",
+xs));
+};
+public static Object get(Object xs, Object i) throws Exception {
+Object p__2;
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.Map))) {
+p__2=((java.util.Map)xs).get(i);
+} else {
+Object p__1;
+if (y2k.RT.toBoolean(
+(xs instanceof java.util.List))) {
+p__1=((java.util.List)xs).get(((int)i));
+} else {
+p__1=y2k.prelude_java_v2.fixme(
+"prelude/data/prelude_java_v2.clj:91:9",
+java.util.Arrays.asList(
+"Unsupported source: ",
+String.format(
+"%s",
+xs),
+", key: ",
+String.format(
+"%s",
+i)));
+};
+p__2=p__1;
+};
+return p__2;
+};
+public static Object update(Object m, Object k, Object f) throws Exception {
+
+return y2k.RT.assoc(
+m,
+k,
+y2k.RT.invoke(
+f,
+y2k.prelude_java_v2.get(
+m,
+k)));
+};
+}
+
+|}
+
 let prelude_java_macro = {|
 ;; Shared definitions for all targets
 
@@ -655,6 +717,260 @@ let prelude_java_macro = {|
 
 (defn macro_get [xs k]
   (list 'y2k.RT.invoke 'y2k.prelude_java.get xs k))
+
+(defn macro_str [& xs]
+  (concat
+   (list
+    'String.format
+    (reduce (fn* [acc x] (str acc "%s")) "" xs))
+   xs))
+
+(defn macro_string? [x]
+  (list 'instance? 'String x))
+
+(defn macro_boolean? [x]
+  (list 'instance? 'Boolean (list 'cast 'Object x)))
+
+(defn macro_println [& xs]
+  (list 'do
+        (list 'System.out.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
+
+(defn macro_eprintln [& xs]
+  (list 'do
+        (list 'System.err.println
+              (concat (list 'str) xs))
+        (list 'y2k.RT.nop)))
+
+;; Regex
+
+(defn macro_re-pattern [x]
+  (list 'java.util.regex.Pattern.compile x))
+
+(defn macro_re-find [p i]
+  (list 'y2k.RT.re_find p i))
+
+;; Collections
+
+(defn macro_vec [xs]
+  (list 'y2k.RT.vec xs))
+
+(defn macro_list [& xs]
+  (concat
+   (list 'java.util.Arrays.asList)
+   xs))
+
+(defn macro_vector [& xs]
+  (concat
+   (list 'java.util.Arrays.asList)
+   xs))
+
+(defn macro_reduce [f init xs]
+  (list 'y2k.RT.reduce f init xs))
+
+(defn macro_second [xs]
+  (list 'get xs 1))
+
+(defn macro_vector? [xs]
+  (list 'instance? 'java.util.List xs))
+
+(defn macro_contains? [m k]
+  (list 'y2k.RT.contains m k))
+
+(defn macro_shuffle [seed xs]
+  (list 'y2k.RT.shuffle seed xs))
+
+(defn macro_take [n xs]
+  (list 'y2k.RT.take n xs))
+
+|}
+
+let prelude_java_v2_macro = {|
+;; Shared definitions for all targets
+
+;; (def false 0)
+;; (def hash-map 0)
+;; (def true 0)
+;; (def vector 0)
+
+;; (defmacro comment [& args] 'nil)
+;; (defmacro first [xs] (list 'get xs 0))
+;; (defmacro not= [a b] (list 'not (list '= a b)))
+
+;; Specific target prelude
+
+;; Prelude macros for java_v2 backend
+;; Key difference: uses direct static method calls instead of y2k.RT.invoke
+
+(defn macro_update [m k f]
+  (list 'y2k.prelude_java_v2.update m k f))
+
+(defn macro_assert [a b]
+  (list '= a b))
+
+(defn macro_parse-int [s]
+  (list 'Integer/parseInt
+        (list 'cast 'String s)))
+
+(defn macro_subs [s sp ep]
+  (list '.substring
+        (list 'cast 'String s)
+        (list 'cast 'int sp)
+        (list 'cast 'int ep)))
+
+(defn macro_string/join [sep xs]
+  (list 'String/join
+        (list 'cast 'String sep)
+        (list 'cast 'java.util.Collection xs)))
+
+(defn macro_string/split [s sep]
+  (list 'vec
+        (list '.split
+              (list 'cast 'String s)
+              (list 'cast 'String sep))))
+
+(defn macro_string/starts-with? [s prefix]
+  (list '.startsWith
+        (list 'cast 'String s)
+        (list 'cast 'String prefix)))
+
+(defn macro_clojure.string/ends-with? [s suffix]
+  (list '.endsWith
+        (list 'cast 'String s)
+        (list 'cast 'String suffix)))
+
+(defn macro_clojure.string/replace [s match replacement]
+  (list '.replace
+        (list 'cast 'String s)
+        (list 'cast 'String match)
+        (list 'cast 'String replacement)))
+
+(defn macro_declare [x] (list 'do))
+
+(defn macro_boolean [x]
+  (list 'y2k.RT.toBoolean x))
+
+(defn macro_unixtime []
+  (list '/ (list '.getTime (list 'java.util.Date.)) 1000.0))
+
+(defn list [& xs] xs)
+
+(defn macro_conj [xs x]
+  (list 'y2k.RT.conj xs x))
+
+(defn macro_map [f xs]
+  (list 'y2k.RT.map f xs))
+
+(defn macro_filter [f xs]
+  (list 'y2k.RT.filter f xs))
+
+(defn macro_hash-map-from [xs]
+  (list 'y2k.RT.hash_map_from xs))
+
+(defn macro_eprintln [& xs]
+  (concat (list 'y2k.RT.eprintln) xs))
+
+(defn macro_inc [x]
+  (list 'y2k.prelude_java_v2.inc x))
+
+(defn macro_FIXME [& xs]
+  (list 'y2k.prelude_java_v2.fixme
+        '__LOC__
+        (concat (list 'vector) xs)))
+
+(defn macro_not= [x y]
+  (list 'not (list '= x y)))
+
+(defn macro_rest [xs]
+  (let [xs_var (gensym)]
+    (list
+     'do
+     (list
+      'let xs_var (list 'cast 'java.util.List xs))
+     (list '.subList xs_var 1 (list '.size xs_var)))))
+
+(defn macro_concat [& xs]
+  (concat (list 'y2k.RT.concat)
+          xs))
+
+(defn macro_merge [m1 m2]
+  (list 'y2k.RT.merge m1 m2))
+
+(defn macro_drop [n xs]
+  (list 'y2k.RT.drop n xs))
+
+(defn macro_first [xs]
+  (list 'get xs 0))
+
+(defn macro_last [xs]
+  (list 'get xs (list '- (list 'cast 'int (list 'count xs)) 1)))
+
+(defn macro_empty? [xs]
+  (list '= 0 (list 'count xs)))
+
+(defn macro_some? [x]
+  (list 'not (list 'nil? x)))
+
+(defn macro_nil? [x]
+  (list '= 'nil x))
+
+(defn macro_into-array2 [class col]
+  (list 'y2k.RT.into_array class col))
+
+(defn macro_assoc [xs k v]
+  (list 'y2k.RT.assoc xs k v))
+
+(defn macro_atom [x]
+  (list 'java.util.concurrent.atomic.AtomicReference. x))
+
+(defn macro_reset! [a x]
+  (let [var (gensym)]
+    (list 'let (list 'vector var x)
+          (list '.set
+                (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+                var)
+          var)))
+
+(defn macro_swap! [a f]
+  (list
+   '.getAndUpdate
+   (list 'cast 'java.util.concurrent.atomic.AtomicReference a)
+   (list 'cast 'java.util.function.UnaryOperator f)))
+
+(defn macro_deref [a]
+  (list
+   '.get
+   (list 'cast 'java.util.concurrent.atomic.AtomicReference a)))
+
+(defn macro_comment [x] (list 'do))
+
+(defn macro_defn- [name args & body]
+  (concat (list 'defn name args) body))
+
+(defn macro_= [x y]
+  (list 'java.util.Objects.equals x y))
+
+(defn macro_hash-map [& xs]
+  (concat
+   (list 'y2k.RT.hash_map)
+   xs))
+
+(defn macro_count [xs]
+  (let* vxs (gensym))
+  (list
+   'do
+   (list 'let vxs (list 'cast 'Object xs))
+   (list
+    'if (list 'instance? 'java.util.Map vxs)
+    (list '. (list 'cast 'java.util.Map vxs) 'size)
+    (list
+     'if (list 'string? vxs)
+     (list '.length (list 'cast 'String vxs))
+     (list '. (list 'cast 'java.util.Collection vxs) 'size)))))
+
+(defn macro_get [xs k]
+  (list 'y2k.prelude_java_v2.get xs k))
 
 (defn macro_str [& xs]
   (concat
