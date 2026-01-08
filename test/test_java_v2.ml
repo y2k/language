@@ -29,8 +29,8 @@ public class ff {
     let temp_java_file = dir ^ "/y2k/" ^ namespace ^ ".java" in
     let java_code =
       FileReader.with_stub_scope ""
-        (Backend_java_v2.compile ~builtin_macro:Macro.invoke ~namespace:"y2k"
-           ~log:true ~filename:temp_java_file)
+        (Backend_java_v2.compile ~builtin_macro:Macro__.Macro_v2.invoke
+           ~namespace:"y2k" ~log:true ~filename:temp_java_file)
         code
     in
     prerr_endline @@ "[temp java file]: " ^ temp_java_file;
@@ -128,5 +128,19 @@ let tests =
     ( __POS__,
       {|(defn test4 [] (let [[y [x]] [0 [16]]] x)) (defn test [] (test4))|},
       "16" );
+    (* gen-class with static method calls *)
+    ( __POS__,
+      {|(gen-class
+           :name MyClass
+           :extends Thread
+           :prefix "sample_"
+           :methods [[add [int int] int]
+                     [^:static foo1 ["String[]"] Object]
+                     [^:static foo2 [] void]])
+          (defn sample_foo1 [_] nil)
+          (defn sample_foo2 [] nil)
+          (defn sample_add [self ^int a ^int b] (+ a b))
+          (defn test [] (.add (MyClass.) 40 2))|},
+      {|42|} );
   ]
   |> JavaV2Execution.create_tests `Slow ~namespace:"user"

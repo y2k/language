@@ -60,7 +60,7 @@ let compile_source cfg =
         Backend_java.compile ~builtin_macro:Macro.invoke
           ~namespace:cfg.namespace cfg.log cfg.src code
     | "java_v2" ->
-        Backend_java_v2.compile ~builtin_macro:Macro.invoke
+        Backend_java_v2.compile ~builtin_macro:Macro__.Macro_v2.invoke
           ~namespace:cfg.namespace ~log:cfg.log ~filename:cfg.src code
     | "js" ->
         Backend_js.compile ~builtin_macro:Macro.invoke ~log:cfg.log code
