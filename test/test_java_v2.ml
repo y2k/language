@@ -142,6 +142,18 @@ let tests =
           (defn sample_add [self ^int a ^int b] (+ a b))
           (defn test [] (.add (MyClass.) 40 2))|},
       {|42|} );
+    (* gen-class with :state and :init *)
+    ( __POS__,
+      {|(gen-class
+           :name Counter
+           :prefix "counter_"
+           :init init
+           :state state
+           :methods [[getValue [] Object]])
+          (defn counter_init [] (atom 40))
+          (defn counter_getValue [^Counter self] (deref (.-state self)))
+          (defn test [] (let [c (Counter.)] (swap! (.-state c) (fn [^int x] (+ x 2))) (.getValue c)))|},
+      {|42|} );
     (* apply - call lambda with args from collection *)
     (__POS__, {|(defn test [] (apply (fn [^int x] (+ x 2)) [40]))|}, "42");
     ( __POS__,
