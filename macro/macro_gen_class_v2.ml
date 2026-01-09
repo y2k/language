@@ -96,33 +96,39 @@ let generate_methods prefix methods =
     | x -> failsexp __LOC__ [ x ])
 
 let generate_constructors cls_name prefix opts =
+  let state_field =
+    List.assoc_opt ":state" opts
+    |> Option.map (function
+      | SAtom (_, v) -> unpack_string v
+      | x -> failsexp __LOC__ [ x ])
+  in
   List.assoc_opt ":init" opts
   |> Option.map (function
     | SAtom (_, init_fn) ->
         let fn = unpack_string init_fn in
-        (* For java_v2: use direct static method call *)
+        (* For java_v2: use direct static method call, assign result to state *)
+        let state_assignment =
+          match state_field with
+          | Some field -> sprintf "this.%s = %s%s();\n" field prefix fn
+          | None -> sprintf "%s%s();\n" prefix fn
+        in
         [
           pack_string
             (sprintf
                "public %s() {\n\
                 try {\n\
-                %s%s(this);\n\
-                } catch (Exception e) { throw new RuntimeException(e); }\n\
+                %s} catch (Exception e) { throw new RuntimeException(e); }\n\
                 }\n"
-               cls_name prefix fn);
+               cls_name state_assignment);
         ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
-let generate_fields opts =
-  List.assoc_opt ":fields" opts
+let generate_state_field opts =
+  List.assoc_opt ":state" opts
   |> Option.map (function
-    | SList (_, SAtom (_, "vector") :: fields) ->
-        fields
-        |> List.map (function
-          | SAtom (_, name) ->
-              pack_string (sprintf "public Object %s;\n" (unpack_string name))
-          | x -> failsexp __LOC__ [ x ])
+    | SAtom (_, name) ->
+        [ pack_string (sprintf "public Object %s;\n" (unpack_string name)) ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
@@ -136,7 +142,7 @@ let invoke = function
         [ pack_string (sprintf "public static class %s extends " cls_name) ]
         @ [ mk_type_resolve extends; pack_string " {\n" ]
         @ generate_constructors cls_name prefix opts
-        @ generate_fields opts
+        @ generate_state_field opts
         @ generate_methods prefix (List.assoc ":methods" opts)
         @ [ pack_string "}\n" ]
       in
