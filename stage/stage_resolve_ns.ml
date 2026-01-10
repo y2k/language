@@ -2,7 +2,7 @@ open Core__.Common
 module StringSet = Set.Make (String)
 
 type resolve_ctx = {
-  links : (string * string) list;
+  links : string StringMap.t;
   aliases : (string * string) list;
   namespace : string;
   prelude_fns : StringSet.t;
@@ -14,7 +14,7 @@ let mangle_from_path ns fname = Printf.sprintf "%s.%s" ns fname
 let rec resolve (ctx : resolve_ctx) node =
   match node with
   | SAtom (m, name) -> (
-      match ctx.links |> List.assoc_opt name with
+      match ctx.links |> StringMap.find_opt name with
       | Some x -> (ctx, SAtom (m, x))
       | None -> (ctx, SAtom (m, name)))
   | SList
@@ -38,7 +38,7 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, x)
   | SList (m, SAtom (_, "def*") :: SAtom (_, "__NS__") :: _) ->
       (ctx, SList (m, [ SAtom (meta_empty, "do*") ]))
-  | SList
+  (* | SList
       ( _,
         [
           SAtom (_, "def*");
@@ -47,12 +47,16 @@ let rec resolve (ctx : resolve_ctx) node =
         ] ) ->
       let ctx = { ctx with links = (name, value) :: ctx.links } in
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
-      (ctx, node)
+      (ctx, node) *)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
       let mng_name = mangle_from_path ctx.namespace name in
       let _, value = resolve ctx value in
       let ctx =
-        { ctx with registered_defs = StringSet.add name ctx.registered_defs }
+        {
+          ctx with
+          registered_defs = StringSet.add name ctx.registered_defs;
+          links = StringMap.add name mng_name ctx.links;
+        }
       in
       (ctx, SList (m, [ def_; SAtom (mn, mng_name); value ]))
   | SList (m, [ (SAtom (_, "fn*") as fn_); args; body ]) ->
@@ -110,7 +114,7 @@ let do_resolve functions filename _ node =
   else
     let ctx =
       {
-        links = [];
+        links = StringMap.empty;
         aliases = [];
         namespace = "user";
         prelude_fns = StringSet.of_list functions;
