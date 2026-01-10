@@ -73,8 +73,10 @@ let rec resolve (ctx : resolve_ctx) node =
           | x -> Some x)
       in
       (ctx, SList (m, do_ :: body))
-  | SList (m, (SAtom (_, "let*") as let_) :: name :: value) ->
+  | SList (m, (SAtom (_, "let*") as let_) :: (SAtom (_, lname) as name) :: value)
+    ->
       let value = value |> List.map (fun x -> resolve ctx x |> snd) in
+      let ctx = { ctx with links = StringMap.remove lname ctx.links } in
       (ctx, SList (m, let_ :: name :: value))
   | SList (m, (SAtom (_, "if*") as if_) :: args) ->
       let args = args |> List.map (fun x -> resolve ctx x |> snd) in
