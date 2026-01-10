@@ -36,6 +36,8 @@ let rec resolve (ctx : resolve_ctx) node =
       in
       let ctx = { ctx with aliases = items } in
       (ctx, x)
+  | SList (m, SAtom (_, "def*") :: SAtom (_, "__NS__") :: _) ->
+      (ctx, SList (m, [ SAtom (meta_empty, "do*") ]))
   | SList
       ( _,
         [
