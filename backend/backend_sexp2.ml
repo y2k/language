@@ -35,3 +35,13 @@ let invoke_to_line ~builtin_macro ~log code ~filename =
   |> StringMap.bindings
   |> List.map (fun (name, body) -> Printf.sprintf "%s\n=======\n%s" name body)
   |> String.concat "\n=======\n"
+
+let save_to_directory ~builtin_macro ~log code ~filename ~directory =
+  let nodes = invoke ~builtin_macro ~log code ~filename in
+  StringMap.iter
+    (fun name body ->
+      let filepath = Filename.concat directory (name ^ ".sexp") in
+      let oc = open_out filepath in
+      output_string oc body;
+      close_out oc)
+    nodes
