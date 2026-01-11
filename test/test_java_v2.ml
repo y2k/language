@@ -160,5 +160,17 @@ let tests =
       {|(defn test [] (apply (fn [^int a ^int b] (+ a b)) [40 2]))|},
       "42" );
     (__POS__, {|(defn test [] (apply (fn [] 42) []))|}, "42");
+    (* reify - anonymous class implementing interface *)
+    ( __POS__,
+      {|(defn test [] (.call (reify java.util.concurrent.Callable (call [this] 42))))|},
+      "42" );
+    (* reify with void method - use println which is a simple side effect *)
+    ( __POS__,
+      {|(defn test [] (let [a (atom 0)] (.run (reify Runnable (^void run [this] (println "hello")))) 42))|},
+      "42" );
+    (* reify with inner interface - $ should be converted to . in Java source *)
+    ( __POS__,
+      {|(defn test [] (let [h (reify java.lang.Thread$UncaughtExceptionHandler (^void uncaughtException [this ^Thread t ^Throwable e] (println "error")))] 42))|},
+      "42" );
   ]
   |> JavaV2Execution.create_tests `Slow ~namespace:"user"

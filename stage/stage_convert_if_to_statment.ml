@@ -99,6 +99,9 @@ let rec invoke_up_do (node : sexp) : sexp =
   | SList (m, (SAtom (_, "___raw_template") as rt) :: body) ->
       let body = List.map invoke_up_do body in
       SList (m, rt :: body)
+  | SList (m, (SAtom (_, "__compiler_emit") as rt) :: body) ->
+      let body = List.map invoke_up_do body in
+      SList (m, rt :: body)
   | SList (m, args) -> (
       let args = List.map invoke_up_do args in
       let lets =
