@@ -70,7 +70,7 @@ let invoke simplify = function
                          "\n\
                          \  @Override public %s %s(%s) {\n\
                          \    try {\n\
-                         \      return (Object)("
+                         \      return ("
                          ret_type name args_decl);
                     simplified_body;
                     pack_string
