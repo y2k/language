@@ -38,7 +38,7 @@ let pnode find_line_and_pos =
        <|> A.take_while1 (fun x ->
            (x >= 'A' && x <= 'z')
            || x = '.' || x = '(' || x = ')' || x = '-' || x = '>' || x = ':'
-           || x = '?'))
+           || x = '?' || x = '$'))
   in
   let patom_meta =
     A.map2 (pmeta <* pspace) patom ~f:(fun m (a, x) ->

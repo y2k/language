@@ -113,6 +113,9 @@ let rec compile (ctx : compile_opt) sexp =
           Printf.sprintf "(%s)(%s)->{\n%s%s;\n}" (List.hd type_parts) sargs body
             last_body
       | type_ ->
+          let type_ =
+            type_ |> String.map (fun c -> if c = '$' then '.' else c)
+          in
           Printf.sprintf "(%s)(%s)->{\n%sreturn %s;\n}" type_ sargs body
             last_body)
   | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
