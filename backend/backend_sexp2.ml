@@ -23,12 +23,13 @@ let rec compile_functions (node : sexp) : string StringMap.t =
   | n -> failsexp __LOC__ [ n ]
 
 let invoke ~builtin_macro ~log code ~filename =
-  Frontend_simplify.do_simplify ~builtin_macro (Fun.const [])
-    { log; macro = ""; filename }
-    code
-  |> Stage_resolve_ns.do_resolve [] filename ""
-  |> log_stage log "Stage_resolve_ns"
-  |> compile_functions
+  Common.NameGenerator.with_scope (fun () ->
+      Frontend_simplify.do_simplify ~builtin_macro (Fun.const [])
+        { log; macro = ""; filename }
+        code
+      |> Stage_resolve_ns.do_resolve [] filename ""
+      |> log_stage log "Stage_resolve_ns"
+      |> compile_functions)
 
 let invoke_to_line ~builtin_macro ~log code ~filename =
   invoke ~builtin_macro ~log code ~filename
