@@ -29,6 +29,8 @@ let invoke ~builtin_macro ~log code ~filename =
         code
       |> Stage_resolve_ns.do_resolve [] filename ""
       |> log_stage log "Stage_resolve_ns"
+      |> Stage_escape_names.invoke
+      |> log_stage log "Stage_escape_names"
       |> compile_functions)
 
 let invoke_to_line ~builtin_macro ~log code ~filename =
