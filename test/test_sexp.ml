@@ -58,4 +58,24 @@ a
   in
   Alcotest.(check ~pos:__POS__ map_testable) "" expected actual
 
-let tests = [ (* Alcotest.test_case "" `Quick test  *) ]
+let test_println_global_var () =
+  let actual =
+    Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
+      ~filename:"app/main.clj" {|(ns g) (def x 42) (defn f [] (println x))|}
+  in
+  let expected =
+    StringMap.of_list
+      [ ("g.x", "42"); ("g.f", {|(
+fn*
+(
+)
+(
+println
+g.x
+)
+)|}) ]
+  in
+  Alcotest.(check ~pos:__POS__ map_testable) "" expected actual
+
+let tests =
+  [ Alcotest.test_case "println global var" `Quick test_println_global_var ]
