@@ -174,15 +174,15 @@ let attach reg_val reg_fun ctx =
       | [ OVector _ ] -> OBool (meta_empty, true)
       | _ -> OBool (meta_empty, false))
   |> reg_fun "list" (fun xs -> OList (meta_empty, xs))
-  |> reg_fun "string/starts-with?" (fun xs ->
-      match xs with
-      | [ OString (_, str); OString (_, prefix) ] ->
-          OBool (meta_empty, String.starts_with ~prefix str)
-      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "clojure.string/ends-with?" (fun xs ->
       match xs with
       | [ OString (_, str); OString (_, suffix) ] ->
           OBool (meta_empty, String.ends_with ~suffix str)
+      | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "clojure.string/starts-with?" (fun xs ->
+      match xs with
+      | [ OString (_, str); OString (_, prefix) ] ->
+          OBool (meta_empty, String.starts_with ~prefix str)
       | x -> Obj.failobj __LOC__ x)
   |> reg_fun "clojure.string/replace" (fun xs ->
       match xs with
@@ -236,7 +236,7 @@ let attach reg_val reg_fun ctx =
       | [ OVector (_, xs) ] -> OInt (meta_empty, List.length xs)
       | [ OString (_, s) ] -> OInt (meta_empty, String.length s)
       | x -> Obj.failobj __LOC__ x)
-  |> reg_fun "string/join" (fun xs ->
+  |> reg_fun "clojure.string/join" (fun xs ->
       match xs with
       | [ OString (_, sep); OVector (_, xs) ] ->
           OString (meta_empty, String.concat sep (List.map Builtin.to_string xs))

@@ -17,7 +17,7 @@
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
-(defn macro_string/join [sep xs]
+(defn macro_clojure.string/join [sep xs]
   (list 'String/join
         (list 'cast 'String sep)
         (list 'cast 'java.util.Collection xs)))
@@ -28,15 +28,15 @@
               (list 'cast 'String s)
               (list 'cast 'String sep))))
 
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith
-        (list 'cast 'String s)
-        (list 'cast 'String prefix)))
-
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith
         (list 'cast 'String s)
         (list 'cast 'String suffix)))
+
+(defn macro_clojure.string/starts-with? [s prefix]
+  (list '.startsWith
+        (list 'cast 'String s)
+        (list 'cast 'String prefix)))
 
 (defn macro_clojure.string/replace [s match replacement]
   (list '.replace

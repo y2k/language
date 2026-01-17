@@ -572,7 +572,7 @@ let prelude_java_macro = {|
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
-(defn macro_string/join [sep xs]
+(defn macro_clojure.string/join [sep xs]
   (list 'String/join
         (list 'cast 'String sep)
         (list 'cast 'java.util.Collection xs)))
@@ -583,15 +583,15 @@ let prelude_java_macro = {|
               (list 'cast 'String s)
               (list 'cast 'String sep))))
 
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith
-        (list 'cast 'String s)
-        (list 'cast 'String prefix)))
-
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith
         (list 'cast 'String s)
         (list 'cast 'String suffix)))
+
+(defn macro_clojure.string/starts-with? [s prefix]
+  (list '.startsWith
+        (list 'cast 'String s)
+        (list 'cast 'String prefix)))
 
 (defn macro_clojure.string/replace [s match replacement]
   (list '.replace
@@ -842,7 +842,7 @@ let prelude_java_v2_macro = {|
         (list 'cast 'int sp)
         (list 'cast 'int ep)))
 
-(defn macro_string/join [sep xs]
+(defn macro_clojure.string/join [sep xs]
   (list 'String/join
         (list 'cast 'String sep)
         (list 'cast 'java.util.Collection xs)))
@@ -853,15 +853,15 @@ let prelude_java_v2_macro = {|
               (list 'cast 'String s)
               (list 'cast 'String sep))))
 
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith
-        (list 'cast 'String s)
-        (list 'cast 'String prefix)))
-
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith
         (list 'cast 'String s)
         (list 'cast 'String suffix)))
+
+(defn macro_clojure.string/starts-with? [s prefix]
+  (list '.startsWith
+        (list 'cast 'String s)
+        (list 'cast 'String prefix)))
 
 (defn macro_clojure.string/replace [s match replacement]
   (list '.replace
@@ -1223,17 +1223,17 @@ let prelude_js_macro = {|
 
 ;; Strings
 
-(defn macro_string/join [sep xs]
+(defn macro_clojure.string/join [sep xs]
   (list '.join xs sep))
 
 (defn macro_string/split [s sep]
   (list '.split s sep))
 
-(defn macro_string/starts-with? [s prefix]
-  (list '.startsWith s prefix))
-
 (defn macro_clojure.string/ends-with? [s suffix]
   (list '.endsWith s suffix))
+
+(defn macro_clojure.string/starts-with? [s prefix]
+  (list '.startsWith s prefix))
 
 (defn macro_clojure.string/replace [s match replacement]
   (list '.replaceAll s match replacement))
