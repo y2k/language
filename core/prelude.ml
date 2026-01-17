@@ -1273,6 +1273,12 @@ let prelude_js_macro = {|
 (defn macro_rest [xs]
   (list '.slice xs 1))
 
+(defn macro_take [n xs]
+  (list '.slice xs 0 n))
+
+(defn macro_drop [n xs]
+  (list '.slice xs n))
+
 (defn macro_last [xs]
   (list '.at xs -1))
 
@@ -1281,15 +1287,6 @@ let prelude_js_macro = {|
 
 (defn macro_first [xs]
   (list 'get xs 0))
-
-;; (defn macro_list [& xs]
-;;   (let [v (gensym)]
-;;     (list 'let (vector v (vec xs))
-;;           (hash-map
-;;            :type :list
-;;            :items v
-;;            :length (count v)
-;;            'Symbol.iterator (list 'get v 'Symbol.iterator)))))
 
 (defn macro_reduce [f init xs]
   (let [v (gensym)]

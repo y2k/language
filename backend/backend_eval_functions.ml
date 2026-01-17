@@ -150,6 +150,13 @@ let attach reg_val reg_fun ctx =
       | [ OInt (_, n); OVector (_, xs) ] ->
           OVector (meta_empty, List.filteri (fun i _ -> i >= n) xs)
       | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "take" (fun xs ->
+      match xs with
+      | [ OInt (_, n); OList (_, xs) ] ->
+          OList (meta_empty, List.filteri (fun i _ -> i < n) xs)
+      | [ OInt (_, n); OVector (_, xs) ] ->
+          OVector (meta_empty, List.filteri (fun i _ -> i < n) xs)
+      | x -> Obj.failobj __LOC__ x)
   |> reg_fun "map?" (fun xs ->
       match xs with
       | [ OMap _ ] -> OBool (meta_empty, true)
