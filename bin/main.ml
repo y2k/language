@@ -22,7 +22,7 @@ let parse_args () =
   let output = ref "" in
   let speclist =
     [
-      ("-target", Arg.Set_string target, "Target: js, java, java_v2, eval, sexp");
+      ("-target", Arg.Set_string target, "Target: js, java_v2, eval, sexp");
       ("-src", Arg.Set_string src, "Source file");
       ("-namespace", Arg.Set_string namespace, "Namespace");
       ("-log", Arg.Bool (( := ) log), "Show log");
@@ -66,12 +66,6 @@ let compile_source cfg =
       Backend_sexp2.save_to_directory ~builtin_macro:Macro.invoke ~log:cfg.log
         code ~filename:cfg.src ~directory:output_dir;
       print_endline "STUB"
-  | "java" ->
-      let result =
-        Backend_java.compile ~builtin_macro:Macro.invoke
-          ~namespace:cfg.namespace cfg.log cfg.src code
-      in
-      print_endline result
   | "java_v2" ->
       let result =
         Backend_java_v2.compile ~builtin_macro:Macro__.Macro_v2.invoke
@@ -93,8 +87,6 @@ let compile_source cfg =
 
 let run_generate target =
   match target with
-  | "java" -> print_endline Prelude.java_runtime
-  | "java_prelude" -> print_endline Prelude.java_runtime2
   | "java_prelude_v2" -> print_endline Prelude.java_runtime2_v2
   | "js" -> print_endline Prelude.js_runtime
   | t -> failwith @@ "Invalid generate target: " ^ t

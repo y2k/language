@@ -17,7 +17,6 @@ let () =
   let shared = In_channel.(with_open_bin "prelude/data/shared.clj" input_all) in
   let result =
     [
-      "prelude_java_macro";
       "prelude_java_v2_macro";
       "prelude_eval_macro";
       "prelude_eval";
@@ -32,9 +31,6 @@ let () =
     |> List.cons
          (generate_java_runtime ~target:"java_v2" ~name:"java_runtime2_v2"
             ~src:"prelude_java_v2.clj")
-    |> List.cons
-         (generate_java_runtime ~target:"java" ~name:"java_runtime2"
-            ~src:"prelude_java.clj")
     |> List.append
          [
            "let js_runtime = {|\n"
