@@ -1,55 +1,35 @@
 open Core__.Common
 
+let me = meta_empty
+let atom s = SAtom (me, s)
+let slist xs = SList (me, xs)
+
 let rec convert_if (node : sexp) : sexp =
   match node with
-  | SAtom _ as n -> n
-  | SList (_, SAtom (_, "quote*") :: _) as n -> n
+  | SAtom _ -> node
+  | SList (_, SAtom (_, "quote*") :: _) -> node
   | SList (_, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
       let cond = convert_if cond in
       let then_ = convert_if then_ in
       let else_ = convert_if else_ in
       let var = NameGenerator.get_new_var () in
-      SList
-        ( meta_empty,
-          [
-            SAtom (meta_empty, "do*");
-            SList
-              ( meta_empty,
-                [ SAtom (meta_empty, "let*"); SAtom (meta_empty, var) ] );
-            SList
-              ( meta_empty,
-                [
-                  if_;
-                  cond;
-                  SList
-                    ( meta_empty,
-                      [
-                        SAtom (meta_empty, "set!");
-                        SAtom (meta_empty, var);
-                        then_;
-                      ] );
-                  SList
-                    ( meta_empty,
-                      [
-                        SAtom (meta_empty, "set!");
-                        SAtom (meta_empty, var);
-                        else_;
-                      ] );
-                ] );
-            SAtom (meta_empty, var);
-          ] )
+      let set_ value = slist [ atom "set!"; atom var; value ] in
+      slist
+        [
+          atom "do*";
+          slist [ atom "let*"; atom var ];
+          slist [ if_; cond; set_ then_; set_ else_ ];
+          atom var;
+        ]
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
-      let body = List.map convert_if body in
-      SList (m, fn_ :: args :: body)
-  | SList (m, args) ->
-      let args = List.map convert_if args in
-      SList (m, args)
+      SList (m, fn_ :: args :: List.map convert_if body)
+  | SList (m, args) -> SList (m, List.map convert_if args)
 
 let rec invoke_up_do (node : sexp) : sexp =
   match node with
-  | SAtom _ as n -> n
-  | SList (_, SAtom (_, "quote*") :: _) as n -> n
-  | SList (_, [ SAtom (_, "let*"); _ ]) as n -> n
+  | SAtom _ -> node
+  | SList (_, SAtom (_, "quote*") :: _) -> node
+  | SList (_, [ SAtom (_, "let*"); _ ]) -> node
   | SList (m, (SAtom (_, "do*") as do_) :: body) ->
       let body =
         body |> List.map invoke_up_do
@@ -68,48 +48,40 @@ let rec invoke_up_do (node : sexp) : sexp =
       in
       SList (m, do_ :: body)
   | SList (m, (SAtom (_, "fn*") as fn_) :: args :: body) ->
-      let body = List.map invoke_up_do body in
-      SList (m, fn_ :: args :: body)
+      SList (m, fn_ :: args :: List.map invoke_up_do body)
   | SList
-      ( m,
+      ( _,
         [
           (SAtom (_, "if*") as if_);
           (SList (_, SAtom (_, "do*") :: _) as cond);
           then_;
           else_;
         ] ) ->
-      let cond =
+      let cond_body =
         match invoke_up_do cond with
         | SList (_, SAtom (_, "do*") :: body) -> body
         | n -> [ n ]
       in
       let then_ = invoke_up_do then_ in
       let else_ = invoke_up_do else_ in
-      SList
-        ( m,
-          List.concat
-            [
-              [ SAtom (meta_empty, "do*") ];
-              butlast cond;
-              [ SList (meta_empty, [ if_; last cond; then_; else_ ]) ];
-            ] )
+      slist
+        ([ atom "do*" ]
+        @ butlast cond_body
+        @ [ slist [ if_; last cond_body; then_; else_ ] ])
   | SList (m, [ (SAtom (_, "if*") as if_); cond; then_; else_ ]) ->
       SList
         (m, [ if_; invoke_up_do cond; invoke_up_do then_; invoke_up_do else_ ])
-  | SList (m, (SAtom (_, "___raw_template") as rt) :: body) ->
-      let body = List.map invoke_up_do body in
-      SList (m, rt :: body)
-  | SList (m, (SAtom (_, "__compiler_emit") as rt) :: body) ->
-      let body = List.map invoke_up_do body in
-      SList (m, rt :: body)
+  | SList
+      (m, (SAtom (_, ("___raw_template" | "__compiler_emit")) as head) :: body)
+    ->
+      SList (m, head :: List.map invoke_up_do body)
   | SList (m, args) -> (
       let args = List.map invoke_up_do args in
       let lets =
         args
         |> List.concat_map (function
           | SList (_, SAtom (_, "do*") :: body) -> butlast body
-          | SAtom _ -> []
-          | SList _ -> [])
+          | _ -> [])
       in
       let args =
         args
@@ -119,11 +91,7 @@ let rec invoke_up_do (node : sexp) : sexp =
       in
       match lets with
       | [] -> SList (m, args)
-      | _ ->
-          SList
-            ( m,
-              (SAtom (meta_empty, "do*") :: lets) @ [ SList (meta_empty, args) ]
-            ))
+      | _ -> SList (m, (atom "do*" :: lets) @ [ slist args ]))
 
 let rec invoke_up_do_ level (node : sexp) : sexp =
   if level = 0 then failwith "Recurse too deep";
