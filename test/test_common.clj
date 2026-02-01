@@ -12,6 +12,8 @@
 (def- static_field "123")
 
 (defn test []
+  (assert_ __LOC__ "1\n2" "1
+2")
   (assert_ __LOC__ "123" static_field)
   (assert_ __LOC__ 7 (inc 6))
   (assert_ __LOC__ 3 (:a (update {:a 2} :a (fn [x] (inc x)))))

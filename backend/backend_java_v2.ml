@@ -9,11 +9,26 @@ let fix_class_name clazz =
     String.sub clazz 0 (String.length clazz - 6)
   else clazz
 
+let escape_string_for_java s =
+  (* Only escape actual control characters, not existing escape sequences *)
+  let buf = Buffer.create (String.length s) in
+  String.iter
+    (function
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c -> Buffer.add_char buf c)
+    s;
+  Buffer.contents buf
+
 let rec compile (ctx : compile_opt) sexp =
   match sexp with
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
+  | SAtom (_, x) when String.starts_with ~prefix:"\"" x ->
+      let inner = unpack_string x in
+      "\"" ^ escape_string_for_java inner ^ "\""
   | SAtom (_, x) -> x
   (* TODO: handle new namespaces *)
   | SList (_, [ SAtom (_, "def*"); SAtom (_, "__NS__"); _ ]) -> ""

@@ -31,6 +31,18 @@ let compile_fn do_compile args body =
   in
   Printf.sprintf "((%s%s) => {\n%sreturn %s;\n})" args vararg body last_body
 
+let escape_string_for_js s =
+  (* Only escape actual control characters, not existing escape sequences *)
+  let buf = Buffer.create (String.length s) in
+  String.iter
+    (function
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c -> Buffer.add_char buf c)
+    s;
+  Buffer.contents buf
+
 let rec do_compile (ctx : context) = function
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
@@ -39,7 +51,9 @@ let rec do_compile (ctx : context) = function
       x
       |> String.map (fun x -> if x = '/' then '.' else x)
       |> Re.replace (Re.Pcre.re "_QMARK_" |> Re.compile) ~f:(Fun.const "?")
-  | SAtom (_, x) -> x
+  | SAtom (_, x) ->
+      let inner = unpack_string x in
+      "\"" ^ escape_string_for_js inner ^ "\""
   (* Inline operators  *)
   | SList (_, SAtom (_, "__inline_op__") :: SAtom (_, op) :: args) ->
       List.map (do_compile ctx) args
@@ -98,32 +112,6 @@ let rec do_compile (ctx : context) = function
         | _ -> failwith __LOC__)
       |> String.concat ";\n"
   | SList (_, [ SAtom (_, "def*"); SAtom (_, "__ns_aliases"); _ ]) -> ""
-  (* | SList
-      ( _,
-        [
-          SAtom (_, "def*");
-          SAtom (_, "__ns_aliases");
-          SList (_, [ SAtom (_, "quote*"); SList (_, items) ]);
-        ] ) ->
-      items |> List.split_into_pairs
-      |> List.map (function
-        | SAtom (_, name), SList (_, [ _; SAtom (_, path); _ ])
-          when String.starts_with ~prefix:"js." path ->
-            let path =
-              String.sub path 3 (String.length path - 3)
-              |> String.map (function '.' -> '/' | x -> x)
-            in
-            Printf.sprintf "import * as %s from '%s'" name path
-        | SAtom (_, name), SList (_, [ _; _; SAtom (_, path) ])
-          when String.starts_with ~prefix:"\"" path ->
-            Printf.sprintf "import * as %s from %s" name path
-        | SAtom (_, name), SList (_, [ _a; SAtom (_, path); _b ]) ->
-            prerr_endline @@ "LOG: " ^ show_sexp2 _a ^ " | " ^ path ^ " | "
-            ^ show_sexp2 _b ^ " | " ^ name ^ " | " ^ show_context ctx;
-            let path = String.map (function '.' -> '/' | x -> x) path in
-            Printf.sprintf "import * as %s from './%s.js'" name path
-        | k, v -> failsexp __LOC__ [ k; v ])
-      |> String.concat ";\n" *)
   (* not *)
   | SList (_, [ SAtom (_, "not"); x ]) ->
       Printf.sprintf "!(%s)" (do_compile ctx x)
