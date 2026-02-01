@@ -217,5 +217,8 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       |> Stage_escape_names.invoke
       |> log_stage log "Stage_escape_names"
       |> do_compile { filename; root_dir; namespace; prelude_path }
-      |> Printf.sprintf "\"use strict\";\nimport * as prelude from '%s';\n%s"
-           prelude_path)
+      |> fun code ->
+      if prelude_path = "" then Printf.sprintf "\"use strict\";\n%s" code
+      else
+        Printf.sprintf "\"use strict\";\nimport * as prelude from '%s';\n%s"
+          prelude_path code)

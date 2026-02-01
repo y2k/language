@@ -6,8 +6,7 @@ Guidance for AI coding agents working with clj2js (ly2k) - a Lisp compiler writt
 
 ```bash
 make build          # Build project (runs prelude generation first)
-make test           # Run tests in quick mode
-make test_slow      # Run tests with detailed output (ALCOTEST_BAIL=true)
+make test           # Run tests
 make restore        # Install opam dependencies
 make deploy         # Run tests and deploy binary to ~/.local/bin/ly2k
 make prelude        # Regenerate prelude.ml from prelude/data/*.clj
