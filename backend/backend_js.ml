@@ -66,6 +66,10 @@ let rec do_compile (ctx : context) = function
   | SList (_, [ SAtom (_, "export_default"); x ]) ->
       Printf.sprintf "export default %s" (do_compile ctx x)
   (* TODO: /end *)
+  | SList (_, SAtom (_, "__compiler_emit") :: args) ->
+      List.map (do_compile ctx) args
+      |> List.map unpack_string |> String.concat "" |> unpack_string
+      |> Scanf.unescaped
   | SList (_, [ SAtom (_, "def*"); SAtom (_, "__namespace"); _ ]) ->
       (* let ns = unpack_symbol ns in
       prerr_endline @@ "LOG:NS: " ^ ns; *)
