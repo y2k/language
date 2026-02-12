@@ -255,7 +255,7 @@ let compile ~builtin_macro ~(namespace : string) ~(log : bool)
   Common.NameGenerator.with_scope (fun () ->
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
-           { log; macro = Prelude.prelude_java_v2_macro; filename }
+           { log; macro = Lazy.force Prelude.prelude_java_v2_macro; filename }
       |> Stage_escape_names.invoke
       |> log_stage log "Stage_escape_names"
       |> Stage_convert_if_to_statment.invoke

@@ -1,15 +1,15 @@
 .PHONY: test
-test: prelude build
+test: build
 	@ dune build
 	@ clear && export ALCOTEST_BAIL=true && export OCAMLRUNPARAM=b && dune test -f
 
 .PHONY: test_smoke
-test_smoke: prelude build
+test_smoke: build
 	@ dune build
 	@ clear && export OCAMLRUNPARAM=b && cd _build/default/test && ./test.exe -q
 
 .PHONY: build
-build: prelude
+build:
 	@ dune build
 
 # .PHONY: deploy
@@ -32,9 +32,9 @@ restore:
 	@ dune build clj2js.opam
 	@ opam install . --deps-only --with-test -y
 
-.PHONY: prelude
-prelude:
-	@ dune build prelude && OCAMLRUNPARAM=b _build/default/prelude/main.exe
+# .PHONY: prelude
+# prelude:
+# 	@ dune build prelude && OCAMLRUNPARAM=b _build/default/prelude/main.exe
 
 # .PHONY: test_e2e
 # test_e2e: test

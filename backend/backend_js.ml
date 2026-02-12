@@ -209,7 +209,7 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       (* prerr_endline @@ "LOG: code: " ^ code; *)
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
-           { log; macro = Prelude.prelude_js_macro; filename }
+           { log; macro = Lazy.force Prelude.prelude_js_macro; filename }
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
@@ -218,7 +218,11 @@ let compile ~builtin_macro ~log ~filename ~prelude_path code =
       |> log_stage log "Stage_escape_names"
       |> do_compile { filename; root_dir; namespace; prelude_path }
       |> fun code ->
-      if prelude_path = "" then Printf.sprintf "\"use strict\";\n%s" code
+      (* if prelude_path = "" then Printf.sprintf "\"use strict\";\n%s" code *)
+      if
+        filename = "prelude.clj"
+        || String.ends_with ~suffix:"/prelude.clj" filename
+      then Printf.sprintf "\"use strict\";\n%s" code
       else
         Printf.sprintf "\"use strict\";\nimport * as prelude from '%s';\n%s"
           prelude_path code)

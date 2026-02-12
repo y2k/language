@@ -1,7 +1,10 @@
 module Js = Backend__.Backend_js
 
 let compile ~filename code =
-  let prelude_path = Unix.realpath "../../../prelude/data/y2k/rt.js" in
+  (* let prelude_path = Unix.realpath "../../../prelude/data/y2k/rt.js" in *)
+  let prelude_path =
+    Sys.getenv "LY2K_PACKAGES_DIR" ^ "/prelude/1.0.0/js/rt.js"
+  in
   Js.compile ~builtin_macro:Macro.invoke ~log:true ~filename ~prelude_path code
   |> Printf.sprintf "%s;\n\nprocess.exit(test());"
 

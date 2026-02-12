@@ -155,7 +155,7 @@ let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =
   code
   |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
-       { log; macro = Prelude.prelude_eval_macro; filename }
+       { log; macro = Lazy.force Prelude.prelude_eval_macro; filename }
   |> Stage_resolve_ns_legacy.do_resolve
        (ctx.ns |> List.map fst)
        filename root_dir
@@ -178,7 +178,8 @@ let create_prelude_context ~builtin_macro =
   let prelude_sexp =
     compile
       (empty_eval_context ~builtin_macro)
-      "" false (Fun.const []) "[PRELUDE]" "" "prelude.clj" Prelude.prelude_eval
+      "" false (Fun.const []) "[PRELUDE]" "" "prelude.clj"
+      (Lazy.force Prelude.prelude_eval)
   in
   empty_eval_context ~builtin_macro
   |> Backend_eval_functions.attach reg_val reg_fun
