@@ -1,5 +1,4 @@
 open Core__.Common
-open Core__
 open Backend__
 
 module JavaExecution = struct
@@ -15,13 +14,13 @@ package y2k;
 public class ff {
     public static Object foo(Object a) { return a; }
 }|}));
-    Out_channel.(
-      with_open_bin (dir ^ "/y2k/RT.java")
-        (Fun.flip output_string (Lazy.force Prelude.java_runtime)));
-    Out_channel.(
-      with_open_bin
-        (dir ^ "/y2k/prelude_java.java")
-        (Fun.flip output_string (Lazy.force Prelude.java_runtime2)));
+    let prelude_path =
+      Sys.getenv "LY2K_PACKAGES_DIR" ^ "/prelude/1.0.0/java/prelude.clj"
+    in
+    Printf.sprintf
+      "ly2k -src %s -target java -namespace y2k > %s/y2k/prelude.java"
+      prelude_path dir
+    |> Sys.command |> ignore;
     let temp_java_file = dir ^ "/y2k/" ^ namespace ^ ".java" in
     let java_code =
       FileReader.with_stub_scope ""
@@ -55,6 +54,18 @@ end
 
 let tests =
   [
+    (* reify - anonymous class implementing interface *)
+    ( __POS__,
+      {|(defn test [] (.call (reify java.util.concurrent.Callable (call [this] 42))))|},
+      "42" );
+    (* reify with void method - use println which is a simple side effect *)
+    ( __POS__,
+      {|(defn test [] (let [a (atom 0)] (.run (reify Runnable (^void run [this] (println "hello")))) 42))|},
+      "42" );
+    (* reify with inner interface - $ should be converted to . in Java source *)
+    ( __POS__,
+      {|(defn test [] (let [h (reify java.lang.Thread$UncaughtExceptionHandler (^void uncaughtException [this ^Thread t ^Throwable e] (println "error")))] 42))|},
+      "42" );
     (* Basic function tests *)
     (__POS__, {|(defn test [] 42)|}, {|42|});
     (__POS__, {|(defn test [] (if true 2 3))|}, {|2|});
@@ -156,17 +167,5 @@ let tests =
       {|(defn test [] (apply (fn [^int a ^int b] (+ a b)) [40 2]))|},
       "42" );
     (__POS__, {|(defn test [] (apply (fn [] 42) []))|}, "42");
-    (* reify - anonymous class implementing interface *)
-    ( __POS__,
-      {|(defn test [] (.call (reify java.util.concurrent.Callable (call [this] 42))))|},
-      "42" );
-    (* reify with void method - use println which is a simple side effect *)
-    ( __POS__,
-      {|(defn test [] (let [a (atom 0)] (.run (reify Runnable (^void run [this] (println "hello")))) 42))|},
-      "42" );
-    (* reify with inner interface - $ should be converted to . in Java source *)
-    ( __POS__,
-      {|(defn test [] (let [h (reify java.lang.Thread$UncaughtExceptionHandler (^void uncaughtException [this ^Thread t ^Throwable e] (println "error")))] 42))|},
-      "42" );
   ]
   |> JavaExecution.create_tests `Slow ~namespace:"user"

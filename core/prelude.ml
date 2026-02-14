@@ -18,10 +18,10 @@ let prelude_java_macro =
     (let base = prelude_base_path () in
      read_file (Filename.concat base "java/prelude.macro"))
 
-let java_runtime =
+(* let java_runtime =
   lazy
     (let base = prelude_base_path () in
-     read_file (Filename.concat base "java/RT.java"))
+     read_file (Filename.concat base "java/RT.java")) *)
 
 let java_runtime2 =
   lazy

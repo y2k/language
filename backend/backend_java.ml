@@ -146,7 +146,8 @@ let rec compile (ctx : compile_opt) sexp =
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       let cond =
         compile ctx
-          (SList (meta_empty, [ SAtom (meta_empty, "prelude.toBoolean"); cond ]))
+          (SList
+             (meta_empty, [ SAtom (meta_empty, "y2k.prelude.toBoolean"); cond ]))
       in
       let then_ = compile ctx then_ in
       let else_ = compile ctx else_ in

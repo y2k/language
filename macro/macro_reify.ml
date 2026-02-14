@@ -75,7 +75,6 @@ let invoke simplify = function
             let simplified_body = simplify body_with_bindings in
             (* Flatten nested do* blocks so butlast/last work correctly *)
             let flat_body = Stage_flat_do.invoke simplified_body in
-            (* Build method code using __compiler_emit *)
             (* Handle void vs non-void return types *)
             (* Use try-catch to handle exceptions without requiring throws clause *)
             if ret_type = "void" then
