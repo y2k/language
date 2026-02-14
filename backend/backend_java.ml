@@ -121,7 +121,7 @@ let rec compile (ctx : compile_opt) sexp =
       let sargs = String.concat "," args in
       match m.symbol with
       | "" ->
-          Printf.sprintf "y2k.RT.fn((%s)->{\n%s\nreturn %s;\n})" sargs body
+          Printf.sprintf "y2k.prelude.fn((%s)->{\n%s\nreturn %s;\n})" sargs body
             last_body
       | type_ when String.contains type_ ':' ->
           let type_parts = String.split_on_char ':' type_ in
@@ -146,7 +146,7 @@ let rec compile (ctx : compile_opt) sexp =
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       let cond =
         compile ctx
-          (SList (meta_empty, [ SAtom (meta_empty, "y2k.RT.toBoolean"); cond ]))
+          (SList (meta_empty, [ SAtom (meta_empty, "prelude.toBoolean"); cond ]))
       in
       let then_ = compile ctx then_ in
       let else_ = compile ctx else_ in
@@ -197,7 +197,7 @@ let rec compile (ctx : compile_opt) sexp =
           else if String.starts_with ~prefix:"p__" name then
             (* Local temporary variable - use RT.invoke *)
             (if sargs = "" then "" else ",\n" ^ sargs)
-            |> Printf.sprintf "y2k.RT.invoke(\n%s%s)" name
+            |> Printf.sprintf "y2k.prelude.invoke(\n%s%s)" name
           else
             (* Assume it's a static method - call directly *)
             Printf.sprintf "%s(\n%s)" name sargs
@@ -205,8 +205,8 @@ let rec compile (ctx : compile_opt) sexp =
           (* For non-atom function expressions, still use RT.invoke *)
           let fn = compile ctx x in
           match sargs with
-          | "" -> Printf.sprintf "y2k.RT.invoke(\n%s)" fn
-          | _ -> Printf.sprintf "y2k.RT.invoke(\n%s,\n%s)" fn sargs))
+          | "" -> Printf.sprintf "y2k.prelude.invoke(\n%s)" fn
+          | _ -> Printf.sprintf "y2k.prelude.invoke(\n%s,\n%s)" fn sargs))
   | x -> failsexp __LOC__ [ x ]
 
 let rec get_namespace : sexp -> string option = function
