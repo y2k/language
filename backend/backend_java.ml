@@ -142,7 +142,7 @@ let rec compile (ctx : compile_opt) sexp =
             unpack_string x
         | other -> compile ctx other
       in
-      args |> List.map compile_emit_arg |> String.concat ""
+      args |> List.map compile_emit_arg |> String.concat "" |> Scanf.unescaped
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       let cond =
         compile ctx
