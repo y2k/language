@@ -2,7 +2,7 @@ open Core__.Common
 open Core__
 open Backend__
 
-module JavaV2Execution = struct
+module JavaExecution = struct
   let run_code ~namespace code =
     let dir = Filename.temp_dir "ly2k" "test" in
     prerr_endline @@ "DIR: " ^ dir;
@@ -20,8 +20,8 @@ public class ff {
         (Fun.flip output_string (Lazy.force Prelude.java_runtime)));
     Out_channel.(
       with_open_bin
-        (dir ^ "/y2k/prelude_java_v2.java")
-        (Fun.flip output_string (Lazy.force Prelude.java_runtime2_v2)));
+        (dir ^ "/y2k/prelude_java.java")
+        (Fun.flip output_string (Lazy.force Prelude.java_runtime2)));
     let temp_java_file = dir ^ "/y2k/" ^ namespace ^ ".java" in
     let java_code =
       FileReader.with_stub_scope ""
@@ -169,4 +169,4 @@ let tests =
       {|(defn test [] (let [h (reify java.lang.Thread$UncaughtExceptionHandler (^void uncaughtException [this ^Thread t ^Throwable e] (println "error")))] 42))|},
       "42" );
   ]
-  |> JavaV2Execution.create_tests `Slow ~namespace:"user"
+  |> JavaExecution.create_tests `Slow ~namespace:"user"

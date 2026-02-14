@@ -13,7 +13,7 @@ let read_file path =
 let prelude_base_path () = Filename.concat (get_packages_dir ()) "prelude/1.0.0"
 
 (* Java *)
-let prelude_java_v2_macro =
+let prelude_java_macro =
   lazy
     (let base = prelude_base_path () in
      read_file (Filename.concat base "java/prelude.macro"))
@@ -23,10 +23,10 @@ let java_runtime =
     (let base = prelude_base_path () in
      read_file (Filename.concat base "java/RT.java"))
 
-let java_runtime2_v2 =
+let java_runtime2 =
   lazy
     (let base = prelude_base_path () in
-     read_file (Filename.concat base "java/prelude_java_v2.java"))
+     read_file (Filename.concat base "java/prelude_java.java"))
 
 (* JS *)
 let prelude_js_macro =

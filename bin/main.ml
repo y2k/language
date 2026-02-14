@@ -1,6 +1,4 @@
 open Core__.Common
-
-(* open Core__ *)
 open Backend__
 
 type config = {
@@ -86,14 +84,6 @@ let compile_source cfg =
       print_endline result
   | t -> failwith @@ "Invalid target: " ^ t
 
-(* let run_generate target =
-  match target with
-  | "java_prelude_v2" -> print_endline (Lazy.force Prelude.java_runtime2_v2)
-  | "js" -> print_endline (Lazy.force Prelude.js_runtime)
-  | t -> failwith @@ "Invalid generate target: " ^ t *)
-
 let () =
   let cfg = parse_args () in
-  match cfg.command with
-  (* | "generate" -> run_generate cfg.target *)
-  | _ -> with_file_scope (fun () -> compile_source cfg)
+  match cfg.command with _ -> with_file_scope (fun () -> compile_source cfg)
