@@ -25,7 +25,7 @@ public class ff {
     let temp_java_file = dir ^ "/y2k/" ^ namespace ^ ".java" in
     let java_code =
       FileReader.with_stub_scope ""
-        (Backend_java_v2.compile ~builtin_macro:Macro__.Macro_v2.invoke
+        (Backend_java.compile ~builtin_macro:Macro__.Macro_v2.invoke
            ~namespace:"y2k" ~log:true ~filename:temp_java_file)
         code
     in
