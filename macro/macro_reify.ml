@@ -78,71 +78,62 @@ let invoke simplify = function
             (* Handle void vs non-void return types *)
             (* Use try-catch to handle exceptions without requiring throws clause *)
             if ret_type = "void" then
-              SList
-                ( meta_empty,
-                  [
-                    SAtom (meta_empty, "__compiler_emit");
-                    pack_string
-                      (Printf.sprintf
-                         "\n  @Override public void %s(%s) {\n    try {\n      "
-                         name args_decl);
-                    flat_body;
-                    pack_string
-                      ";\n\
-                      \    } catch (Exception e) {\n\
-                      \      throw new RuntimeException(e);\n\
-                      \    }\n\
-                      \  }";
-                  ] )
+              [
+                pack_string
+                  (Printf.sprintf
+                     "\n  @Override public void %s(%s) {\n    try {\n      "
+                     name args_decl);
+                flat_body;
+                pack_string
+                  ";\n\
+                  \    } catch (Exception e) {\n\
+                  \      throw new RuntimeException(e);\n\
+                  \    }\n\
+                  \  }";
+              ]
             else
               (* For non-void return: emit statements first, then return last expression *)
               let butlast = SexpUtil.butlast flat_body in
               let last_expr = SexpUtil.last flat_body in
               if List.length butlast = 0 then
                 (* Simple case: just one expression *)
-                SList
-                  ( meta_empty,
-                    [
-                      SAtom (meta_empty, "__compiler_emit");
-                      pack_string
-                        (Printf.sprintf
-                           "\n\
-                           \  @Override public %s %s(%s) {\n\
-                           \    try {\n\
-                           \      return (%s)("
-                           ret_type name args_decl ret_type);
-                      flat_body;
-                      pack_string
-                        ");\n\
-                        \    } catch (Exception e) {\n\
-                        \      throw new RuntimeException(e);\n\
-                        \    }\n\
-                        \  }";
-                    ] )
+                [
+                  pack_string
+                    (Printf.sprintf
+                       "\n\
+                       \  @Override public %s %s(%s) {\n\
+                       \    try {\n\
+                       \      return (%s)("
+                       ret_type name args_decl ret_type);
+                  flat_body;
+                  pack_string
+                    ");\n\
+                    \    } catch (Exception e) {\n\
+                    \      throw new RuntimeException(e);\n\
+                    \    }\n\
+                    \  }";
+                ]
               else
                 (* Multiple statements: emit all but last, then return last *)
                 let statements =
                   SList (meta_empty, SAtom (meta_empty, "do*") :: butlast)
                 in
-                SList
-                  ( meta_empty,
-                    [
-                      SAtom (meta_empty, "__compiler_emit");
-                      pack_string
-                        (Printf.sprintf
-                           "\n  @Override public %s %s(%s) {\n    try {\n      "
-                           ret_type name args_decl);
-                      statements;
-                      pack_string ";\n      return (";
-                      pack_string (ret_type ^ ")(");
-                      last_expr;
-                      pack_string
-                        ");\n\
-                        \    } catch (Exception e) {\n\
-                        \      throw new RuntimeException(e);\n\
-                        \    }\n\
-                        \  }";
-                    ] ))
+                [
+                  pack_string
+                    (Printf.sprintf
+                       "\n  @Override public %s %s(%s) {\n    try {\n      "
+                       ret_type name args_decl);
+                  statements;
+                  pack_string ";\n      return (";
+                  pack_string (ret_type ^ ")(");
+                  last_expr;
+                  pack_string
+                    ");\n\
+                    \    } catch (Exception e) {\n\
+                    \      throw new RuntimeException(e);\n\
+                    \    }\n\
+                    \  }";
+                ])
       in
       (* Build the anonymous class *)
       (* Convert $ to . for inner classes (e.g., Thread$UncaughtExceptionHandler -> Thread.UncaughtExceptionHandler) *)
@@ -154,7 +145,7 @@ let invoke simplify = function
           SAtom (meta_empty, "__compiler_emit");
           pack_string ("new " ^ interface_java ^ "() {");
         ]
-        @ method_codes
+        @ List.flatten method_codes
         @ [ pack_string "\n}" ]
       in
       Some (SList (meta_empty, cls_code))

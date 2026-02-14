@@ -135,14 +135,12 @@ let rec compile (ctx : compile_opt) sexp =
             last_body)
   | SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]) -> value
   | SList (_, SAtom (_, "__compiler_emit") :: args) ->
-      (* For __compiler_emit, strings should be emitted directly without escaping *)
       let compile_emit_arg = function
         | SAtom (_, x) when String.starts_with ~prefix:"\"" x ->
-            (* Raw string - emit directly without Java escaping *)
-            unpack_string x
+            unpack_string x |> Scanf.unescaped
         | other -> compile ctx other
       in
-      args |> List.map compile_emit_arg |> String.concat "" |> Scanf.unescaped
+      args |> List.map compile_emit_arg |> String.concat ""
   | SList (_, [ SAtom (_, "if*"); cond; then_; else_ ]) ->
       let cond =
         compile ctx
