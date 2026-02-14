@@ -18,26 +18,11 @@ let prelude_java_macro =
     (let base = prelude_base_path () in
      read_file (Filename.concat base "java/prelude.macro"))
 
-(* let java_runtime =
-  lazy
-    (let base = prelude_base_path () in
-     read_file (Filename.concat base "java/RT.java")) *)
-
-let java_runtime2 =
-  lazy
-    (let base = prelude_base_path () in
-     read_file (Filename.concat base "java/prelude_java.java"))
-
 (* JS *)
 let prelude_js_macro =
   lazy
     (let base = prelude_base_path () in
      read_file (Filename.concat base "js/prelude.macro"))
-
-let js_runtime =
-  lazy
-    (let base = prelude_base_path () in
-     read_file (Filename.concat base "js/rt.js"))
 
 (* Eval *)
 let prelude_eval_macro =
