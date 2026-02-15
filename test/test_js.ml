@@ -1,15 +1,18 @@
 module Js = Backend__.Backend_js
 
-let compile ~filename code =
-  (* let prelude_path = Unix.realpath "../../../prelude/data/y2k/rt.js" in *)
-  let prelude_path =
-    Sys.getenv "LY2K_PACKAGES_DIR" ^ "/prelude/1.0.0/js/rt.js"
-  in
+let compile ~filename ~prelude_path code =
   Js.compile ~builtin_macro:Macro.invoke ~log:true ~filename ~prelude_path code
   |> Printf.sprintf "%s;\n\nprocess.exit(test());"
 
-let run_code code =
+let run_code ~prelude_path code =
   let path = Filename.temp_file "test_" ".js" in
+
+  let prelude_src_path =
+    Sys.getenv "LY2K_PACKAGES_DIR" ^ "/prelude/1.0.0/js/prelude.clj"
+  in
+  Printf.sprintf "ly2k -src %s -target js > %s" prelude_src_path prelude_path
+  |> Sys.command |> ignore;
+
   prerr_endline @@ "===| CODE |===\n" ^ code ^ "\n==============\n";
   Out_channel.(with_open_bin path (fun f -> output_string f code));
   Sys.command (Printf.sprintf "node %s" path) |> string_of_int
@@ -18,8 +21,9 @@ let create_test ~filename speed tests =
   tests
   |> List.map (fun (pos, input, expected) ->
       Alcotest.test_case input speed (fun () ->
-          let compiled = compile ~filename input in
-          let actual = run_code compiled in
+          let prelude_path = Filename.temp_file "prelude_" ".js" in
+          let compiled = compile ~filename ~prelude_path input in
+          let actual = run_code ~prelude_path compiled in
           Alcotest.(check ?pos:(Some pos) string) "" expected actual))
 
 let tests =
