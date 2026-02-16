@@ -1,6 +1,8 @@
 open Core__.Common
 open Printf
 
+(* gen-class macro for java_v2 backend - uses direct static method calls *)
+
 let parse_opts opts =
   opts |> List.split_into_pairs
   |> List.map (function
@@ -43,11 +45,16 @@ let generate_method_args args =
 
 let generate_method_body is_static ret_type prefix name args =
   let args_str =
-    args |> List.mapi (fun i _ -> sprintf ",p%i" i) |> String.concat ""
+    args |> List.mapi (fun i _ -> sprintf "p%i" i) |> String.concat ","
   in
+  (* For java_v2: use direct static method call instead of RT.invoke *)
   let invoke_call =
-    if is_static then sprintf "y2k.RT.invoke(%s%s%s)" prefix name args_str
-    else sprintf "y2k.RT.invoke(%s%s,this%s)" prefix name args_str
+    if is_static then sprintf "%s%s(%s)" prefix name args_str
+    else
+      let args_with_this =
+        if args_str = "" then "this" else "this," ^ args_str
+      in
+      sprintf "%s%s(%s)" prefix name args_with_this
   in
   match ret_type with
   | "void" -> invoke_call
@@ -66,10 +73,15 @@ let generate_method annot args ret_type prefix name =
     else ""
   in
   let static_mod = if is_static then "static " else "" in
+  let body_with_try =
+    sprintf
+      "try {\n%s%s;\n} catch (Exception e) { throw new RuntimeException(e); }"
+      call_super body
+  in
   method_annot
   @ [ pack_string (sprintf "public %s%s %s(" static_mod ret_type name) ]
   @ args_code
-  @ [ pack_string (sprintf ") {\n%s%s;\n}" call_super body) ]
+  @ [ pack_string (sprintf ") {\n%s\n}" body_with_try) ]
 
 let generate_methods prefix methods =
   let methods =
@@ -84,27 +96,39 @@ let generate_methods prefix methods =
     | x -> failsexp __LOC__ [ x ])
 
 let generate_constructors cls_name prefix opts =
+  let state_field =
+    List.assoc_opt ":state" opts
+    |> Option.map (function
+      | SAtom (_, v) -> unpack_string v
+      | x -> failsexp __LOC__ [ x ])
+  in
   List.assoc_opt ":init" opts
   |> Option.map (function
     | SAtom (_, init_fn) ->
         let fn = unpack_string init_fn in
+        (* For java_v2: use direct static method call, assign result to state *)
+        let state_assignment =
+          match state_field with
+          | Some field -> sprintf "this.%s = %s%s();\n" field prefix fn
+          | None -> sprintf "%s%s();\n" prefix fn
+        in
         [
           pack_string
-            (sprintf "public %s() {\ny2k.RT.invoke(%s%s,this);\n}\n" cls_name
-               prefix fn);
+            (sprintf
+               "public %s() {\n\
+                try {\n\
+                %s} catch (Exception e) { throw new RuntimeException(e); }\n\
+                }\n"
+               cls_name state_assignment);
         ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
-let generate_fields opts =
-  List.assoc_opt ":fields" opts
+let generate_state_field opts =
+  List.assoc_opt ":state" opts
   |> Option.map (function
-    | SList (_, SAtom (_, "vector") :: fields) ->
-        fields
-        |> List.map (function
-          | SAtom (_, name) ->
-              pack_string (sprintf "public Object %s;\n" (unpack_string name))
-          | x -> failsexp __LOC__ [ x ])
+    | SAtom (_, name) ->
+        [ pack_string (sprintf "public Object %s;\n" (unpack_string name)) ]
     | x -> failsexp __LOC__ [ x ])
   |> Option.value ~default:[]
 
@@ -118,7 +142,7 @@ let invoke = function
         [ pack_string (sprintf "public static class %s extends " cls_name) ]
         @ [ mk_type_resolve extends; pack_string " {\n" ]
         @ generate_constructors cls_name prefix opts
-        @ generate_fields opts
+        @ generate_state_field opts
         @ generate_methods prefix (List.assoc ":methods" opts)
         @ [ pack_string "}\n" ]
       in
