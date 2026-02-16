@@ -67,7 +67,7 @@ let compile_source cfg =
       print_endline "STUB"
   | "java" | "java_v2" ->
       let result =
-        Backend_java.compile ~builtin_macro:Macro__.Macro_v2.invoke
+        Backend_java.compile ~builtin_macro:Macro.invoke
           ~namespace:cfg.namespace ~log:cfg.log ~filename:cfg.src code
       in
       print_endline result
