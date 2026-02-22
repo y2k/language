@@ -53,16 +53,11 @@ let with_file_scope f = FileReader.with_scope (fun _ -> f ()) ()
 let compile_source cfg =
   let code = read_source cfg.src in
   match cfg.target with
-  | "sexp_legacy" ->
-      let result =
-        Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:cfg.log code
-      in
-      print_endline result
   | "sexp" ->
       if cfg.output = "" then
         failwith "Output directory required for sexp target";
       let output_dir = Filename.dirname cfg.output in
-      Backend_sexp2.save_to_directory ~builtin_macro:Macro.invoke ~log:cfg.log
+      Backend_sexp.save_to_directory ~builtin_macro:Macro.invoke ~log:cfg.log
         code ~filename:cfg.src ~directory:output_dir;
       print_endline "STUB"
   | "java" | "java_v2" ->

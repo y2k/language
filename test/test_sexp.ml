@@ -15,7 +15,7 @@ let map_testable =
 
 let test () =
   let actual =
-    Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
+    Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:true
       ~filename:"app/main.clj"
       {|(ns g) (defn f2 [a b] (str a)) (defn f [a b c] (f2 :a "b") (+ b c))|}
   in
@@ -60,7 +60,7 @@ a
 
 let test_println_global_var () =
   let actual =
-    Backend_sexp2.invoke ~builtin_macro:Macro.invoke ~log:true
+    Backend_sexp.invoke ~builtin_macro:Macro.invoke ~log:true
       ~filename:"app/main.clj" {|(ns g) (def x 42) (defn f [] (println x))|}
   in
   let expected =
