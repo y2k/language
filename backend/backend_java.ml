@@ -249,13 +249,19 @@ let get_macro ~builtin_macro node =
   in
   Backend_eval.get_all_functions ctx
 
+let get_prelude_fn_names ~builtin_macro =
+  let ctx = Backend_eval.create_prelude_context ~builtin_macro in
+  ctx.ns |> List.map fst
+
 let compile ~builtin_macro ~(namespace : string) ~(log : bool)
     ~(filename : string) code =
   Common.NameGenerator.with_scope (fun () ->
+      let prelude_fns = get_prelude_fn_names ~builtin_macro in
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Lazy.force Prelude.prelude_java_macro; filename }
-      |> Stage_escape_names.invoke
+      |> Stage_lint.invoke ~prelude_fns ~filename
+      |> log_stage log "Stage_lint" |> Stage_escape_names.invoke
       |> log_stage log "Stage_escape_names"
       |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "

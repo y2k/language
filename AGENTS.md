@@ -60,6 +60,12 @@ ly2k -target eval -src app.clj                  # Interpret/evaluate
 
 ## Code Style Guidelines
 
+### Comments
+
+- Do NOT add comments to generated code if the code is self-explanatory
+- Avoid obvious comments like `(* Variable reference *)` or `(* Function call *)`
+- Only add comments when logic is non-trivial or requires context
+
 ### Formatting
 
 - `.ocamlformat`: `profile = default`, `margin = 80`

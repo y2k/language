@@ -202,15 +202,21 @@ let get_macro ~builtin_macro node =
   Backend_eval.eval_ (Backend_eval.create_prelude_context ~builtin_macro) node
   |> fst |> Backend_eval.get_all_functions
 
+let get_prelude_fn_names ~builtin_macro =
+  let ctx = Backend_eval.create_prelude_context ~builtin_macro in
+  ctx.ns |> List.map fst
+
 let compile ~builtin_macro ~log ~filename ~prelude_path code =
   let root_dir = "" in
   let namespace = "" in
   Ng.with_scope (fun () ->
+      let prelude_fns = get_prelude_fn_names ~builtin_macro in
       (* prerr_endline @@ "LOG: code: " ^ code; *)
       code
       |> Frontend_simplify.do_simplify ~builtin_macro (get_macro ~builtin_macro)
            { log; macro = Lazy.force Prelude.prelude_js_macro; filename }
-      |> Stage_convert_if_to_statment.invoke
+      |> Stage_lint.invoke ~prelude_fns ~filename
+      |> log_stage log "Stage_lint" |> Stage_convert_if_to_statment.invoke
       |> log_stage log "if_to_statement "
       |> Stage_flat_do.invoke
       |> log_stage log "Stage_flat_do"

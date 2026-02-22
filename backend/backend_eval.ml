@@ -153,9 +153,12 @@ let reg_fun name f ctx =
 
 let rec compile (ctx : eval_context) origin_filename log get_macro type_
     root_dir filename code =
+  let prelude_fns = ctx.ns |> List.map fst in
   code
   |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
        { log; macro = Lazy.force Prelude.prelude_eval_macro; filename }
+  |> Stage_lint.invoke ~prelude_fns ~filename
+  |> log_stage log (type_ ^ " Stage_lint")
   |> Stage_resolve_ns_legacy.do_resolve
        (ctx.ns |> List.map fst)
        filename root_dir
