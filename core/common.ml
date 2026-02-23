@@ -102,9 +102,11 @@ end
 module FileReader = struct
   type _ Effect.t += Load : string -> string Effect.t
   type _ Effect.t += Realpath : string -> string Effect.t
+  type _ Effect.t += FileExists : string -> bool Effect.t
 
   let read filename = Effect.perform (Load filename)
   let realpath path = Effect.perform (Realpath path)
+  let file_exists path = Effect.perform (FileExists path)
 
   let resolve_env_in_path path =
     let var = ".+\\$LY2K_PACKAGES_DIR" in
@@ -112,7 +114,8 @@ module FileReader = struct
     | Some value -> Str.global_replace (Str.regexp var) value path
     | None -> path
 
-  let with_stub_scope (content : string) f arg =
+  let with_stub_scope ?(file_exists = Fun.const false) (content : string) f arg
+      =
     let open Effect.Deep in
     Effect.Deep.match_with f arg
       {
@@ -132,6 +135,10 @@ module FileReader = struct
                       Str.global_replace (Str.regexp "/\\./") "/" path
                     in
                     continue k path)
+            | FileExists path ->
+                Some
+                  (fun (k : (a, _) continuation) ->
+                    continue k (file_exists path))
             | _ -> None);
       }
 
@@ -155,6 +162,10 @@ module FileReader = struct
                 Some
                   (fun (k : (a, _) continuation) ->
                     continue k (Files.realpath path))
+            | FileExists path ->
+                Some
+                  (fun (k : (a, _) continuation) ->
+                    continue k (Sys.file_exists path))
             | _ -> None);
       }
 end
@@ -365,7 +376,16 @@ end
    ============================================================================ *)
 
 module NamespaceUtils = struct
-  let get_ns_from_path _ path = "m" ^ string_of_int (String.hash path)
+  let normalize_path_to_module path =
+    (* Convert file path like "lib/eff.clj" or "./lib/eff" to module name "lib.eff" *)
+    let path = Str.global_replace (Str.regexp "\\.clj$") "" path in
+    let path = Str.global_replace (Str.regexp "^\\./") "" path in
+    let path = Str.global_replace (Str.regexp "\\.\\./") "" path in
+    String.map (fun c -> if c = '/' then '.' else c) path
+
+  let get_ns_from_path _ path =
+    let module_name = normalize_path_to_module path in
+    "m" ^ string_of_int (String.hash module_name)
 
   let mangle_name (ns : string) (name : string) : string =
     let result =

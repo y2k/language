@@ -34,8 +34,8 @@ let resolve_value ctx name =
     match List.assoc_opt name scope with
     | Some v -> v
     | None ->
-        failwith @@ __LOC__ ^ " - Can't find value: '" ^ name ^ "' in "
-        ^ show_eval_context ctx
+        prerr_endline @@ show_eval_context ctx;
+        failwith @@ __LOC__ ^ " - Can't find value: '" ^ name
 
 let rec eval_ (ctx : eval_context) (node : sexp) =
   let ctx = { ctx with level = ctx.level + 1 } in
@@ -151,25 +151,29 @@ let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }
 let reg_fun name f ctx =
   { ctx with ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns }
 
-let rec compile (ctx : eval_context) origin_filename log get_macro type_
-    root_dir filename code =
+let rec compile (ctx : eval_context) ~deps ~current_dir ~module_name log
+    get_macro type_ root_dir filename code =
   let prelude_fns = ctx.ns |> List.map fst in
-  code
-  |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
-       { log; macro = Lazy.force Prelude.prelude_eval_macro; filename }
+  let simplified =
+    code
+    |> Frontend_simplify.do_simplify ~builtin_macro:ctx.builtin_macro get_macro
+         { log; macro = Lazy.force Prelude.prelude_eval_macro; filename }
+  in
+  let deps =
+    if deps = [] then Stage_load_require.extract_deps simplified else deps
+  in
+  simplified
   |> Stage_lint.invoke ~prelude_fns ~filename
   |> log_stage log (type_ ^ " Stage_lint")
-  |> Stage_resolve_ns_legacy.do_resolve
+  |> Stage_resolve_ns_legacy.do_resolve ~module_name
        (ctx.ns |> List.map fst)
        filename root_dir
   |> log_stage log (type_ ^ " Stage_resolve_ns_legacy")
-  |> Stage_load_require.do_invoke (fun path ->
-      let path2 =
-        Filename.concat (Filename.dirname origin_filename) (path ^ ".clj")
-        |> FileReader.realpath
-      in
-      let code = FileReader.read path2 in
-      compile ctx origin_filename log get_macro "  [REQ]" "" path2 code)
+  |> Stage_load_require.do_invoke ~deps ~current_dir
+       (fun ~deps ~current_dir ~module_name resolved_path ->
+         let code = FileReader.read resolved_path in
+         compile ctx ~deps ~current_dir ~module_name log get_macro "  [REQ]" ""
+           resolved_path code)
   |> log_stage log (type_ ^ " Stage_load_require")
   |> Stage_flat_do.invoke
   |> log_stage log (type_ ^ " Stage_flat_do")
@@ -181,7 +185,8 @@ let create_prelude_context ~builtin_macro =
   let prelude_sexp =
     compile
       (empty_eval_context ~builtin_macro)
-      "" false (Fun.const []) "[PRELUDE]" "" "prelude.clj"
+      ~deps:[] ~current_dir:"" ~module_name:"" false (Fun.const []) "[PRELUDE]"
+      "" "prelude.clj"
       (Lazy.force Prelude.prelude_eval)
   in
   empty_eval_context ~builtin_macro
@@ -195,7 +200,9 @@ let invoke ~builtin_macro (log : bool) (filename : string) code =
   in
   NameGenerator.with_scope (fun () ->
       let ctx = create_prelude_context ~builtin_macro in
+      let current_dir = get_dir filename in
       code
-      |> compile ctx filename log get_macro "[EVAL]" (get_dir filename) filename
+      |> compile ctx ~deps:[] ~current_dir ~module_name:"" log get_macro
+           "[EVAL]" current_dir filename
       |> eval_ ctx |> snd |> OUtils.obj_to_sexp |> Utils.serialize_to_string
       |> unpack_string)

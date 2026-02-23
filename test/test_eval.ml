@@ -2,9 +2,9 @@ open Core__.Common
 open Backend__
 
 module EvalExecution = struct
-  let run ~path input =
+  let run ?(file_exists = Fun.const false) ~path input =
     let input = input ^ "\n(test)" in
-    FileReader.with_stub_scope "(defn foo [x] x)"
+    FileReader.with_stub_scope ~file_exists "(defn foo [x] x)"
       (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
       input
 
@@ -27,8 +27,20 @@ let tests =
     (__POS__, {|(defn test [] (if (and true 1) 2 3))|}, "2");
     (__POS__, {|(defn- f [x] x) (defn test [] (f 4))|}, "4");
     (__POS__, {|(defn test [] (+ 2 2))|}, "4");
-    ( __POS__,
-      {|(ns _ (:require ["./lib/eff" :as e])) (defn test [] (e/foo 4))|},
-      "4" );
   ]
   |> EvalExecution.create_tests `Quick "/app/src/core/ext/user.clj"
+
+let require_tests =
+  let file_exists path = String.ends_with ~suffix:"lib/eff.clj" path in
+  [
+    ( __POS__,
+      {|(ns _ (:require [lib.eff :as e])) (defn test [] (e/foo 4))|},
+      "4" );
+  ]
+  |> List.map (fun (pos, input, expected) ->
+      Alcotest.test_case input `Quick (fun () ->
+          let actual =
+            EvalExecution.run ~file_exists ~path:"/app/src/core/ext/user.clj"
+              input
+          in
+          Alcotest.(check ?pos:(Some pos) string) "" expected actual))

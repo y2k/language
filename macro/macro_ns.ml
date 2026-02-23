@@ -1,8 +1,9 @@
 open Core__.Common
 
-let convert_path_to_ns filename path =
-  Filename.concat (Filename.dirname filename) (path ^ ".clj")
-  |> FileReader.realpath |> String.hash |> Printf.sprintf "m%i"
+let module_to_path module_name =
+  String.split_on_char '.' module_name |> String.concat Filename.dir_sep
+
+let convert_path_to_ns _filename path = "m" ^ string_of_int (String.hash path)
 
 type ns_ctx = { filename : string; namespace : string }
 
@@ -10,6 +11,19 @@ let expand_require ctx requires =
   let aliases =
     requires
     |> List.concat_map (function
+      (* New format: [lib.eff :as e] - path is a symbol with dots *)
+      | SList (_, [ _; SAtom (_, path); SAtom (_, ":as"); SAtom (ma, alias) ])
+        when not (String.starts_with ~prefix:"\"" path) ->
+          [
+            SAtom (meta_empty, alias);
+            SList
+              ( meta_empty,
+                [
+                  SAtom (ma, convert_path_to_ns ctx.filename path);
+                  SAtom (ma, path);
+                ] );
+          ]
+      (* Old format: ["./lib/eff" :as e] - path is a quoted string *)
       | SList (_, [ _; SAtom (_, path); SAtom (_, ":as"); SAtom (ma, alias) ])
         ->
           let path2 = unpack_string path in

@@ -14,6 +14,7 @@ let () =
         |> Test_js.create_test ~filename:"test_common.clj" `Quick );
       ("Sexp", Test_sexp.tests);
       ("Eval", Test_eval.tests);
+      ("Eval Require", Test_eval.require_tests);
       ("Java", Test_java.tests);
       ("JS", Test_js.tests);
       ("Regex", Test_regex.tests);

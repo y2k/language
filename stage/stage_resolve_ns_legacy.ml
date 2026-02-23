@@ -5,10 +5,18 @@ type resolve_ctx = {
   links : (string * string) list;
   aliases : (string * string) list;
   defs : (string * string) list;
+  module_name : string;
   filename : string;
   root_dir : string;
   prelude_fns : StringSet.t;
 }
+
+let mangle_name_for_ctx (ctx : resolve_ctx) name =
+  (* Use module_name if available (for required modules), otherwise fall back to filename *)
+  if ctx.module_name <> "" then
+    let ns_id = "m" ^ string_of_int (String.hash ctx.module_name) in
+    NamespaceUtils.mangle_name ns_id name
+  else NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
 
 let rec resolve (ctx : resolve_ctx) node =
   match node with
@@ -28,6 +36,9 @@ let rec resolve (ctx : resolve_ctx) node =
       let items =
         items |> List.split_into_pairs
         |> List.map (function
+          (* New format: 2 elements [ns_id, module_path] *)
+          | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+          (* Old format: 3 elements [ns_id, path_unquoted, path_quoted] *)
           | SAtom (_, k), SList (_, [ SAtom (_, v); _; _ ]) -> (k, v)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
@@ -44,9 +55,7 @@ let rec resolve (ctx : resolve_ctx) node =
       let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
       (ctx, node)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
-      let mangled_name =
-        NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename name
-      in
+      let mangled_name = mangle_name_for_ctx ctx name in
       let ctx = { ctx with defs = (name, mangled_name) :: ctx.defs } in
       let _, value = resolve ctx value in
       (ctx, SList (m, [ def_; SAtom (mn, mangled_name); value ]))
@@ -86,7 +95,7 @@ let rec resolve (ctx : resolve_ctx) node =
               in
               NamespaceUtils.path_to_namespace fun_name x)
           |> Option.value ~default:fun_name
-        else NamespaceUtils.mangle_from_path ctx.root_dir ctx.filename fun_name
+        else mangle_name_for_ctx ctx fun_name
       in
       (ctx, SList (m, SAtom (m, fun_name) :: args))
   | SList (m, fn :: args) ->
@@ -95,7 +104,7 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, SList (m, fn :: args))
   | x -> failsexp __LOC__ [ x ]
 
-let do_resolve functions filename root_dir node =
+let do_resolve ?(module_name = "") functions filename root_dir node =
   if filename = "prelude.clj" then node
   else
     let ctx =
@@ -103,6 +112,7 @@ let do_resolve functions filename root_dir node =
         links = [];
         aliases = [];
         defs = [];
+        module_name;
         filename;
         root_dir;
         prelude_fns = StringSet.of_list functions;
