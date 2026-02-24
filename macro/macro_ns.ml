@@ -108,17 +108,15 @@ let expand_ns m ctx args =
       | x -> failsexp __LOC__ [ x ])
   in
   let ns_def =
-    if ctx.namespace = "_" then []
-    else
-      [
-        SList
-          ( meta_empty,
-            [
-              SAtom (meta_empty, "def*");
-              SAtom (meta_empty, "__namespace");
-              SAtom (meta_empty, ":" ^ ctx.namespace);
-            ] );
-      ]
+    [
+      SList
+        ( meta_empty,
+          [
+            SAtom (meta_empty, "def*");
+            SAtom (meta_empty, "__namespace");
+            SAtom (meta_empty, ":" ^ ctx.namespace);
+          ] );
+    ]
   in
   let _ns2_def =
     SList
@@ -133,27 +131,6 @@ let expand_ns m ctx args =
               :: compute_ns_requires args );
         ] )
   in
-  (* let _ns2_def =
-    SList
-      ( meta_empty,
-        [
-          SAtom (meta_empty, "def");
-          SAtom (meta_empty, "__NS__");
-          SList
-            ( meta_empty,
-              [
-                SAtom (meta_empty, "RT.build_ns");
-                SList
-                  ( meta_empty,
-                    [
-                      (* SAtom (meta_empty, ":ns"); *)
-                      SAtom (meta_empty, "\"" ^ ctx.namespace ^ "\"");
-                      (* SAtom (meta_empty, ":require"); *)
-                      SList (meta_empty, compute_ns_requires args);
-                    ] );
-              ] );
-        ] )
-  in *)
   SList (m, SAtom (meta_empty, "do") :: _ns2_def :: (ns_def @ expanded_args))
 
 let invoke (ctx : Core__.Frontend_simplify.simplify_ctx) simplify = function

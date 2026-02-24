@@ -39,16 +39,6 @@ let rec resolve (ctx : resolve_ctx) node =
       (ctx, x)
   | SList (m, SAtom (_, "def*") :: SAtom (_, "__NS__") :: _) ->
       (ctx, SList (m, [ SAtom (meta_empty, "do*") ]))
-  (* | SList
-      ( _,
-        [
-          SAtom (_, "def*");
-          SAtom (_, name);
-          SList (_, [ SAtom (_, "quote*"); SAtom (_, value) ]);
-        ] ) ->
-      let ctx = { ctx with links = (name, value) :: ctx.links } in
-      let node = SList (meta_empty, [ SAtom (meta_empty, "do*") ]) in
-      (ctx, node) *)
   | SList (m, [ (SAtom (_, "def*") as def_); SAtom (mn, name); value ]) ->
       let mng_name = mangle_from_path ctx.namespace name in
       let _, value = resolve ctx value in
