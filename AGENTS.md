@@ -6,23 +6,12 @@ Guidance for AI coding agents working with clj2js (ly2k) - a Lisp compiler writt
 
 ```bash
 make build          # Build project (runs prelude generation first)
-make test           # Run tests
+make test_e2e       # Run tests
 make restore        # Install opam dependencies
 make deploy         # Run tests and deploy binary to ~/.local/bin/ly2k
 make prelude        # Regenerate prelude.ml from prelude/data/*.clj
 ```
 
-## Running Specific Tests
-
-The test runner uses Alcotest. Run specific test suites by name:
-
-```bash
-./_build/default/test/test.exe test "Eval"     # Interpreter tests
-./_build/default/test/test.exe test "JS"       # JavaScript backend tests
-./_build/default/test/test.exe test "Java"     # Java backend tests
-./_build/default/test/test.exe test "Sexp"     # S-expression tests
-./_build/default/test/test.exe test "Common (Eval)"  # Common tests via interpreter
-```
 
 ## CLI Usage
 
