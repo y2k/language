@@ -31,7 +31,8 @@ let rec resolve (ctx : resolve_ctx) node =
       let items =
         items |> List.split_into_pairs
         |> List.map (function
-          | SAtom (_, k), SList (_, [ SAtom (_, v); _ ]) -> (k, v)
+          | SAtom (_, k), SList (_, [ _; SAtom (_, module_path) ]) ->
+              (k, module_path)
           | k, v -> failsexp __LOC__ [ k; v ])
       in
       let ctx = { ctx with aliases = items } in
@@ -86,23 +87,20 @@ let rec resolve (ctx : resolve_ctx) node =
     when not (String.ends_with ~suffix:"*" fun_name) ->
       let _, args = List.fold_left_map (fun ctx x -> resolve ctx x) ctx args in
       let fun_name =
-        if
-          String.get fun_name 0 < 'a'
-          || String.get fun_name 0 > 'z'
-          || StringSet.mem fun_name ctx.prelude_fns
-          || not (StringSet.mem fun_name ctx.registered_defs)
-        then fun_name
+        if StringSet.mem fun_name ctx.prelude_fns then fun_name
         else if String.contains fun_name '/' then
           let alias_name = String.split_on_char '/' fun_name |> List.hd in
           ctx.aliases |> List.assoc_opt alias_name
-          |> Option.map (fun x ->
-              let fun_name =
+          |> Option.map (fun ns ->
+              let name =
                 String.split_on_char '/' fun_name
                 |> List.tl |> String.concat "/"
               in
-              NamespaceUtils.path_to_namespace fun_name x)
+              mangle_from_path ns name)
           |> Option.value ~default:fun_name
-        else mangle_from_path ctx.namespace fun_name
+        else if StringSet.mem fun_name ctx.registered_defs then
+          mangle_from_path ctx.namespace fun_name
+        else fun_name
       in
       (ctx, SList (m, SAtom (m, fun_name) :: args))
   | SList (m, fn :: args) ->

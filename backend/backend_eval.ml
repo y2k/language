@@ -151,8 +151,8 @@ let reg_val name value ctx = { ctx with scope = (name, value) :: ctx.scope }
 let reg_fun name f ctx =
   { ctx with ns = (name, ref (OLambda (meta_empty, fun xs -> f xs))) :: ctx.ns }
 
-let rec compile (ctx : eval_context) ~deps ~current_dir ~module_name log
-    get_macro type_ root_dir filename code =
+let rec compile (ctx : eval_context) ~deps ~current_dir ~module_name:_ log
+    get_macro type_ _root_dir filename code =
   let prelude_fns = ctx.ns |> List.map fst in
   let simplified =
     code
@@ -165,10 +165,8 @@ let rec compile (ctx : eval_context) ~deps ~current_dir ~module_name log
   simplified
   |> Stage_lint.invoke ~prelude_fns ~filename
   |> log_stage log (type_ ^ " Stage_lint")
-  |> Stage_resolve_ns_legacy.do_resolve ~module_name
-       (ctx.ns |> List.map fst)
-       filename root_dir
-  |> log_stage log (type_ ^ " Stage_resolve_ns_legacy")
+  |> Stage_resolve_ns.do_resolve (ctx.ns |> List.map fst) filename ""
+  |> log_stage log (type_ ^ " Stage_resolve_ns")
   |> Stage_load_require.do_invoke ~deps ~current_dir
        (fun ~deps ~current_dir ~module_name resolved_path ->
          let code = FileReader.read resolved_path in

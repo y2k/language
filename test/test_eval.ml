@@ -4,7 +4,7 @@ open Backend__
 module EvalExecution = struct
   let run ?(file_exists = Fun.const false) ~path input =
     let input = input ^ "\n(test)" in
-    FileReader.with_stub_scope ~file_exists "(defn foo [x] x)"
+    FileReader.with_stub_scope ~file_exists "(ns lib.eff) (defn foo [x] x)"
       (Backend_eval.invoke ~builtin_macro:Macro.invoke true path)
       input
 
