@@ -47,6 +47,8 @@ let rec do_compile (ctx : context) = function
   | SAtom (_, "nil") -> "null"
   | SAtom (_, x) when String.starts_with ~prefix:":" x ->
       "\"" ^ unpack_symbol x ^ "\""
+  | SAtom (_, x) when String.starts_with ~prefix:"js/" x ->
+      "globalThis." ^ String.sub x 3 (String.length x - 3)
   | SAtom (_, x) when not (String.starts_with ~prefix:"\"" x) ->
       x
       |> String.map (fun x -> if x = '/' then '.' else x)
@@ -170,7 +172,8 @@ let rec do_compile (ctx : context) = function
       let body = List.map (do_compile ctx) body in
       String.concat ";\n" body
   (* new *)
-  | SList (_, SAtom (_, "new") :: SAtom (_, type_) :: args) ->
+  | SList (_, SAtom (_, "new") :: type_ :: args) ->
+      let type_ = do_compile ctx type_ in
       let args = List.map (do_compile ctx) args in
       Printf.sprintf "new %s(%s)" type_ (String.concat "," args)
   (* Interop field read *)

@@ -29,6 +29,10 @@ let create_test ~filename speed tests =
 let tests =
   [
     ( __POS__,
+      {|(defn test [] (if (= (str (js/URL. "https://g.c/")) "https://g.c/") 42 0))|},
+      "42" );
+    (__POS__, {|(defn test [] (if (= js/undefined js/undefined) 42 0))|}, "42");
+    ( __POS__,
       {|(defn test [] (if (and (> (unixtime) 1700000000) (< (unixtime) 2700000000)) 42 2))|},
       "42" );
     ( __POS__,
