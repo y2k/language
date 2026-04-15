@@ -128,7 +128,7 @@ let rec do_compile (ctx : context) = function
       |> List.map (fun (k, v) -> Printf.sprintf "%s:%s" k v)
       |> String.concat "," |> Printf.sprintf "{%s}"
   (* = *)
-  | SList (_, [ SAtom (_, "="); target; value ]) ->
+  | SList (_, [ SAtom (_, "_EQ_"); target; value ]) ->
       Printf.sprintf "(%s===%s)" (do_compile ctx target) (do_compile ctx value)
   (* get *)
   | SList (_, [ SAtom (_, "get"); target; key ]) ->

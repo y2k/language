@@ -5,6 +5,9 @@ let escape_char = function
   | '!' -> "_BANG_"
   | '?' -> "_QMARK_"
   | '+' -> "_PLUS_"
+  | '>' -> "_GT_"
+  | '=' -> "_EQ_"
+  | '<' -> "_LT_"
   | c -> String.make 1 c
 
 let escape_name name =

@@ -8,7 +8,7 @@
   (if (assert expected actual)
     (FIXME loc " - " expected " == " actual)))
 
-(defn- ?!- [x] x)
+(defn- ?!-> [x] x)
 (def- static_field "123")
 
 (defn test []
@@ -37,7 +37,7 @@
   (let [value_atom (atom 1)]
     (assert_ __LOC__ 1 (swap! value_atom (fn [^int x] (+ x 2))))
     (assert_ __LOC__ 3 (deref value_atom)))
-  (assert_ __LOC__ 1 (?!- 1))
+  (assert_ __LOC__ 1 (?!-> 1))
   (assert_ __LOC__ [] (filter (fn [_] false) [1 2]))
   (assert_ __LOC__ ["1" "2"] (map (fn [x] (str x)) [1 2]))
   (assert_ __LOC__ 1 (if (clojure.string/ends-with? "foo.txt" ".txt") 1 2))

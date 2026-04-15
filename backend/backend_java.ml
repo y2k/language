@@ -40,8 +40,16 @@ let rec compile (ctx : compile_opt) sexp =
       List.map (compile ctx) args
       |> String.concat " - " |> Printf.sprintf "(%s)"
   | SList (_, SAtom (_, op) :: args)
-    when op = "+" || op = "*" || op = "/" || op = "<" || op = "<=" || op = ">"
-         || op = ">=" ->
+    when op = "+" || op = "*" || op = "/" || op = "_LT_" || op = "_LT__EQ_"
+         || op = "_GT_" || op = "_GT__EQ_" || op = "_EQ_" ->
+      let op =
+        if op = "_GT_" then ">"
+        else if op = "_GT__EQ_" then ">="
+        else if op = "_LT_" then "<"
+        else if op = "_LT__EQ_" then "<="
+        else if op = "_EQ_" then "==="
+        else op
+      in
       List.map (compile ctx) args
       |> String.concat (" " ^ op ^ " ")
       |> Printf.sprintf "(%s)"
