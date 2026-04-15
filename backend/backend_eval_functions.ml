@@ -280,6 +280,7 @@ let attach reg_val reg_fun ctx =
       xs
       |> List.map (function
         | OList (_, x) -> x
+        | OVector (_, x) -> x
         | x -> Obj.failobj __LOC__ [ x ])
       |> List.flatten
       |> fun xs -> OList (meta_empty, xs))
@@ -342,6 +343,30 @@ let attach reg_val reg_fun ctx =
         OList (meta_empty, List.map (fun x -> f [ x ]) xs)
     | [ OLambda (_, f); OVector (_, xs) ] ->
         OVector (meta_empty, List.map (fun x -> f [ x ]) xs)
+    | x -> Obj.failobj __LOC__ x)
+  |> reg_fun "mapcat" (function
+    | [ OLambda (_, f); OList (_, xs) ] ->
+        let results =
+          List.map
+            (fun x ->
+              match f [ x ] with
+              | OList (_, ys) -> ys
+              | OVector (_, ys) -> ys
+              | y -> Obj.failobj __LOC__ [ y ])
+            xs
+        in
+        OList (meta_empty, List.flatten results)
+    | [ OLambda (_, f); OVector (_, xs) ] ->
+        let results =
+          List.map
+            (fun x ->
+              match f [ x ] with
+              | OList (_, ys) -> ys
+              | OVector (_, ys) -> ys
+              | y -> Obj.failobj __LOC__ [ y ])
+            xs
+        in
+        OList (meta_empty, List.flatten results)
     | x -> Obj.failobj __LOC__ x)
   |> reg_fun "atom" (function
     | [ x ] -> OAtom (meta_empty, ref x)
