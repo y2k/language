@@ -258,8 +258,16 @@ let attach reg_val reg_fun ctx =
           List.find_opt (fun (k', _) -> Obj.equal k k') m
           |> Option.map snd
           |> Option.value ~default:(ONil meta_empty)
+      | [ OMap (_, m); k; not_found ] ->
+          List.find_opt (fun (k', _) -> Obj.equal k k') m
+          |> Option.map snd
+          |> Option.value ~default:not_found
       | [ OList (_, xs); OInt (_, i) ] -> List.nth xs i
+      | [ OList (_, xs); OInt (_, i); not_found ] ->
+          if i >= 0 && i < List.length xs then List.nth xs i else not_found
       | [ OVector (_, xs); OInt (_, i) ] -> List.nth xs i
+      | [ OVector (_, xs); OInt (_, i); not_found ] ->
+          if i >= 0 && i < List.length xs then List.nth xs i else not_found
       | x -> Obj.failobj __LOC__ x)
   |> reg_val "nil" (ONil meta_empty)
   |> reg_fun "vector" (fun xs ->
