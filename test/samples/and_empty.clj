@@ -1,0 +1,3 @@
+;; true
+
+(defn test [] (and))

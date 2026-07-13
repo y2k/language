@@ -1,0 +1,4 @@
+(library
+ (name backend_compiler)
+ (public_name language.backend_compiler)
+ (libraries language.frontend))

@@ -1,0 +1,10 @@
+(library
+ (name language_main)
+ (modules runner)
+ (libraries language.frontend language.backend_eval language.backend_compiler))
+
+(executable
+ (public_name language)
+ (name main)
+ (modules main)
+ (libraries language_main))

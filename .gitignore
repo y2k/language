@@ -1,0 +1,12 @@
+_build/
+*.install
+*.merlin
+
+# Local editor and OS files
+.DS_Store
+.vscode/
+.idea/
+*~
+
+playground.clj
+/tasks

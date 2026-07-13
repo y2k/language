@@ -1,0 +1,4 @@
+(library
+ (name frontend)
+ (public_name language.frontend)
+ (libraries angstrom))

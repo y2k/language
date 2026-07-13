@@ -1,0 +1,12 @@
+(tests
+ (names test js_ns_test java_ns_test eval_ns_test eval_deps_test frontend_desugar_test lowering_test)
+ (libraries unix alcotest language_main frontend backend_eval backend_compiler)
+ (action
+  (setenv RUNTIME_JS ../prelude/language_runtime.js
+   (setenv RUNTIME_JAVA ../prelude/language_runtime.java
+    (setenv SAMPLES_DIR samples
+     (run %{test})))))
+ (deps
+     (source_tree samples)
+     ../prelude/language_runtime.js
+     ../prelude/language_runtime.java))
