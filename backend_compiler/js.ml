@@ -91,7 +91,7 @@ and compile_statement = function
 let compile sexprs =
   let runtime_import =
     "import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, \
-     _STAR_, _SLASH_, count, get, map, reduce } from \"./language_runtime.js\";"
+     _STAR_, _SLASH_, count, get, map, reduce, drop } from \"./language_runtime.js\";"
   in
   let sexprs = Gensym.run (fun () -> Lowering_expression_to_statement.lower sexprs) in
   runtime_import :: List.map (fun sexpr -> compile_expr sexpr ^ ";") sexprs |> String.concat "\n"

@@ -17,7 +17,7 @@ let require_imports () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 import * as mc from "./io/math/core.js";;
 const test = (() => {
 return (mc.foo)(1);
@@ -31,7 +31,7 @@ let string_literals () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 const test = (() => {
 return (list)("column", (hash_map)("text", "Start"));
 });|}
@@ -44,7 +44,7 @@ let instance_method_call () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 const test = ((value) => {
 return value.toString();
 });|}
@@ -57,7 +57,7 @@ let constructor_call () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 const test = ((title) => {
 return new Widget(title);
 });|}
@@ -70,7 +70,7 @@ let constructor_call_with_nested_arg () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 const test = ((value) => {
 return new Widget(value.toString());
 });|}
@@ -80,7 +80,7 @@ let cast_is_no_op () =
   let js = compile "(defn test [value] (cast java.util.List value))" in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 const test = ((value) => {
 return value;
 });|}
