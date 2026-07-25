@@ -26,6 +26,18 @@ Before JavaScript or Java code generation, compiler targets SHALL lower expressi
 - **WHEN** an `if` expression is used where a value is required
 - **THEN** lowering creates a generated result binding and assigns branch results before returning that binding
 
+### Requirement: Compiler targets SHALL call local function values
+
+JavaScript и Java compiler targets SHALL разрешать символ в позиции функции как локальное значение, если символ связан параметром или локальным binding. Java target SHALL вызывать такое значение через runtime-интерфейс `FnN`, соответствующий числу аргументов, а локальное binding SHALL иметь приоритет над одноимённой top-level или runtime-функцией.
+
+#### Scenario: Call a lambda passed as a function parameter
+- **WHEN** top-level функция принимает лямбду параметром и вызывает этот параметр с поддерживаемой арностью
+- **THEN** JavaScript и Java output компилируются и возвращают тот же результат, что и eval
+
+#### Scenario: Local function value shadows a non-local function
+- **WHEN** символ локального функционального значения совпадает с именем top-level или runtime-функции
+- **THEN** compiler target вызывает локальное функциональное значение
+
 ### Requirement: Lowering SHALL eliminate destructuring let bindings
 
 Lowering SHALL преобразовывать `let*` bindings и `fn*` parameter patterns с sequential или associative patterns в bindings только с symbol слева. Для каждого destructuring `let*` RHS lowering SHALL вычислять RHS ровно один раз во временное имя через `Gensym`, а для каждого non-symbol parameter pattern SHALL создавать один fresh symbol parameter через `Gensym` и initial bindings в function body. Затем lowering SHALL создавать leaf bindings с core-вызовами `get`. JavaScript и Java generators SHALL не содержать специальной логики для destructuring patterns.

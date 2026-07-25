@@ -149,8 +149,11 @@ let rec compile_expr ctx = function
       compile_expr ctx instance ^ "." ^ Symbol_munge.munge method_name ^ "("
       ^ String.concat ", " (List.map (compile_expr ctx) args)
       ^ ")"
-  | SList (_, _, SAtom (_, name) :: args) ->
-      compile_qualified_name ctx name ^ "(" ^ String.concat ", " (List.map (compile_expr ctx) args) ^ ")"
+  | SList (meta, _, SAtom (_, name) :: args) ->
+      let compiled_args = String.concat ", " (List.map (compile_expr ctx) args) in
+      if StringSet.mem name ctx.locals then
+        "((" ^ fn_interface meta name (List.length args) ^ ") " ^ java_local_name name ^ ").call(" ^ compiled_args ^ ")"
+      else compile_qualified_name ctx name ^ "(" ^ compiled_args ^ ")"
   | SList (_, _, name :: args) ->
       compile_expr ctx name ^ ".call(" ^ String.concat ", " (List.map (compile_expr ctx) args) ^ ")"
   | SList _ as code -> invalid_sexpr __LOC__ code
