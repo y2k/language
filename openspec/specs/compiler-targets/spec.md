@@ -34,6 +34,11 @@ JavaScript и Java compiler targets SHALL разрешать символ в п�
 - **WHEN** top-level функция принимает лямбду параметром и вызывает этот параметр с поддерживаемой арностью
 - **THEN** JavaScript и Java output компилируются и возвращают тот же результат, что и eval
 
+#### Scenario: Call a lambda from a sequential local binding
+- **WHEN** функциональное значение связано обычным или созданным destructuring local binding и вызывается в следующей форме lexical body
+- **THEN** JavaScript и Java targets вызывают локальное значение
+- **AND** Java output компилируется и возвращает тот же результат, что и eval
+
 #### Scenario: Local function value shadows a non-local function
 - **WHEN** символ локального функционального значения совпадает с именем top-level или runtime-функции
 - **THEN** compiler target вызывает локальное функциональное значение

@@ -83,14 +83,8 @@ let rec compile_expr ctx = function
               ctx.locals args;
         }
       in
-      let rec compile_body = function
-        | [ body ] -> "return " ^ compile_expr ctx body ^ ";"
-        | body :: rest -> compile_expr ctx body ^ ";\n" ^ compile_body rest
-        | [] -> "return null;"
-      in
-      let rec compile_void_body = function
-        | [] -> []
-        | body :: rest -> (compile_expr ctx body ^ ";") :: compile_void_body rest
+      let compile_value_body () =
+        compile_body ctx ~last:(fun expr -> "return " ^ expr ^ ";") ~empty:[ "return null;" ] body |> String.concat "\n"
       in
       let params =
         args |> List.map (function SAtom (_, x) -> java_local_name x | _ -> failwith __LOC__) |> String.concat ", "
@@ -98,7 +92,11 @@ let rec compile_expr ctx = function
       (match parse_java_lambda_annotation meta.type_annotation with
         | Some { target_type; return_mode } ->
             let exception_name = java_local_name (Gensym.gensym_string meta) in
-            let body = match return_mode with Value -> [ compile_body body ] | Void -> compile_void_body body in
+            let body =
+              match return_mode with
+              | Value -> [ compile_value_body () ]
+              | Void -> compile_body ctx ~last:(fun expr -> expr ^ ";") ~empty:[] body
+            in
             [
               [ "((" ^ target_type ^ ")"; "(" ^ params ^ ") -> {"; "try {" ];
               body;
@@ -108,7 +106,9 @@ let rec compile_expr ctx = function
             ]
             |> List.concat
         | None ->
-            [ "((" ^ fn_interface meta "" (List.length args) ^ ")"; "(" ^ params ^ ") -> {"; compile_body body; "})" ])
+            [
+              "((" ^ fn_interface meta "" (List.length args) ^ ")"; "(" ^ params ^ ") -> {"; compile_value_body (); "})";
+            ])
       |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
   | SList (_, _, [ SAtom (_, "cast"); SAtom (_, type_name); value ]) ->
@@ -136,12 +136,7 @@ let rec compile_expr ctx = function
         | _ -> failwith __LOC__
       in
       let bindings, ctx = compile_let_binding ctx bingins in
-      let rec compile_body = function
-        | [] -> []
-        | [ expr ] -> [ compile_expr ctx expr ]
-        | expr :: rest -> (compile_expr ctx expr ^ ";") :: compile_body rest
-      in
-      bindings @ compile_body body |> String.concat "\n"
+      bindings @ compile_body ctx ~last:(fun expr -> expr) ~empty:[] body |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "set!"); SAtom (_, name); value ]) -> java_local_name name ^ " = " ^ compile_expr ctx value
   | SList (_, _, SAtom (_, "new") :: SAtom (_, class_name) :: args) ->
       "new " ^ compile_qualified_name ctx class_name ^ "(" ^ String.concat ", " (List.map (compile_expr ctx) args) ^ ")"
@@ -158,6 +153,18 @@ let rec compile_expr ctx = function
       compile_expr ctx name ^ ".call(" ^ String.concat ", " (List.map (compile_expr ctx) args) ^ ")"
   | SList _ as code -> invalid_sexpr __LOC__ code
 
+and compile_body ctx ~last ~empty = function
+  | [] -> empty
+  | [ expr ] -> [ last (compile_expr ctx expr) ]
+  | expr :: rest ->
+      let statement = compile_expr ctx expr ^ ";" in
+      let ctx =
+        match expr with
+        | SList (_, _, [ SAtom (_, "let*"); SAtom (_, name); _ ]) -> { ctx with locals = StringSet.add name ctx.locals }
+        | _ -> ctx
+      in
+      statement :: compile_body ctx ~last ~empty rest
+
 let compile_function ctx code name args body =
   let compile_arg = function SAtom (_, name) -> "Object " ^ java_local_name name | _ -> invalid_sexpr __LOC__ code in
   let locals =
@@ -166,17 +173,13 @@ let compile_function ctx code name args body =
       StringSet.empty args
   in
   let ctx = { ctx with locals } in
-  let rec compile_body = function
-    | [] -> [ "return null;" ]
-    | [ body ] -> [ "return " ^ compile_expr ctx body ^ ";" ]
-    | body :: rest -> (compile_expr ctx body ^ ";") :: compile_body rest
-  in
   [
     "static Object " ^ Symbol_munge.munge name ^ "("
     ^ String.concat ", " (List.map compile_arg args)
     ^ ") throws Exception {";
   ]
-  @ compile_body body @ [ "}" ]
+  @ compile_body ctx ~last:(fun expr -> "return " ^ expr ^ ";") ~empty:[ "return null;" ] body
+  @ [ "}" ]
 
 let compile_statement ctx = function
   | SList (_, _, SAtom (_, "compiler/ns") :: _) -> []
