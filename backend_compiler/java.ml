@@ -29,10 +29,13 @@ let nested_class_name name =
 let invalid_sexpr loc ((SAtom (meta, _) | SList (meta, _, _)) as code) =
   Printf.sprintf "%s\n%s [%d:%d]" loc (show_sexpr code) meta.loc.line meta.loc.column |> failwith
 
-let fn_interface name arity =
+let fn_interface meta name arity =
   match arity with
-  | 0 | 1 | 2 -> "Fn" ^ string_of_int arity
-  | _ -> failwith ("Java backend does not support function arity " ^ string_of_int arity ^ " for " ^ name)
+  | 0 | 1 | 2 | 3 | 4 -> "Fn" ^ string_of_int arity
+  | _ ->
+      Printf.sprintf "Java backend does not support function arity %d for %s [%d:%d]" arity name meta.loc.line
+        meta.loc.column
+      |> failwith
 
 let parse_java_lambda_annotation = function
   | None -> None
@@ -46,14 +49,14 @@ let parse_java_lambda_annotation = function
         Some { target_type; return_mode = Void })
       else Some { target_type = annotation; return_mode = Value }
 
-let compile_atom ctx name =
+let compile_atom ctx meta name =
   if name = "nil" then "null"
   else if is_number name then name
   else if is_string name then java_string (string_value name)
   else if StringSet.mem name ctx.locals then java_local_name name
   else
     match StringMap.find_opt name ctx.top_fns with
-    | Some arity -> "(" ^ fn_interface name arity ^ ") user::" ^ Symbol_munge.munge name
+    | Some arity -> "(" ^ fn_interface meta name arity ^ ") user::" ^ Symbol_munge.munge name
     | None -> Symbol_munge.munge name
 
 let compile_qualified_name ctx name =
@@ -69,7 +72,7 @@ let rec compile_quote = function
   | SList (_, _, items) -> "list(" ^ String.concat ", " (List.map compile_quote items) ^ ")"
 
 let rec compile_expr ctx = function
-  | SAtom (_, name) -> compile_atom ctx name
+  | SAtom (meta, name) -> compile_atom ctx meta name
   | SList (meta, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ->
       let ctx =
         {
@@ -104,7 +107,8 @@ let rec compile_expr ctx = function
               ];
             ]
             |> List.concat
-        | None -> [ "((" ^ fn_interface "" (List.length args) ^ ")"; "(" ^ params ^ ") -> {"; compile_body body; "})" ])
+        | None ->
+            [ "((" ^ fn_interface meta "" (List.length args) ^ ")"; "(" ^ params ^ ") -> {"; compile_body body; "})" ])
       |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
   | SList (_, _, [ SAtom (_, "cast"); SAtom (_, type_name); value ]) ->
@@ -177,11 +181,11 @@ let compile_statement ctx = function
   | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ]) as
     code ->
       compile_function ctx code name args body
-  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SAtom (_, value) ]) ->
+  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SAtom (value_meta, value) ]) ->
       let value =
         match StringMap.find_opt value ctx.top_fns with
-        | Some _ -> compile_atom { ctx with locals = StringSet.empty } value
-        | None -> compile_atom { ctx with locals = StringSet.empty } value
+        | Some _ -> compile_atom { ctx with locals = StringSet.empty } value_meta value
+        | None -> compile_atom { ctx with locals = StringSet.empty } value_meta value
       in
       [ "static Object " ^ Symbol_munge.munge name ^ " = " ^ value ^ ";" ]
   | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
@@ -195,9 +199,10 @@ let compile_statement ctx = function
 
 let collect_top_fns sexprs =
   let collect top_fns = function
-    | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: _) ]) ->
+    | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: _) ])
+      ->
         let arity = List.length args in
-        ignore (fn_interface name arity);
+        ignore (fn_interface meta name arity);
         StringMap.add name arity top_fns
     | _ -> top_fns
   in

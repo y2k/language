@@ -250,6 +250,11 @@ let void_annotation_requires_type () =
   (fn [] nil))
 |}))
 
+let unsupported_function_arity_reports_location () =
+  Alcotest.check_raises "unsupported arity location"
+    (Failure "Java backend does not support function arity 5 for test [2:1]") (fun () ->
+      ignore (compile "\n(defn test [a b c d e] nil)"))
+
 let gen_class () =
   let java =
     compile
@@ -308,6 +313,8 @@ let () =
           Alcotest.test_case "typed consumer interop" `Quick typed_consumer_interop;
           Alcotest.test_case "annotated parameters" `Quick annotated_parameters;
           Alcotest.test_case "void annotation requires type" `Quick void_annotation_requires_type;
+          Alcotest.test_case "unsupported function arity reports location" `Quick
+            unsupported_function_arity_reports_location;
           Alcotest.test_case "gen-class" `Quick gen_class;
         ] );
     ]
