@@ -87,6 +87,22 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 - **THEN** target runtime возвращает соответствующее значение
 - **AND** отсутствующий индекс или ключ возвращает `nil`/`null`
 
+### Requirement: Compiler target runtimes SHALL provide basic two-argument equality
+
+JavaScript и Java runtimes SHALL предоставлять `_EQ_` для сравнения ровно двух значений. Для `nil`, boolean, string и integer значений одного типа результат SHALL быть `true`, когда значения равны, и `false`, когда они различаются.
+
+#### Scenario: Equal scalar values
+- **WHEN** compiled source вызывает `(= left right)` с двумя равными `nil`, boolean, string или integer значениями одного типа
+- **THEN** JavaScript и Java target возвращают `true`
+
+#### Scenario: Unequal scalar values
+- **WHEN** compiled source вызывает `(= left right)` с двумя различными boolean, string или integer значениями одного типа
+- **THEN** JavaScript и Java target возвращают `false`
+
+#### Scenario: JavaScript runtime import
+- **WHEN** JavaScript source содержит вызов `=`
+- **THEN** generated runtime import предоставляет identifier `_EQ_`
+
 ### Requirement: Compiler target runtimes SHALL support reduce with an initial value
 
 JavaScript и Java runtimes SHALL поддерживать `(reduce fn init collection)` для list, выполняя left fold по всем элементам `collection` начиная с `init`. Существующая форма `(reduce fn collection)` SHALL сохранить текущее поведение.
