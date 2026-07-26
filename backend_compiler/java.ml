@@ -122,10 +122,14 @@ let rec compile_expr ctx = function
         "}";
       ]
       |> String.concat "\n"
-  | SList (_, _, [ SAtom (_, "let*"); SAtom (_, key); SAtom (_, "nil") ]) ->
-      "Object " ^ java_local_name key ^ " = " ^ "null" ^ ";"
-  | SList (_, _, [ SAtom (_, "let*"); SAtom (_, key); value ]) ->
-      "var " ^ java_local_name key ^ " = " ^ compile_expr ctx value ^ ";"
+  | SList (_, _, [ SAtom (_, "let*"); SAtom (key_meta, key); value ]) -> (
+      let value_java = compile_expr ctx value in
+      match (key_meta.type_annotation, value) with
+      | Some type_name, SList (_, _, [ SAtom (_, "cast"); SAtom (_, cast_type); _ ]) when type_name = cast_type ->
+          "var " ^ java_local_name key ^ " = " ^ value_java ^ ";"
+      | Some type_name, _ -> "var " ^ java_local_name key ^ " = ((" ^ type_name ^ ") " ^ value_java ^ ");"
+      | None, SAtom (_, "nil") -> "Object " ^ java_local_name key ^ " = null;"
+      | None, _ -> "var " ^ java_local_name key ^ " = " ^ value_java ^ ";")
   | SList (_, _, SAtom (_, "let*") :: SList (_, _, bingins) :: body) ->
       let rec compile_let_binding ctx = function
         | [] -> ([], ctx)
