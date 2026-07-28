@@ -63,6 +63,51 @@ let annotated_fn_parameters () =
 let annotated_defn_parameter () =
   check_parameter_casts "(defn size [^java.util.List xs] (.size xs))" [ ("xs", "java.util.List") ]
 
+let case_parts input =
+  match parse_one input with
+  | SList (_, _, [ SAtom (_, "let*"); SList (_, _, [ SAtom (_, name); value ]); body ]) -> (name, value, body)
+  | sexpr -> Alcotest.failf "expected case expansion, got %s" (Frontend.show_sexpr sexpr)
+
+let case_with_fallback () =
+  let name, value, body = case_parts "(case (source) 1 one 2 two other)" in
+  Alcotest.(check string) "value evaluated in binding" "(source)" (Frontend.show_sexpr value);
+  match body with
+  | SList
+      ( _,
+        _,
+        [
+          SAtom (_, "if");
+          SList (_, _, [ SAtom (_, "="); SAtom (_, first_name); SAtom (_, "1") ]);
+          SAtom (_, "one");
+          SList
+            ( _,
+              _,
+              [
+                SAtom (_, "if");
+                SList (_, _, [ SAtom (_, "="); SAtom (_, second_name); SAtom (_, "2") ]);
+                SAtom (_, "two");
+                SAtom (_, "other");
+              ] );
+        ] ) ->
+      Alcotest.(check string) "first comparison uses binding" name first_name;
+      Alcotest.(check string) "second comparison uses binding" name second_name
+  | sexpr -> Alcotest.failf "expected nested case conditions, got %s" (Frontend.show_sexpr sexpr)
+
+let case_without_fallback () =
+  let name, _, body = case_parts "(case value 1 one)" in
+  match body with
+  | SList
+      ( _,
+        _,
+        [
+          SAtom (_, "if");
+          SList (_, _, [ SAtom (_, "="); SAtom (_, compared_name); SAtom (_, "1") ]);
+          SAtom (_, "one");
+          SAtom (_, "nil");
+        ] ) ->
+      Alcotest.(check string) "comparison uses binding" name compared_name
+  | sexpr -> Alcotest.failf "expected nil case fallback, got %s" (Frontend.show_sexpr sexpr)
+
 let () =
   Alcotest.run "frontend desugar"
     [
@@ -76,5 +121,7 @@ let () =
           Alcotest.test_case "let associative pattern" `Quick let_associative_pattern;
           Alcotest.test_case "annotated fn parameters" `Quick annotated_fn_parameters;
           Alcotest.test_case "annotated defn parameter" `Quick annotated_defn_parameter;
+          Alcotest.test_case "case with fallback" `Quick case_with_fallback;
+          Alcotest.test_case "case without fallback" `Quick case_without_fallback;
         ] );
     ]

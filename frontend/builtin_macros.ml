@@ -34,6 +34,21 @@ let rec or_expr meta = function
 let and_macro = function SList (meta, Paren, SAtom (_, "and") :: items) -> Some (and_expr meta items) | _ -> None
 let or_macro = function SList (meta, Paren, SAtom (_, "or") :: items) -> Some (or_expr meta items) | _ -> None
 
+let case_macro = function
+  | SList (meta, Paren, SAtom (_, "case") :: value :: clauses) ->
+      let name = Gensym.gensym meta in
+      let rec expand = function
+        | [] -> atom meta "nil"
+        | [ fallback ] -> fallback
+        | matching :: result :: rest ->
+            SList
+              ( meta,
+                Paren,
+                [ atom meta "if"; SList (meta, Paren, [ atom meta "="; name; matching ]); result; expand rest ] )
+      in
+      Some (SList (meta, Paren, [ atom meta "let*"; SList (meta, Paren, [ name; value ]); expand clauses ]))
+  | _ -> None
+
 let keyword_macro = function
   | SAtom (meta, name) when String.length name > 1 && String.starts_with ~prefix:":" name ->
       Some (atom meta ("\"" ^ String.sub name 1 (String.length name - 1) ^ "\""))
@@ -155,6 +170,7 @@ let builtin_macros =
   [
     and_macro;
     or_macro;
+    case_macro;
     thread_first_macro;
     thread_last_macro;
     defn_macro;
