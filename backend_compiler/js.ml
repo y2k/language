@@ -39,6 +39,8 @@ let rec compile_expr = function
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
   | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
       "const " ^ Symbol_munge.munge name ^ " = " ^ compile_expr value
+  (* ponytail: only render the valid ESM form; export validation is out of scope. *)
+  | SList (_, _, [ SAtom (_, "export-default"); value ]) -> "export default " ^ compile_expr value
   | SList (_, _, SAtom (_, "fn*") :: SList (_, _, params) :: body) as code -> compile_fn code params body
   | SList (_, _, SAtom (_, "do") :: body) -> compile_body_iife body
   | SList (_, _, SAtom (_, "let*") :: SList (_, _, bindings) :: body) as code -> compile_let code bindings body

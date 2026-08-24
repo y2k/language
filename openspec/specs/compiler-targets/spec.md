@@ -139,7 +139,7 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 
 ### Requirement: The JavaScript compiler SHALL emit ES module code using the language runtime
 
-The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`.
+The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`.
 
 #### Scenario: Runtime import
 - **WHEN** JavaScript source is generated
@@ -164,6 +164,11 @@ The JavaScript target SHALL emit an import from `./language_runtime.js` and comp
 #### Scenario: JavaScript interop syntax
 - **WHEN** source uses `new` or `.` forms
 - **THEN** JavaScript emits constructor calls and instance method calls
+
+#### Scenario: Default export
+- **WHEN** source contains `(export-default {:fetch handler})`
+- **THEN** JavaScript emits `export default (hash_map)("fetch", handler);`
+- **AND** output does not invoke `export_default`
 
 ### Requirement: JavaScript compiler SHALL compile cast as a transparent expression
 

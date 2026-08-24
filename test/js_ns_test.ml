@@ -50,6 +50,29 @@ return (list)("column", (hash_map)("text", "Start"));
 });|}
     js
 
+let default_export () =
+  let js =
+    compile
+      {|
+(defn handle-fetch [request env ctx]
+  (Response. "OK"))
+
+(export-default
+ {:fetch (fn [request env ctx]
+           (handle-fetch request env ctx))})
+|}
+  in
+  Alcotest.(check string)
+    "generated js"
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+const handle_fetch = ((request, env, ctx) => {
+return new Response("OK");
+});
+export default (hash_map)("fetch", ((request, env, ctx) => {
+return (handle_fetch)(request, env, ctx);
+}));|}
+    js
+
 let instance_method_call () =
   let js = compile {|
 (defn test [value]
@@ -107,6 +130,7 @@ let () =
           Alcotest.test_case "require imports" `Quick require_imports;
           Alcotest.test_case "string require import" `Quick string_require_import;
           Alcotest.test_case "string literals" `Quick string_literals;
+          Alcotest.test_case "default export" `Quick default_export;
           Alcotest.test_case "instance method call" `Quick instance_method_call;
           Alcotest.test_case "constructor call" `Quick constructor_call;
           Alcotest.test_case "constructor call with nested arg" `Quick constructor_call_with_nested_arg;
