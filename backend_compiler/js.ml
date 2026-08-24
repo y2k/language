@@ -10,7 +10,7 @@ let compile_atom name =
   if name = "nil" then "null"
   else if is_number name then name
   else if is_string name then js_string (string_value name)
-  else Symbol_munge.munge name
+  else Symbol_munge.munge name |> String.map (function '/' -> '.' | ch -> ch)
 
 let compile_constructor_name name = Symbol_munge.munge name |> String.map (function '/' -> '.' | ch -> ch)
 
@@ -34,7 +34,7 @@ let rec compile_expr = function
             ^ ".js\";")
         (List.map parse_pair requires)
       |> String.concat "\n"
-  | SAtom (_, name) -> compile_atom name |> String.map (function '/' -> '.' | ch -> ch)
+  | SAtom (_, name) -> compile_atom name
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
   | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->

@@ -139,7 +139,7 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 
 ### Requirement: The JavaScript compiler SHALL emit ES module code using the language runtime
 
-The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`.
+The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`. Строковые литералы SHALL сохранять исходное содержимое, включая `/`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`.
 
 #### Scenario: Runtime import
 - **WHEN** JavaScript source is generated
@@ -156,6 +156,10 @@ The JavaScript target SHALL emit an import from `./language_runtime.js` and comp
 #### Scenario: String npm package require
 - **WHEN** source contains `(:require ["wrangler" :as w])`
 - **THEN** JavaScript emits `import * as w from "wrangler"`
+
+#### Scenario: String literal with slash
+- **WHEN** source contains `(str "/")`
+- **THEN** JavaScript emits `(str)("/")`
 
 #### Scenario: Definitions and functions
 - **WHEN** a top-level `def` contains a function
