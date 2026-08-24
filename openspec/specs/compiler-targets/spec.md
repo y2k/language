@@ -139,15 +139,23 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 
 ### Requirement: The JavaScript compiler SHALL emit ES module code using the language runtime
 
-The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements.
+The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`.
 
 #### Scenario: Runtime import
 - **WHEN** JavaScript source is generated
 - **THEN** it begins with imports for runtime functions such as `list`, `hash_map`, `truthy`, `str`, arithmetic, `count`, `map`, and `reduce`
 
 #### Scenario: Namespace requires
-- **WHEN** `compiler/ns` contains require pairs
-- **THEN** JavaScript emits `import * as alias from "./path/to/namespace.js"`
+- **WHEN** source contains `(:require [io.math.core :as mc])`
+- **THEN** JavaScript emits `import * as mc from "./io/math/core.js"`
+
+#### Scenario: String Node module require
+- **WHEN** source contains `(:require ["node:test" :as t])`
+- **THEN** JavaScript emits `import * as t from "node:test"`
+
+#### Scenario: String npm package require
+- **WHEN** source contains `(:require ["wrangler" :as w])`
+- **THEN** JavaScript emits `import * as w from "wrangler"`
 
 #### Scenario: Definitions and functions
 - **WHEN** a top-level `def` contains a function

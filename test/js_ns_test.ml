@@ -24,6 +24,19 @@ return (mc.foo)(1);
 });|}
     js
 
+let string_require_import () =
+  let js = compile {|
+(ns app.main
+  (:require ["node:test" :as t])
+  (:require ["wrangler" :as w]))
+|} in
+  Alcotest.(check string)
+    "generated js"
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+import * as t from "node:test";
+import * as w from "wrangler";;|}
+    js
+
 let string_literals () =
   let js = compile {|
 (defn test []
@@ -92,6 +105,7 @@ let () =
       ( "compiler/ns",
         [
           Alcotest.test_case "require imports" `Quick require_imports;
+          Alcotest.test_case "string require import" `Quick string_require_import;
           Alcotest.test_case "string literals" `Quick string_literals;
           Alcotest.test_case "instance method call" `Quick instance_method_call;
           Alcotest.test_case "constructor call" `Quick constructor_call;

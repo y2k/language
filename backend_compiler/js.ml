@@ -25,9 +25,13 @@ let rec compile_expr = function
       in
       List.map
         (fun (namespace, alias) ->
-          "import * as " ^ string_value alias ^ " from \"./"
-          ^ String.map (fun c -> if c = '.' then '/' else c) (string_value namespace)
-          ^ ".js\";")
+          let namespace = string_value namespace in
+          (* Quoted content marks a source string require and is already an ESM specifier. *)
+          if is_string namespace then "import * as " ^ string_value alias ^ " from " ^ namespace ^ ";"
+          else
+            "import * as " ^ string_value alias ^ " from \"./"
+            ^ String.map (fun c -> if c = '.' then '/' else c) namespace
+            ^ ".js\";")
         (List.map parse_pair requires)
       |> String.concat "\n"
   | SAtom (_, name) -> compile_atom name |> String.map (function '/' -> '.' | ch -> ch)
