@@ -27,7 +27,8 @@ let rec compile_expr = function
         (fun (namespace, alias) ->
           let namespace = string_value namespace in
           (* Quoted content marks a source string require and is already an ESM specifier. *)
-          if is_string namespace then "import * as " ^ string_value alias ^ " from " ^ namespace ^ ";"
+          if is_string namespace then
+            "import * as " ^ (string_value alias |> Symbol_munge.munge) ^ " from " ^ namespace ^ ";"
           else
             "import * as " ^ string_value alias ^ " from \"./"
             ^ String.map (fun c -> if c = '.' then '/' else c) namespace

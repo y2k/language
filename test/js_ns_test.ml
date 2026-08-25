@@ -25,16 +25,21 @@ return (mc.foo)(1);
     js
 
 let string_require_import () =
-  let js = compile {|
+  let js =
+    compile
+      {|
 (ns app.main
-  (:require ["node:test" :as t])
-  (:require ["wrangler" :as w]))
-|} in
+   (:require ["node:test" :as t])
+   (:require ["wrangler" :as w])
+   (:require ["node:async_hooks" :as async-hooks]))
+|}
+  in
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 import * as t from "node:test";
-import * as w from "wrangler";;|}
+import * as w from "wrangler";
+import * as async_hooks from "node:async_hooks";;|}
     js
 
 let string_literal_with_slash () =
