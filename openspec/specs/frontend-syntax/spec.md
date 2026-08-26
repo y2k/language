@@ -48,15 +48,27 @@ The parser SHALL attach `^TYPE` metadata to the immediately following atom or li
 
 ### Requirement: Built-in macros SHALL desugar user syntax into core forms
 
-Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns.
+Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. После каждого раскрытия outer form SHALL снова проверяться built-in macros до тех пор, пока она не перестанет быть распознаваемой macro form; metadata результирующей формы SHALL сохраняться в последующих раскрытиях. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns. `(def- name value)` SHALL become core `(def name value)` with private metadata. `(defn- name params body...)` SHALL become private `(defn name params body...)` and complete the normal `defn` and `fn` expansions into a private core `def` containing `fn*`.
 
 #### Scenario: Desugar collection literals
 - **WHEN** the input contains `[1 2]` or `{:a 1}`
 - **THEN** vectors become `(list 1 2)` and maps become `(hash-map "a" 1)` after keyword expansion
 
 #### Scenario: Desugar binding and function forms
-- **WHEN** the input contains `let`, `fn`, `defn`, or `defn-`
-- **THEN** they become `let*`, `fn*`, or `def` plus `fn`
+- **WHEN** the input contains `let`, `fn`, or `defn`
+- **THEN** they become `let*`, `fn*`, or a non-private `def` plus `fn*`
+
+#### Scenario: Desugar private value definition
+- **WHEN** the input contains `(def- storage value)`
+- **THEN** it becomes a core `def` of `storage` with `value` and private metadata
+
+#### Scenario: Desugar private function definition through public function macro
+- **WHEN** the input contains `(defn- helper [x] x)`
+- **THEN** it first becomes a private `defn`, then a private core `def` containing `fn*`
+
+#### Scenario: Preserve private metadata through chained macro expansion
+- **WHEN** a macro expansion produces another recognized macro form with private metadata
+- **THEN** the later expansion receives and preserves that private metadata
 
 #### Scenario: Preserve sequential let binding patterns
 - **WHEN** the input contains `(let [[a b] xs] body)`

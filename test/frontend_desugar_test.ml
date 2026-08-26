@@ -63,6 +63,18 @@ let annotated_fn_parameters () =
 let annotated_defn_parameter () =
   check_parameter_casts "(defn size [^java.util.List xs] (.size xs))" [ ("xs", "java.util.List") ]
 
+let private_def () =
+  match parse_one "(def- storage 1)" with
+  | SList ({ private_; _ }, _, [ SAtom (_, "def"); SAtom (_, "storage"); SAtom (_, "1") ]) ->
+      Alcotest.(check bool) "private definition" true private_
+  | sexpr -> Alcotest.failf "expected private def, got %s" (Frontend.show_sexpr sexpr)
+
+let private_defn () =
+  match parse_one "(defn- helper [x] x)" with
+  | SList ({ private_; _ }, _, [ SAtom (_, "def"); SAtom (_, "helper"); SList (_, _, SAtom (_, "fn*") :: _) ]) ->
+      Alcotest.(check bool) "private function definition" true private_
+  | sexpr -> Alcotest.failf "expected private defn, got %s" (Frontend.show_sexpr sexpr)
+
 let case_parts input =
   match parse_one input with
   | SList (_, _, [ SAtom (_, "let*"); SList (_, _, [ SAtom (_, name); value ]); body ]) -> (name, value, body)
@@ -121,6 +133,8 @@ let () =
           Alcotest.test_case "let associative pattern" `Quick let_associative_pattern;
           Alcotest.test_case "annotated fn parameters" `Quick annotated_fn_parameters;
           Alcotest.test_case "annotated defn parameter" `Quick annotated_defn_parameter;
+          Alcotest.test_case "private def" `Quick private_def;
+          Alcotest.test_case "private defn" `Quick private_defn;
           Alcotest.test_case "case with fallback" `Quick case_with_fallback;
           Alcotest.test_case "case without fallback" `Quick case_without_fallback;
         ] );

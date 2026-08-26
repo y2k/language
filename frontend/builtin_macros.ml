@@ -90,10 +90,19 @@ let fn_macro = function
   | _ -> None
 
 let defn_macro = function
-  | SList (meta, _, SAtom (_, macro_name) :: SAtom (_, name) :: params :: body)
-    when macro_name = "defn" || macro_name = "defn-" ->
+  | SList (meta, _, SAtom (_, "defn") :: SAtom (_, name) :: params :: body) ->
       Some
         (SList (meta, Paren, [ atom meta "def"; atom meta name; SList (meta, Paren, atom meta "fn" :: params :: body) ]))
+  | _ -> None
+
+let private_def_macro = function
+  | SList (meta, _, [ SAtom (_, "def-"); SAtom (_, name); value ]) ->
+      Some (SList ({ meta with private_ = true }, Paren, [ atom meta "def"; atom meta name; value ]))
+  | _ -> None
+
+let private_defn_macro = function
+  | SList (meta, bracket, SAtom (_, "defn-") :: rest) ->
+      Some (SList ({ meta with private_ = true }, bracket, atom meta "defn" :: rest))
   | _ -> None
 
 let method_call_macro = function
@@ -173,6 +182,8 @@ let builtin_macros =
     case_macro;
     thread_first_macro;
     thread_last_macro;
+    private_def_macro;
+    private_defn_macro;
     defn_macro;
     constructor_macro;
     method_call_macro;

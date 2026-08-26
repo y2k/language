@@ -1,6 +1,6 @@
 type bracket = Paren | Bracket | Brace
 type loc = { line : int; column : int }
-type meta = { loc : loc; type_annotation : string option }
+type meta = { loc : loc; type_annotation : string option; private_ : bool }
 type sexpr = SList of meta * bracket * sexpr list | SAtom of meta * string
 
 let bracket_chars = function Paren -> ("(", ")") | Bracket -> ("[", "]") | Brace -> ("{", "}")

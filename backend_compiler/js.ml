@@ -38,8 +38,8 @@ let rec compile_expr = function
   | SAtom (_, name) -> compile_atom name
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
-  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
-      "const " ^ Symbol_munge.munge name ^ " = " ^ compile_expr value
+  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
+      (if meta.private_ then "" else "export ") ^ "const " ^ Symbol_munge.munge name ^ " = " ^ compile_expr value
   (* ponytail: only render the valid ESM form; export validation is out of scope. *)
   | SList (_, _, [ SAtom (_, "export-default"); value ]) -> "export default " ^ compile_expr value
   | SList (_, _, SAtom (_, "fn*") :: SList (_, _, params) :: body) as code -> compile_fn code params body

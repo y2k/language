@@ -19,7 +19,7 @@ let require_imports () =
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
 import * as mc from "./io/math/core.js";;
-const test = (() => {
+export const test = (() => {
 return (mc.foo)(1);
 });|}
     js
@@ -50,7 +50,7 @@ let string_literal_with_slash () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const test = (() => {
+export const test = (() => {
 return (list)("column", (hash_map)("text", "/"));
 });|}
     js
@@ -70,7 +70,7 @@ let default_export () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const handle_fetch = ((request, env, ctx) => {
+export const handle_fetch = ((request, env, ctx) => {
 return new Response("OK");
 });
 export default (hash_map)("fetch", ((request, env, ctx) => {
@@ -86,7 +86,7 @@ let instance_method_call () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const test = ((value) => {
+export const test = ((value) => {
 return value.toString();
 });|}
     js
@@ -99,7 +99,7 @@ let constructor_call () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const test = ((title) => {
+export const test = ((title) => {
 return new Widget(title);
 });|}
     js
@@ -112,7 +112,7 @@ let constructor_call_with_nested_arg () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const test = ((value) => {
+export const test = ((value) => {
 return new Widget(value.toString());
 });|}
     js
@@ -122,9 +122,29 @@ let cast_is_no_op () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-const test = ((value) => {
+export const test = ((value) => {
 return value;
 });|}
+    js
+
+let definition_visibility () =
+  let js = compile {|
+(defn public-f [] 1)
+(defn- private-f [] 2)
+(def public-value 3)
+(def- private-value 4)
+|} in
+  Alcotest.(check string)
+    "generated js"
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+export const public_f = (() => {
+return 1;
+});
+const private_f = (() => {
+return 2;
+});
+export const public_value = 3;
+const private_value = 4;|}
     js
 
 let () =
@@ -140,5 +160,6 @@ let () =
           Alcotest.test_case "constructor call" `Quick constructor_call;
           Alcotest.test_case "constructor call with nested arg" `Quick constructor_call_with_nested_arg;
           Alcotest.test_case "cast is no-op" `Quick cast_is_no_op;
+          Alcotest.test_case "definition visibility" `Quick definition_visibility;
         ] );
     ]

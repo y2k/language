@@ -7,7 +7,7 @@ let position_at input offset =
   in
   loop 0 1 1
 
-let make_meta input start_offset = { loc = position_at input start_offset; type_annotation = None }
+let make_meta input start_offset = { loc = position_at input start_offset; type_annotation = None; private_ = false }
 
 let parse_string input =
   let open Angstrom in
