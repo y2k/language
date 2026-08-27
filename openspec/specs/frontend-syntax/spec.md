@@ -48,11 +48,15 @@ The parser SHALL attach `^TYPE` metadata to the immediately following atom or li
 
 ### Requirement: Built-in macros SHALL desugar user syntax into core forms
 
-Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. После каждого раскрытия outer form SHALL снова проверяться built-in macros до тех пор, пока она не перестанет быть распознаваемой macro form; metadata результирующей формы SHALL сохраняться в последующих раскрытиях. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns. `(def- name value)` SHALL become core `(def name value)` with private metadata. `(defn- name params body...)` SHALL become private `(defn name params body...)` and complete the normal `defn` and `fn` expansions into a private core `def` containing `fn*`.
+Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. После каждого раскрытия outer form SHALL снова проверяться built-in macros до тех пор, пока она не перестанет быть распознаваемой macro form; metadata результирующей формы SHALL сохраняться в последующих раскрытиях. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns. `(def- name value)` SHALL become core `(def name value)` with private metadata. `(defn- name params body...)` SHALL become private `(defn name params body...)` and complete the normal `defn` and `fn` expansions into a private core `def` containing `fn*`. Двухаргументная форма `(:key collection)` SHALL раскрывать keyword-вызов в `(get collection "key")` до обычного преобразования keyword в строковый литерал.
 
 #### Scenario: Desugar collection literals
 - **WHEN** the input contains `[1 2]` or `{:a 1}`
 - **THEN** vectors become `(list 1 2)` and maps become `(hash-map "a" 1)` after keyword expansion
+
+#### Scenario: Desugar keyword lookup
+- **WHEN** the input contains `(:TELEGRAM_WEBHOOK_SECRET env)`
+- **THEN** it becomes `(get env "TELEGRAM_WEBHOOK_SECRET")`
 
 #### Scenario: Desugar binding and function forms
 - **WHEN** the input contains `let`, `fn`, or `defn`

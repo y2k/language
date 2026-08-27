@@ -12,6 +12,11 @@ let explicit_method_call_unchanged () = check_desugar "explicit method call" "(.
 let constructor_shorthand () = check_desugar "constructor shorthand" "(LocalDate. 2024 1 2)" "(new LocalDate 2024 1 2)"
 let let_sequential_pattern () = check_desugar "let sequential pattern" "(let [[a b] xs] a)" "(let* ((list a b) xs) a)"
 
+let keyword_lookup () =
+  check_desugar "keyword lookup" "(:TELEGRAM_WEBHOOK_SECRET env)" "(get env \"TELEGRAM_WEBHOOK_SECRET\")"
+
+let keyword_map_key () = check_desugar "keyword map key" "{:key value}" "(hash-map \"key\" value)"
+
 let multiple_import_vectors () =
   check_desugar "multiple import vectors" "(ns app.main (:import [java.time LocalDate] [java.util UUID]))"
     {|(compiler/ns
@@ -129,6 +134,8 @@ let () =
           Alcotest.test_case "explicit method call unchanged" `Quick explicit_method_call_unchanged;
           Alcotest.test_case "constructor shorthand" `Quick constructor_shorthand;
           Alcotest.test_case "let sequential pattern" `Quick let_sequential_pattern;
+          Alcotest.test_case "keyword lookup" `Quick keyword_lookup;
+          Alcotest.test_case "keyword map key" `Quick keyword_map_key;
           Alcotest.test_case "multiple import vectors" `Quick multiple_import_vectors;
           Alcotest.test_case "let associative pattern" `Quick let_associative_pattern;
           Alcotest.test_case "annotated fn parameters" `Quick annotated_fn_parameters;

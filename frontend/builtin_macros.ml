@@ -49,6 +49,16 @@ let case_macro = function
       Some (SList (meta, Paren, [ atom meta "let*"; SList (meta, Paren, [ name; value ]); expand clauses ]))
   | _ -> None
 
+let keyword_lookup_macro = function
+  | SList (meta, Paren, [ SAtom (key_meta, name); collection ])
+    when String.length name > 1 && String.starts_with ~prefix:":" name ->
+      Some
+        (SList
+           ( meta,
+             Paren,
+             [ atom meta "get"; collection; string_atom key_meta (String.sub name 1 (String.length name - 1)) ] ))
+  | _ -> None
+
 let keyword_macro = function
   | SAtom (meta, name) when String.length name > 1 && String.starts_with ~prefix:":" name ->
       Some (atom meta ("\"" ^ String.sub name 1 (String.length name - 1) ^ "\""))
@@ -190,6 +200,7 @@ let builtin_macros =
     gen_class_macro;
     fn_macro;
     Macro_ns.apply;
+    keyword_lookup_macro;
     keyword_macro;
     hash_map_macro;
     let_macro;
