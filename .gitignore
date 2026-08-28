@@ -9,5 +9,6 @@ _build/
 .opencode/
 *~
 
-playground.clj
+/opencode.json
 /tasks
+playground.clj

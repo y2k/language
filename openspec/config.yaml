@@ -3,3 +3,25 @@ schema: spec-driven
 context: |
   Language: OpenSpec discussion and artifacts are in Russian.
   Keep code identifiers, file paths, commands, language keywords, and quoted program output unchanged.
+
+  Проект реализует на OCaml небольшой язык, похожий на Clojure: исходный текст
+  разбирается в s-выражения с метаданными, встроенные макросы раскрываются в
+  core-формы, затем формы исполняются интерпретатором либо компилируются в
+  JavaScript или Java.
+
+  Стек: OCaml, Dune, Alcotest, Angstrom. Полная проверка: `make test`.
+  CLI: `dune exec ./bin/main.exe -- --target eval|js|java`.
+
+  `frontend/` содержит AST, парсер и раскрытие макросов; `backend_eval/` --
+  интерпретатор, стандартную библиотеку, пространства имен и загрузку
+  зависимостей; `backend_compiler/` -- генерацию JavaScript и Java и lowering;
+  `bin/runner.ml` -- общий вход CLI и тестов; `test/` -- целевые и sample-тесты.
+
+  `def` поддерживается только на верхнем уровне. Генерируемые идентификаторы
+  компилятора должны создаваться через `Gensym`. JavaScript sample-тесты
+  используют `language_runtime.js`, Java sample-тесты компилируются вместе с
+  `language_runtime.java`. В `test/samples/*.clj` первая строка содержит
+  ожидаемый вывод.
+
+  Неясное или неполное поведение фиксируется в
+  `openspec/specs/open-questions/spec.md`.
