@@ -139,7 +139,7 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 
 ### Requirement: The JavaScript compiler SHALL emit ES module code using the language runtime
 
-The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`; строковый `:require` SHALL сохранять свой module specifier как bare ESM import без добавления `./` или `.js`. Локальный алиас string require SHALL использовать стандартное munging символов, чтобы быть допустимым JavaScript identifier. Строковые литералы SHALL сохранять исходное содержимое, включая `/`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`. Public top-level `def` SHALL compile to an `export const` binding; top-level `def` with private metadata SHALL compile to a non-exported `const` binding.
+The JavaScript target SHALL emit an import from `./language_runtime.js` and compile language forms to JavaScript expressions/statements. Символьный namespace require SHALL компилироваться в относительный module specifier с расширением `.js`: compiler SHALL применять стандартное symbol munging к namespace, затем преобразовывать точки в `/`. Строковый `:require` SHALL сохранять свой module specifier как bare ESM import без munging, добавления `./` или `.js`. Локальный алиас string require SHALL использовать стандартное munging символов, чтобы быть допустимым JavaScript identifier. Строковые литералы SHALL сохранять исходное содержимое, включая `/`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`. Public top-level `def` SHALL compile to an `export const` binding; top-level `def` with private metadata SHALL compile to a non-exported `const` binding.
 
 #### Scenario: Runtime import
 - **WHEN** JavaScript source is generated
@@ -148,6 +148,14 @@ The JavaScript target SHALL emit an import from `./language_runtime.js` and comp
 #### Scenario: Namespace requires
 - **WHEN** source contains `(:require [io.math.core :as mc])`
 - **THEN** JavaScript emits `import * as mc from "./io/math/core.js"`
+
+#### Scenario: Hyphenated root namespace require
+- **WHEN** source contains `(:require [effect-fetch :as fetch])`
+- **THEN** JavaScript emits `import * as fetch from "./effect_fetch.js"`
+
+#### Scenario: Hyphenated dotted namespace require
+- **WHEN** source contains `(:require [effects-promise.fetch :as fetch])`
+- **THEN** JavaScript emits `import * as fetch from "./effects_promise/fetch.js"`
 
 #### Scenario: String Node module require
 - **WHEN** source contains `(:require ["node:test" :as t])`

@@ -8,8 +8,10 @@ let require_imports () =
     compile
       {|
 (ns app.main
-  (:require [io.math.core :as mc])
-  (:import [java.time LocalDate]))
+   (:require [io.math.core :as mc])
+   (:require [effect-fetch :as fetch])
+   (:require [effects-promise.fetch :as promise])
+   (:import [java.time LocalDate]))
 
 (defn test []
   (mc/foo 1))
@@ -18,7 +20,9 @@ let require_imports () =
   Alcotest.(check string)
     "generated js"
     {|import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-import * as mc from "./io/math/core.js";;
+import * as mc from "./io/math/core.js";
+import * as fetch from "./effect_fetch.js";
+import * as promise from "./effects_promise/fetch.js";;
 export const test = (() => {
 return (mc.foo)(1);
 });|}

@@ -31,7 +31,7 @@ let rec compile_expr = function
             "import * as " ^ (string_value alias |> Symbol_munge.munge) ^ " from " ^ namespace ^ ";"
           else
             "import * as " ^ string_value alias ^ " from \"./"
-            ^ String.map (fun c -> if c = '.' then '/' else c) namespace
+            ^ (namespace |> Symbol_munge.munge |> String.map (fun c -> if c = '.' then '/' else c))
             ^ ".js\";")
         (List.map parse_pair requires)
       |> String.concat "\n"
