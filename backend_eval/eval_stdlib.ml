@@ -78,6 +78,10 @@ let to_int name value =
       match int_of_string_opt value with Some value -> value | None -> raise (Eval_error (name ^ " expects numbers")))
   | _ -> raise (Eval_error (name ^ " expects numbers"))
 
+let compare_numbers name fn _ = function
+  | [ left; right ] -> Symbol (string_of_bool (fn (to_int name left) (to_int name right)))
+  | _ -> raise (Eval_error (name ^ " expects two numbers"))
+
 let fold_numbers name init fn args =
   args |> List.fold_left (fun acc value -> fn acc (to_int name value)) init |> string_of_int |> fun value ->
   Symbol value
@@ -107,6 +111,10 @@ let env =
   [
     ("list", Closure (Native list));
     ("=", Closure (Native equal));
+    (">", Closure (Native (compare_numbers ">" Stdlib.( > ))));
+    ("<", Closure (Native (compare_numbers "<" Stdlib.( < ))));
+    (">=", Closure (Native (compare_numbers ">=" Stdlib.( >= ))));
+    ("<=", Closure (Native (compare_numbers "<=" Stdlib.( <= ))));
     ("vector?", Closure (Native vector_QMARK_));
     ("concat", Closure (Native concat));
     ("hash-map", Closure (Native hash_map));
