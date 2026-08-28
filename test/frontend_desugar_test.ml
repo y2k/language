@@ -27,6 +27,23 @@ let multiple_import_vectors () =
 let let_associative_pattern () =
   check_desugar "let associative pattern" "(let [{:name n} user] n)" "(let* ((hash-map \"name\" n) user) n)"
 
+let let_reversed_associative_pattern () =
+  check_desugar "let reversed associative pattern" "(let [{url :url props :props} value] (str url props))"
+    "(let* ((hash-map \"url\" url \"props\" props) value) (str url props))"
+
+let fn_reversed_associative_pattern () =
+  check_desugar "fn reversed associative pattern" "(fn [{url :url}] url)" "(fn* ((hash-map \"url\" url)) url)"
+
+let nested_reversed_associative_pattern () =
+  check_desugar "nested reversed associative pattern" "(let [[{name :name} {{city :city} :address}] value] city)"
+    {|(let*
+ ((list (hash-map "name" name) (hash-map "address" (hash-map "city" city)))
+  value)
+ city)|}
+
+let reversed_pair_in_map_expression () =
+  check_desugar "reversed pair in map expression" "{url :url}" "(hash-map url \"url\")"
+
 let rec function_parts = function
   | SList
       ( _,
@@ -138,6 +155,10 @@ let () =
           Alcotest.test_case "keyword map key" `Quick keyword_map_key;
           Alcotest.test_case "multiple import vectors" `Quick multiple_import_vectors;
           Alcotest.test_case "let associative pattern" `Quick let_associative_pattern;
+          Alcotest.test_case "let reversed associative pattern" `Quick let_reversed_associative_pattern;
+          Alcotest.test_case "fn reversed associative pattern" `Quick fn_reversed_associative_pattern;
+          Alcotest.test_case "nested reversed associative pattern" `Quick nested_reversed_associative_pattern;
+          Alcotest.test_case "reversed pair in map expression" `Quick reversed_pair_in_map_expression;
           Alcotest.test_case "annotated fn parameters" `Quick annotated_fn_parameters;
           Alcotest.test_case "annotated defn parameter" `Quick annotated_defn_parameter;
           Alcotest.test_case "private def" `Quick private_def;

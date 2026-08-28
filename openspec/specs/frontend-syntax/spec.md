@@ -48,7 +48,7 @@ The parser SHALL attach `^TYPE` metadata to the immediately following atom or li
 
 ### Requirement: Built-in macros SHALL desugar user syntax into core forms
 
-Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. После каждого раскрытия outer form SHALL снова проверяться built-in macros до тех пор, пока она не перестанет быть распознаваемой macro form; metadata результирующей формы SHALL сохраняться в последующих раскрытиях. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns. `(def- name value)` SHALL become core `(def name value)` with private metadata. `(defn- name params body...)` SHALL become private `(defn name params body...)` and complete the normal `defn` and `fn` expansions into a private core `def` containing `fn*`. Двухаргументная форма `(:key collection)` SHALL раскрывать keyword-вызов в `(get collection "key")` до обычного преобразования keyword в строковый литерал.
+Macro expansion SHALL transform recognized syntactic forms before backend execution or compilation. После каждого раскрытия outer form SHALL снова проверяться built-in macros до тех пор, пока она не перестанет быть распознаваемой macro form; metadata результирующей формы SHALL сохраняться в последующих раскрытиях. Binding forms in `let` SHALL preserve pattern structure after normal collection and keyword expansion so backends can distinguish symbol, sequential, and associative binding patterns. Brace binding patterns in `let` and `fn` SHALL recursively normalize each reverse pair `binding :keyword` to the existing key-first form `:keyword binding` before collection and keyword expansion. Эта нормализация SHALL не применяться к обычным map-выражениям, прямым core-формам `let*`/`fn*` или явно записанным `(hash-map ...)` patterns. `(def- name value)` SHALL become core `(def name value)` with private metadata. `(defn- name params body...)` SHALL become private `(defn name params body...)` and complete the normal `defn` and `fn` expansions into a private core `def` containing `fn*`. Двухаргументная форма `(:key collection)` SHALL раскрывать keyword-вызов в `(get collection "key")` до обычного преобразования keyword в строковый литерал.
 
 #### Scenario: Desugar collection literals
 - **WHEN** the input contains `[1 2]` or `{:a 1}`
@@ -81,6 +81,22 @@ Macro expansion SHALL transform recognized syntactic forms before backend execut
 #### Scenario: Preserve associative let binding patterns
 - **WHEN** the input contains `(let [{:name n :age a} user] body)`
 - **THEN** macro expansion preserves the binding pattern as an associative pattern in the resulting `let*` bindings
+
+#### Scenario: Normalize reversed associative let bindings
+- **WHEN** the input contains `(let [{url :url props :props} value] body)`
+- **THEN** macro expansion produces canonical bindings `(hash-map "url" url "props" props)` in the resulting `let*`
+
+#### Scenario: Normalize reversed associative function parameters
+- **WHEN** a `fn`, `defn`, or `defn-` parameter contains `{url :url}`
+- **THEN** macro expansion produces a canonical `(hash-map "url" url)` parameter pattern in the resulting `fn*`
+
+#### Scenario: Normalize nested reversed associative bindings
+- **WHEN** a `let` binding or `fn` parameter contains reverse keyword pairs nested in sequential or associative brace patterns
+- **THEN** every nested reverse keyword pair is normalized to key-first order
+
+#### Scenario: Leave map expressions outside binding patterns unchanged
+- **WHEN** `{url :url}` occurs as a value expression rather than a `let` binding pattern or `fn` parameter
+- **THEN** macro expansion preserves its pair order and produces `(hash-map url "url")`
 
 #### Scenario: Preserve short-circuit behavior in logical macros
 - **WHEN** the input contains `and` or `or`

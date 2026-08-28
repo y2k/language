@@ -49,9 +49,10 @@ let case_macro = function
       Some (SList (meta, Paren, [ atom meta "let*"; SList (meta, Paren, [ name; value ]); expand clauses ]))
   | _ -> None
 
+let is_keyword name = String.length name > 1 && String.starts_with ~prefix:":" name
+
 let keyword_lookup_macro = function
-  | SList (meta, Paren, [ SAtom (key_meta, name); collection ])
-    when String.length name > 1 && String.starts_with ~prefix:":" name ->
+  | SList (meta, Paren, [ SAtom (key_meta, name); collection ]) when is_keyword name ->
       Some
         (SList
            ( meta,
@@ -60,7 +61,7 @@ let keyword_lookup_macro = function
   | _ -> None
 
 let keyword_macro = function
-  | SAtom (meta, name) when String.length name > 1 && String.starts_with ~prefix:":" name ->
+  | SAtom (meta, name) when is_keyword name ->
       Some (atom meta ("\"" ^ String.sub name 1 (String.length name - 1) ^ "\""))
   | _ -> None
 
@@ -72,14 +73,32 @@ let hash_map_macro = function
   | SList (meta, Brace, items) -> Some (SList (meta, Paren, atom meta "hash-map" :: items))
   | _ -> None
 
+let rec normalize_binding_pattern = function
+  | SList (meta, Bracket, patterns) -> SList (meta, Bracket, List.map normalize_binding_pattern patterns)
+  | SList (meta, Brace, patterns) ->
+      let rec normalize_pairs = function
+        | binding :: (SAtom (_, name) as keyword) :: rest when is_keyword name ->
+            keyword :: normalize_binding_pattern binding :: normalize_pairs rest
+        | key :: binding :: rest -> key :: normalize_binding_pattern binding :: normalize_pairs rest
+        | rest -> rest
+      in
+      SList (meta, Brace, normalize_pairs patterns)
+  | pattern -> pattern
+
+let rec normalize_bindings = function
+  | pattern :: value :: rest -> normalize_binding_pattern pattern :: value :: normalize_bindings rest
+  | rest -> rest
+
 let let_macro = function
   | SList (meta, bracket, SAtom (_, "let") :: SList (bm, _, bindings) :: body) ->
+      let bindings = normalize_bindings bindings in
       Some (SList (meta, bracket, atom meta "let*" :: SList (bm, Paren, bindings) :: body))
   | SList (meta, bracket, SAtom (_, "let") :: items) -> Some (SList (meta, bracket, atom meta "let*" :: items))
   | _ -> None
 
 let fn_macro = function
   | SList (meta, bracket, SAtom (_, "fn") :: SList (params_meta, _, params) :: body) ->
+      let params = List.map normalize_binding_pattern params in
       let params, bindings =
         List.fold_right
           (fun param (params, bindings) ->
