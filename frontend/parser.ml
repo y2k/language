@@ -23,7 +23,9 @@ let parse_string input =
   let symbol = with_loc (take_while1 (fun c -> not (delimiter c))) >>| fun (meta, value) -> SAtom (meta, value) in
   let quoted_string =
     let string_char =
-      char '\\' *> any_char >>| (fun c -> Printf.sprintf "\\%c" c) <|> (satisfy (fun c -> c <> '"') >>| String.make 1)
+      char '\\' *> any_char
+      >>| ( function 'n' -> "\n" | c -> Printf.sprintf "\\%c" c )
+      <|> (satisfy (fun c -> c <> '"') >>| String.make 1)
     in
     with_loc (char '"' *> many string_char <* char '"') >>| fun (meta, parts) ->
     SAtom (meta, "\"" ^ String.concat "" parts ^ "\"")

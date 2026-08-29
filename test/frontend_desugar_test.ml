@@ -7,6 +7,12 @@ let parse_one input =
   | Error message -> Alcotest.fail message
 
 let check_desugar name input expected = Alcotest.(check string) name expected (Frontend.show_sexpr (parse_one input))
+
+let newline_escape () =
+  match parse_one "\"a\\nb\"" with
+  | SAtom (_, value) -> Alcotest.(check string) "newline escape" "\"a\nb\"" value
+  | _ -> Alcotest.fail "expected string atom"
+
 let method_call_shorthand () = check_desugar "method call shorthand" "(.foo obj 1 2)" "(. obj foo 1 2)"
 let explicit_method_call_unchanged () = check_desugar "explicit method call" "(. obj foo 1 2)" "(. obj foo 1 2)"
 let constructor_shorthand () = check_desugar "constructor shorthand" "(LocalDate. 2024 1 2)" "(new LocalDate 2024 1 2)"
@@ -147,6 +153,7 @@ let () =
     [
       ( "interop",
         [
+          Alcotest.test_case "newline escape" `Quick newline_escape;
           Alcotest.test_case "method call shorthand" `Quick method_call_shorthand;
           Alcotest.test_case "explicit method call unchanged" `Quick explicit_method_call_unchanged;
           Alcotest.test_case "constructor shorthand" `Quick constructor_shorthand;
