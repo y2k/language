@@ -103,6 +103,22 @@ JavaScript и Java runtimes SHALL предоставлять `_EQ_` для ср�
 - **WHEN** JavaScript source содержит вызов `=`
 - **THEN** generated runtime import предоставляет identifier `_EQ_`
 
+### Requirement: Compiler target runtimes SHALL provide core logical negation
+
+JavaScript и Java runtimes SHALL предоставлять одноаргументную core-функцию `not`, которая возвращает boolean, противоположный language truthiness переданного значения.
+
+#### Scenario: Negate falsey values
+- **WHEN** compiled source вызывает `not` со значением `false` или `nil`
+- **THEN** JavaScript и Java target возвращают `true`
+
+#### Scenario: Negate truthy values
+- **WHEN** compiled source вызывает `not` с любым другим значением, включая integer `0`
+- **THEN** JavaScript и Java target возвращают `false`
+
+#### Scenario: JavaScript runtime import
+- **WHEN** compiler генерирует JavaScript module
+- **THEN** unconditional runtime import предоставляет identifier `not`
+
 ### Requirement: Compiler target runtimes SHALL provide binary integer comparisons
 
 JavaScript и Java runtimes SHALL предоставлять `_GT_`, `_LT_`, `_GT__EQ_` и `_LT__EQ_` для бинарного сравнения integer значений, представимых соответствующим target.

@@ -14,6 +14,11 @@ let equal _ = function
   | [] | [ _ ] -> Symbol "true"
   | first :: rest -> Symbol (if List.for_all (equal_value first) rest then "true" else "false")
 
+let not _ = function
+  | [ Symbol "false" ] | [ Symbol "nil" ] -> Symbol "true"
+  | [ _ ] -> Symbol "false"
+  | _ -> raise (Eval_error "not expects one value")
+
 let vector_QMARK_ _ = function
   | [ List _ ] -> Symbol "true"
   | [ _ ] -> Symbol "false"
@@ -111,6 +116,7 @@ let env =
   [
     ("list", Closure (Native list));
     ("=", Closure (Native equal));
+    ("not", Closure (Native not));
     (">", Closure (Native (compare_numbers ">" Stdlib.( > ))));
     ("<", Closure (Native (compare_numbers "<" Stdlib.( < ))));
     (">=", Closure (Native (compare_numbers ">=" Stdlib.( >= ))));

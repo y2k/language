@@ -126,7 +126,7 @@ Evaluator SHALL обработать `(cast TYPE value)` как core-форму,
 
 ### Requirement: The eval stdlib SHALL provide the implemented functions
 
-The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`.
+The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`.
 
 #### Scenario: Lists and hash maps
 - **WHEN** `list` is called with any arguments
@@ -141,6 +141,12 @@ The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `>`, `<`, `>=`
 - **THEN** it returns `true`
 - **WHEN** `=` receives multiple values
 - **THEN** it returns `true` only when all values are structurally equal runtime values
+
+#### Scenario: Logical negation
+- **WHEN** `not` receives `false` or `nil`
+- **THEN** it returns `true`
+- **WHEN** `not` receives any other runtime value
+- **THEN** it returns `false`
 
 #### Scenario: Integer comparisons
 - **WHEN** `>` or `<` receives two integer symbol values representable by evaluator

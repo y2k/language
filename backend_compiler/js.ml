@@ -97,8 +97,8 @@ and compile_statement = function
 
 let compile sexprs =
   let runtime_import =
-    "import { list, vector_QMARK_, concat, hash_map, truthy, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, \
-     _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from \
+    "import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, \
+     _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from \
      \"./language_runtime.js\";"
   in
   let sexprs = Gensym.run (fun () -> Lowering_expression_to_statement.lower sexprs) in
