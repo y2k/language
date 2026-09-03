@@ -71,7 +71,10 @@ cp prelude/language_runtime.js .
 node --input-type=module < program.js
 ```
 
-Generated JavaScript imports `./language_runtime.js`; keep the runtime alongside the generated module.
+Keep `language_runtime.js` in the JavaScript output root. A generated module without `ns`, or with a one-segment
+namespace, also lives in that root and imports `./language_runtime.js`. A nested namespace determines its path below
+the same root: `app.commands.add` maps to `app/commands/add.js`, which imports `../../language_runtime.js`. Symbolic
+namespace imports use the same output-root prefix followed by the required namespace path.
 
 Generate Java source:
 

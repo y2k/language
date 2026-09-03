@@ -6,6 +6,10 @@ let is_string name = String.length name >= 2 && name.[0] = '"' && name.[String.l
 let string_value value = String.sub value 1 (String.length value - 2)
 let js_string = Target_syntax.string_literal
 
+let output_root_prefix namespace =
+  let depth = String.fold_left (fun depth ch -> if ch = '.' then depth + 1 else depth) 0 namespace in
+  if depth = 0 then "./" else String.concat "" (List.init depth (fun _ -> "../"))
+
 let compile_atom name =
   if name = "nil" then "null"
   else if is_number name then name
@@ -18,11 +22,12 @@ let invalid_sexpr ((SAtom (meta, _) | SList (meta, _, _)) as code) =
   Printf.sprintf "%s line %d, pos %d" (show_sexpr code) meta.loc.line meta.loc.column |> failwith
 
 let rec compile_expr = function
-  | SList (_, _, [ SAtom (_, "compiler/ns"); _; SList (_, _, requires); _ ]) ->
+  | SList (_, _, [ SAtom (_, "compiler/ns"); SAtom (_, current_namespace); SList (_, _, requires); _ ]) ->
       let parse_pair = function
         | SList (_, _, [ SAtom (_, left); SAtom (_, right) ]) -> (left, right)
         | _ -> failwith "malformed compiler/ns pair"
       in
+      let root_prefix = current_namespace |> string_value |> output_root_prefix in
       List.map
         (fun (namespace, alias) ->
           let namespace = string_value namespace in
@@ -30,7 +35,7 @@ let rec compile_expr = function
           if is_string namespace then
             "import * as " ^ (string_value alias |> Symbol_munge.munge) ^ " from " ^ namespace ^ ";"
           else
-            "import * as " ^ string_value alias ^ " from \"./"
+            "import * as " ^ string_value alias ^ " from \"" ^ root_prefix
             ^ (namespace |> Symbol_munge.munge |> String.map (fun c -> if c = '.' then '/' else c))
             ^ ".js\";")
         (List.map parse_pair requires)
@@ -96,10 +101,19 @@ and compile_statement = function
   | expr -> compile_expr expr ^ ";"
 
 let compile sexprs =
+  let sexprs = Gensym.run (fun () -> Lowering_expression_to_statement.lower sexprs) in
+  let root_prefix =
+    List.find_map
+      (function
+        | SList (_, _, [ SAtom (_, "compiler/ns"); SAtom (_, namespace); _; _ ]) ->
+            Some (namespace |> string_value |> output_root_prefix)
+        | _ -> None)
+      sexprs
+    |> Option.value ~default:"./"
+  in
   let runtime_import =
     "import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, \
-     _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from \
-     \"./language_runtime.js\";"
+     _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from \"" ^ root_prefix
+    ^ "language_runtime.js\";"
   in
-  let sexprs = Gensym.run (fun () -> Lowering_expression_to_statement.lower sexprs) in
   runtime_import :: List.map (fun sexpr -> compile_expr sexpr ^ ";") sexprs |> String.concat "\n"

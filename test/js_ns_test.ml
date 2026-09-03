@@ -19,10 +19,10 @@ let require_imports () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
-import * as mc from "./io/math/core.js";
-import * as fetch from "./effect_fetch.js";
-import * as promise from "./effects_promise/fetch.js";;
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../language_runtime.js";
+import * as mc from "../io/math/core.js";
+import * as fetch from "../effect_fetch.js";
+import * as promise from "../effects_promise/fetch.js";;
 export const test = (() => {
 return (mc.foo)(1);
 });|}
@@ -40,10 +40,40 @@ let string_require_import () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../language_runtime.js";
 import * as t from "node:test";
 import * as w from "wrangler";
 import * as async_hooks from "node:async_hooks";;|}
+    js
+
+let root_namespace_imports () =
+  let js = compile {|
+(ns main (:require [db :as db]))
+|} in
+  Alcotest.(check string)
+    "generated js"
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+import * as db from "./db.js";;|}
+    js
+
+let nested_namespace_imports () =
+  let js =
+    compile
+      {|
+(ns app.commands.add
+   (:require [app.commands :as parent])
+   (:require [app.commands.remove :as sibling])
+   (:require [app.commands.add.audit :as child])
+   (:require [other.feature.worker :as foreign]))
+|}
+  in
+  Alcotest.(check string)
+    "generated js"
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../../language_runtime.js";
+import * as parent from "../../app/commands.js";
+import * as sibling from "../../app/commands/remove.js";
+import * as child from "../../app/commands/add/audit.js";
+import * as foreign from "../../other/feature/worker.js";;|}
     js
 
 let string_literal_with_slash () =
@@ -158,6 +188,8 @@ let () =
         [
           Alcotest.test_case "require imports" `Quick require_imports;
           Alcotest.test_case "string require import" `Quick string_require_import;
+          Alcotest.test_case "root namespace imports" `Quick root_namespace_imports;
+          Alcotest.test_case "nested namespace imports" `Quick nested_namespace_imports;
           Alcotest.test_case "string literal with slash" `Quick string_literal_with_slash;
           Alcotest.test_case "default export" `Quick default_export;
           Alcotest.test_case "instance method call" `Quick instance_method_call;
