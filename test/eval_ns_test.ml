@@ -41,6 +41,15 @@ let get_reads_list_by_index () =
   Alcotest.(check string) "result" "20 nil" (last_symbol {|(str (get [10 20 30] 1) " " (get [10] 2))|})
 
 let cast_is_no_op () = Alcotest.(check string) "result" "ab" (last_symbol {|(cast java.util.List (str "a" "b"))|})
+let assert_returns_true () = Alcotest.(check string) "result" "true" (last_symbol {|(assert "ok")|})
+
+let assert_rejects_false () =
+  Alcotest.check_raises "assertion failed" (Backend_eval.Eval.Eval_error "assertion failed") (fun () ->
+      ignore (eval {|(assert false)|}))
+
+let assert_rejects_nil () =
+  Alcotest.check_raises "assertion failed" (Backend_eval.Eval.Eval_error "assertion failed") (fun () ->
+      ignore (eval {|(assert nil)|}))
 
 let let_binds_nested_patterns () =
   Alcotest.(check string)
@@ -70,6 +79,9 @@ let () =
         [
           Alcotest.test_case "get reads list by index" `Quick get_reads_list_by_index;
           Alcotest.test_case "cast is no-op" `Quick cast_is_no_op;
+          Alcotest.test_case "assert returns true" `Quick assert_returns_true;
+          Alcotest.test_case "assert rejects false" `Quick assert_rejects_false;
+          Alcotest.test_case "assert rejects nil" `Quick assert_rejects_nil;
           Alcotest.test_case "let binds nested patterns" `Quick let_binds_nested_patterns;
           Alcotest.test_case "fn binds nested patterns" `Quick fn_binds_nested_patterns;
         ] );

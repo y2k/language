@@ -19,6 +19,11 @@ let not _ = function
   | [ _ ] -> Symbol "false"
   | _ -> raise (Eval_error "not expects one value")
 
+let assert_ _ = function
+  | [ Symbol "false" ] | [ Symbol "nil" ] -> raise (Eval_error "assertion failed")
+  | [ _ ] -> Symbol "true"
+  | _ -> raise (Eval_error "assert expects one value")
+
 let vector_QMARK_ _ = function
   | [ List _ ] -> Symbol "true"
   | [ _ ] -> Symbol "false"
@@ -117,6 +122,7 @@ let env =
     ("list", Closure (Native list));
     ("=", Closure (Native equal));
     ("not", Closure (Native not));
+    ("assert", Closure (Native assert_));
     (">", Closure (Native (compare_numbers ">" Stdlib.( > ))));
     ("<", Closure (Native (compare_numbers "<" Stdlib.( < ))));
     (">=", Closure (Native (compare_numbers ">=" Stdlib.( >= ))));
