@@ -117,6 +117,12 @@ let rec to_string = function
 
 let str _ args = Symbol (String.concat "" (List.map to_string args))
 
+let slurp _ = function
+  | [ Symbol path ] -> (
+      try Symbol (In_channel.with_open_text path In_channel.input_all)
+      with Sys_error _ -> raise (Eval_error ("slurp failed: " ^ path)))
+  | _ -> raise (Eval_error "slurp expects one path")
+
 let env =
   [
     ("list", Closure (Native list));
@@ -132,6 +138,7 @@ let env =
     ("hash-map", Closure (Native hash_map));
     ("get", Closure (Native get));
     ("str", Closure (Native str));
+    ("slurp", Closure (Native slurp));
     ("count", Closure (Native count));
     ("map", Closure (Native map));
     ("reduce", Closure (Native reduce));

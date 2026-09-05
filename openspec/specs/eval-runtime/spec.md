@@ -126,7 +126,7 @@ Evaluator SHALL обработать `(cast TYPE value)` как core-форму,
 
 ### Requirement: The eval stdlib SHALL provide the implemented functions
 
-The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`.
+The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `slurp`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`. `slurp` SHALL разрешать relative path от текущего рабочего каталога процесса.
 
 #### Scenario: Lists and hash maps
 - **WHEN** `list` is called with any arguments
@@ -190,6 +190,19 @@ The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<
 #### Scenario: String conversion
 - **WHEN** `str` receives runtime values
 - **THEN** it returns one symbol value by concatenating symbols as their text, lists as parenthesized item strings, hash maps as braced key/value strings in stored order, and closures as `#<function>`
+
+#### Scenario: Чтение текстового файла
+- **WHEN** `(slurp "notes.txt")` исполняется из рабочего каталога, где `notes.txt` доступен для чтения и содержит несколько строк
+- **THEN** функция разрешает `notes.txt` относительно этого рабочего каталога
+- **AND** возвращает symbol value с полным содержимым файла, включая переводы строк
+
+#### Scenario: Неверные аргументы slurp
+- **WHEN** `slurp` получает не ровно один symbol value
+- **THEN** evaluation вызывает `Eval_error` с `slurp expects one path`
+
+#### Scenario: Ошибка чтения файла
+- **WHEN** `slurp` не может открыть или прочитать файл по `PATH`
+- **THEN** evaluation вызывает `Eval_error` с `slurp failed: PATH`
 
 #### Scenario: Arithmetic
 - **WHEN** arithmetic stdlib functions receive integer symbol values

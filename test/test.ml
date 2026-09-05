@@ -38,7 +38,9 @@ let run_language target input =
   | Ok output -> output
   | Error message -> Alcotest.failf "compiler failed: %s" message
 
-let run path = trim_output (run_language "eval" (eval_input path))
+let run path =
+  match Language_main.Runner.run ~target:"eval" (eval_input path) with Ok output | Error output -> trim_output output
+
 let ensure_runtime_js () = write_file "language_runtime.js" (read_file (Sys.getenv "RUNTIME_JS"))
 
 let run_js path =
