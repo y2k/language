@@ -96,9 +96,7 @@ let default_export () =
 (defn handle-fetch [request env ctx]
   (Response. "OK"))
 
-(export-default
- {:fetch (fn [request env ctx]
-           (handle-fetch request env ctx))})
+(export-default :fetch handle-fetch :scheduled handle-fetch)
 |}
   in
   Alcotest.(check string)
@@ -107,10 +105,20 @@ let default_export () =
 export const handle_fetch = ((request, env, ctx) => {
 return new Response("OK");
 });
-export default (hash_map)("fetch", ((request, env, ctx) => {
-return (handle_fetch)(request, env, ctx);
-}));|}
+export default {["fetch"]: handle_fetch, ["scheduled"]: handle_fetch};|}
     js
+
+let default_export_rejects_malformed_forms () =
+  List.iter
+    (fun input ->
+      Alcotest.check_raises input (Failure "export-default: expected one or more key/value pairs") (fun () ->
+          ignore (compile input)))
+    [
+      "(export-default)";
+      "(export-default :fetch)";
+      "(export-default fetch handler)";
+      "(export-default {:fetch handler})";
+    ]
 
 let instance_method_call () =
   let js = compile {|
@@ -192,6 +200,7 @@ let () =
           Alcotest.test_case "nested namespace imports" `Quick nested_namespace_imports;
           Alcotest.test_case "string literal with slash" `Quick string_literal_with_slash;
           Alcotest.test_case "default export" `Quick default_export;
+          Alcotest.test_case "default export rejects malformed forms" `Quick default_export_rejects_malformed_forms;
           Alcotest.test_case "instance method call" `Quick instance_method_call;
           Alcotest.test_case "constructor call" `Quick constructor_call;
           Alcotest.test_case "constructor call with nested arg" `Quick constructor_call_with_nested_arg;

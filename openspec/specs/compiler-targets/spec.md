@@ -171,7 +171,7 @@ JavaScript и Java runtimes SHALL предоставлять core-функцию
 
 ### Requirement: The JavaScript compiler SHALL emit ES module code using the language runtime
 
-The JavaScript target SHALL считать объявленный `ns` каноническим путём модуля относительно output root: точки разделяют каталоги, а последний сегмент задаёт имя `.js` файла. Target SHALL вычислять относительный префикс к output root по глубине текущего namespace и применять его к runtime import и символьным namespace requires. Для namespace из одного сегмента и исходника без `ns` префикс SHALL оставаться `./`. Символьный namespace require SHALL компилироваться в путь от output root с расширением `.js`: compiler SHALL применять стандартное symbol munging к required namespace, затем преобразовывать точки в `/`. Строковый `:require` SHALL сохранять свой module specifier как bare ESM import без munging, добавления префикса output root или `.js`. Локальный алиас string require SHALL использовать стандартное munging символов, чтобы быть допустимым JavaScript identifier. Строковые литералы SHALL сохранять исходное содержимое, включая `/`. Форма `(export-default expression)` SHALL компилироваться в статическую ESM-декларацию `export default <expression>` вместо вызова `export_default(...)`. Public top-level `def` SHALL compile to an `export const` binding; top-level `def` with private metadata SHALL compile to a non-exported `const` binding.
+The JavaScript target SHALL считать объявленный `ns` каноническим путём модуля относительно output root: точки разделяют каталоги, а последний сегмент задаёт имя `.js` файла. Target SHALL вычислять относительный префикс к output root по глубине текущего namespace и применять его к runtime import и символьным namespace requires. Для namespace из одного сегмента и исходника без `ns` префикс SHALL оставаться `./`. Символьный namespace require SHALL компилироваться в путь от output root с расширением `.js`: compiler SHALL применять стандартное symbol munging к required namespace, затем преобразовывать точки в `/`. Строковый `:require` SHALL сохранять свой module specifier как bare ESM import без munging, добавления префикса output root или `.js`. Локальный алиас string require SHALL использовать стандартное munging символов, чтобы быть допустимым JavaScript identifier. Строковые литералы SHALL сохранять исходное содержимое, включая `/`. Форма `(export-default key value ...)` SHALL принимать одну или несколько пар с keyword или string literal keys и компилироваться в статическую ESM-декларацию, значением которой является обычный JavaScript object с соответствующими own properties. Она SHALL NOT вызывать `hash_map` или `export_default`. Пустая форма, нечётное число аргументов или key, который после desugaring не представлен строковым atom, SHALL приводить к ошибке JavaScript compilation. Public top-level `def` SHALL compile to an `export const` binding; top-level `def` with private metadata SHALL compile to a non-exported `const` binding.
 
 #### Scenario: Runtime import
 - **WHEN** source без `ns` или с `(ns main)` компилируется в JavaScript
@@ -238,9 +238,18 @@ The JavaScript target SHALL считать объявленный `ns` кано�
 - **THEN** JavaScript emits constructor calls and instance method calls
 
 #### Scenario: Default export
-- **WHEN** source contains `(export-default {:fetch handler})`
-- **THEN** JavaScript emits `export default (hash_map)("fetch", handler);`
-- **AND** output does not invoke `export_default`
+- **WHEN** source contains `(export-default :fetch handler :scheduled scheduled-handler)`
+- **THEN** JavaScript emits `export default {["fetch"]: handler, ["scheduled"]: scheduled_handler};`
+- **AND** exported value has `Object.prototype` in its prototype chain
+- **AND** output does not invoke `hash_map` or `export_default`
+
+#### Scenario: Malformed default export
+- **WHEN** source contains an empty `(export-default)`, an unmatched key, or a key that is neither a keyword nor a string literal
+- **THEN** JavaScript compilation fails
+
+#### Scenario: Ordinary hash maps retain their representation
+- **WHEN** a map literal is compiled outside `export-default`
+- **THEN** JavaScript continues to construct it through `hash_map`
 
 ### Requirement: JavaScript compiler SHALL compile cast as a transparent expression
 
