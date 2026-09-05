@@ -148,6 +148,64 @@ let case_without_fallback () =
       Alcotest.(check string) "comparison uses binding" name compared_name
   | sexpr -> Alcotest.failf "expected nil case fallback, got %s" (Frontend.show_sexpr sexpr)
 
+let if_let_sequential () =
+  match parse_one "(if-let [user (first) id (second user)] id fallback)" with
+  | SList
+      ( _,
+        Paren,
+        [
+          SAtom (_, "let*");
+          SList (_, Paren, [ SAtom (_, "user"); SList (_, Paren, [ SAtom (_, "first") ]) ]);
+          SList
+            ( _,
+              Paren,
+              [
+                SAtom (_, "if");
+                SAtom (_, "user");
+                SList
+                  ( _,
+                    Paren,
+                    [
+                      SAtom (_, "let*");
+                      SList (_, Paren, [ SAtom (_, "id"); SList (_, Paren, [ SAtom (_, "second"); SAtom (_, "user") ]) ]);
+                      SList (_, Paren, [ SAtom (_, "if"); SAtom (_, "id"); SAtom (_, "id"); SAtom (_, "fallback") ]);
+                    ] );
+                SAtom (_, "fallback");
+              ] );
+        ] ) ->
+      ()
+  | sexpr -> Alcotest.failf "expected sequential if-let expansion, got %s" (Frontend.show_sexpr sexpr)
+
+let if_let_without_else () =
+  check_desugar "if-let without else" "(if-let [value (source)] value)" "(let* (value (source)) (if value value nil))"
+
+let check_if_let_failure input message =
+  Alcotest.check_raises input (Failure ("if-let: " ^ message)) (fun () -> ignore (parse_one input))
+
+let if_let_rejects_non_symbol_names () =
+  List.iter
+    (fun input -> check_if_let_failure input "binding names must be symbols")
+    [
+      "(if-let [[x] value] ok)";
+      "(if-let [\"x\" value] ok)";
+      "(if-let [1 value] ok)";
+      "(if-let [:x value] ok)";
+      "(if-let [nil value] ok)";
+      "(if-let [true value] ok)";
+      "(if-let [false value] ok)";
+    ]
+
+let if_let_rejects_malformed_forms () =
+  List.iter
+    (fun (input, message) -> check_if_let_failure input message)
+    [
+      ("(if-let [] ok)", "binding vector must not be empty");
+      ("(if-let [x] ok)", "bindings must be name/value pairs");
+      ("(if-let (x value) ok)", "expected non-empty [name value ...], then branch, and optional else branch");
+      ("(if-let [x value])", "expected non-empty [name value ...], then branch, and optional else branch");
+      ("(if-let [x value] yes no extra)", "expected non-empty [name value ...], then branch, and optional else branch");
+    ]
+
 let () =
   Alcotest.run "frontend desugar"
     [
@@ -172,5 +230,9 @@ let () =
           Alcotest.test_case "private defn" `Quick private_defn;
           Alcotest.test_case "case with fallback" `Quick case_with_fallback;
           Alcotest.test_case "case without fallback" `Quick case_without_fallback;
+          Alcotest.test_case "sequential if-let" `Quick if_let_sequential;
+          Alcotest.test_case "if-let without else" `Quick if_let_without_else;
+          Alcotest.test_case "if-let rejects non-symbol names" `Quick if_let_rejects_non_symbol_names;
+          Alcotest.test_case "if-let rejects malformed forms" `Quick if_let_rejects_malformed_forms;
         ] );
     ]
