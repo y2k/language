@@ -19,6 +19,8 @@ let not _ = function
   | [ _ ] -> Symbol "false"
   | _ -> raise (Eval_error "not expects one value")
 
+let not_equal apply args = not apply [ equal apply args ]
+
 let assert_ _ = function
   | [ Symbol "false" ] | [ Symbol "nil" ] -> raise (Eval_error "assertion failed")
   | [ _ ] -> Symbol "true"
@@ -127,6 +129,7 @@ let env =
   [
     ("list", Closure (Native list));
     ("=", Closure (Native equal));
+    ("not=", Closure (Native not_equal));
     ("not", Closure (Native not));
     ("assert", Closure (Native assert_));
     (">", Closure (Native (compare_numbers ">" Stdlib.( > ))));

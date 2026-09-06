@@ -126,7 +126,7 @@ Evaluator SHALL обработать `(cast TYPE value)` как core-форму,
 
 ### Requirement: The eval stdlib SHALL provide the implemented functions
 
-The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `slurp`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`. `slurp` SHALL разрешать relative path от текущего рабочего каталога процесса.
+The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `slurp`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`. `slurp` SHALL разрешать relative path от текущего рабочего каталога процесса.
 
 #### Scenario: Lists and hash maps
 - **WHEN** `list` is called with any arguments
@@ -141,6 +141,11 @@ The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not`, `>`, `<
 - **THEN** it returns `true`
 - **WHEN** `=` receives multiple values
 - **THEN** it returns `true` only when all values are structurally equal runtime values
+
+#### Scenario: Two-argument scalar inequality
+- **WHEN** `not=` receives exactly two `nil`, boolean, string or integer values supported by `=`
+- **THEN** it returns `false` when `=` returns `true` for those values
+- **AND** it returns `true` when `=` returns `false` for those values
 
 #### Scenario: Logical negation
 - **WHEN** `not` receives `false` or `nil`
