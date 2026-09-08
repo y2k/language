@@ -1,10 +1,4 @@
-# Open Questions Spec
-
-## Purpose
-
-Track ambiguous observed behavior separately from accepted behavior and proposed changes.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The project SHALL keep unclear current behavior separate from desired changes
 

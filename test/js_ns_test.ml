@@ -46,6 +46,27 @@ import * as w from "wrangler";
 import * as async_hooks from "node:async_hooks";;|}
     js
 
+let string_escapes () =
+  let check input expected =
+    match String.split_on_char '\n' (compile input) with
+    | _runtime_import :: lines -> Alcotest.(check string) input expected (String.concat "\n" lines)
+    | [] -> Alcotest.fail "expected generated module"
+  in
+  List.iter
+    (fun (source, literal) ->
+      check ("(def value " ^ source ^ ")") ("export const value = " ^ literal ^ ";");
+      check ("(ns app (:require [" ^ source ^ " :as test-dep]))") ("import * as test_dep from " ^ literal ^ ";;"))
+    [
+      ({|"<div data-post=\"serbia/4\"></div>"|}, {|"<div data-post=\"serbia/4\"></div>"|});
+      ({|"./a\"b.js"|}, {|"./a\"b.js"|});
+      ({|"a\\b"|}, {|"a\\b"|});
+      ({|"a\nb"|}, {|"a\nb"|});
+      ({|"a\tb"|}, {|"a\tb"|});
+      ({|"a\rb"|}, {|"a\rb"|});
+      ({|"./a\\n.js"|}, {|"./a\\n.js"|});
+      ({|"\q\b\f\/\u0041"|}, {|"\\q\\b\\f\\/\\u0041"|});
+    ]
+
 let root_namespace_imports () =
   let js = compile {|
 (ns main (:require [db :as db]))
@@ -196,6 +217,7 @@ let () =
         [
           Alcotest.test_case "require imports" `Quick require_imports;
           Alcotest.test_case "string require import" `Quick string_require_import;
+          Alcotest.test_case "string escapes" `Quick string_escapes;
           Alcotest.test_case "root namespace imports" `Quick root_namespace_imports;
           Alcotest.test_case "nested namespace imports" `Quick nested_namespace_imports;
           Alcotest.test_case "string literal with slash" `Quick string_literal_with_slash;

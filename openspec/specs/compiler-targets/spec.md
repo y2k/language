@@ -267,6 +267,22 @@ The JavaScript target SHALL считать объявленный `ns` кано�
 - **WHEN** a map literal is compiled outside `export-default`
 - **THEN** JavaScript continues to construct it through `hash_map`
 
+### Requirement: Строковые JS module specifiers SHALL сохранять декодированное значение
+
+JavaScript target SHALL представлять строковый `:require` корректным JS-строковым литералом, значение которого совпадает с декодированным значением исходного module specifier. Целевое экранирование SHALL NOT добавлять символы в значение или повторно декодировать source escapes. Это требование дополняет существующие правила ESM imports: munging, префикс output root и суффикс `.js` к строковому specifier SHALL NOT применяться. Требование определяет генерацию литерала, а не существование или загрузку указанного модуля.
+
+#### Scenario: Кавычка в module specifier
+- **WHEN** source содержит `(:require ["./a\"b.js" :as dep])`
+- **THEN** generated import содержит `from "./a\"b.js"`, представляющий значение с одной кавычкой и без обратного слеша перед ней
+
+#### Scenario: Обратный слеш без повторного декодирования
+- **WHEN** source содержит `(:require ["./a\\n.js" :as dep])`
+- **THEN** generated import содержит `from "./a\\n.js"`, представляющий обратный слеш и `n`, а не LF
+
+#### Scenario: Управляющие символы и неизвестные пары
+- **WHEN** строковый specifier содержит исходные `\n`, `\t`, `\r` или `\q`
+- **THEN** generated JS-литерал корректно представляет соответственно LF, TAB, CR или буквальную пару обратного слеша и `q`, без вставки необработанного LF или CR в литерал
+
 ### Requirement: JavaScript compiler SHALL compile cast as a transparent expression
 
 JavaScript compiler SHALL compile `(cast TYPE value)` as compiled `value`, не выполняя проверку `TYPE` и не генерируя runtime-зависимость для cast. `value` SHALL вычисляться ровно один раз согласно обычной семантике выражений JavaScript.

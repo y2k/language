@@ -8,10 +8,23 @@ let parse_one input =
 
 let check_desugar name input expected = Alcotest.(check string) name expected (Frontend.show_sexpr (parse_one input))
 
-let newline_escape () =
-  match parse_one "\"a\\nb\"" with
-  | SAtom (_, value) -> Alcotest.(check string) "newline escape" "\"a\nb\"" value
-  | _ -> Alcotest.fail "expected string atom"
+let string_escapes () =
+  List.iter
+    (fun (input, expected) ->
+      match parse_one input with
+      | SAtom (_, value) -> Alcotest.(check string) input expected value
+      | _ -> Alcotest.fail "expected string atom")
+    [
+      ({|"a\nb"|}, "\"a\nb\"");
+      ({|"a\"b"|}, "\"a\"b\"");
+      ({|"a\\b"|}, "\"a\\b\"");
+      ({|"a\tb"|}, "\"a\tb\"");
+      ({|"a\rb"|}, "\"a\rb\"");
+      ({|"\"\\\n\t\r"|}, "\"\"\\\n\t\r\"");
+      ({|"\\n"|}, "\"\\n\"");
+      ({|"\q\b\f\/\u0041"|}, {|"\q\b\f\/\u0041"|});
+      ({|"<div data-post=\"serbia/4\"></div>"|}, {|"<div data-post="serbia/4"></div>"|});
+    ]
 
 let method_call_shorthand () = check_desugar "method call shorthand" "(.foo obj 1 2)" "(. obj foo 1 2)"
 let explicit_method_call_unchanged () = check_desugar "explicit method call" "(. obj foo 1 2)" "(. obj foo 1 2)"
@@ -211,7 +224,7 @@ let () =
     [
       ( "interop",
         [
-          Alcotest.test_case "newline escape" `Quick newline_escape;
+          Alcotest.test_case "string escapes" `Quick string_escapes;
           Alcotest.test_case "method call shorthand" `Quick method_call_shorthand;
           Alcotest.test_case "explicit method call unchanged" `Quick explicit_method_call_unchanged;
           Alcotest.test_case "constructor shorthand" `Quick constructor_shorthand;

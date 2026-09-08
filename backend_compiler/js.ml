@@ -31,9 +31,13 @@ let rec compile_expr = function
       List.map
         (fun (namespace, alias) ->
           let namespace = string_value namespace in
-          (* Quoted content marks a source string require and is already an ESM specifier. *)
+          (* Quoted content marks a source string require; serialize its decoded value. *)
           if is_string namespace then
-            "import * as " ^ (string_value alias |> Symbol_munge.munge) ^ " from " ^ namespace ^ ";"
+            "import * as "
+            ^ (string_value alias |> Symbol_munge.munge)
+            ^ " from "
+            ^ js_string (string_value namespace)
+            ^ ";"
           else
             "import * as " ^ string_value alias ^ " from \"" ^ root_prefix
             ^ (namespace |> Symbol_munge.munge |> String.map (fun c -> if c = '.' then '/' else c))

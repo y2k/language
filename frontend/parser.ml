@@ -24,7 +24,14 @@ let parse_string input =
   let quoted_string =
     let string_char =
       char '\\' *> any_char
-      >>| ( function 'n' -> "\n" | c -> Printf.sprintf "\\%c" c )
+      >>| ( function
+      | 'n' -> "\n"
+      | '"' -> "\""
+      | '\\' -> "\\"
+      | 't' -> "\t"
+      | 'r' -> "\r"
+      (* ponytail: preserve unsupported escape pairs literally. *)
+      | c -> Printf.sprintf "\\%c" c )
       <|> (satisfy (fun c -> c <> '"') >>| String.make 1)
     in
     with_loc (char '"' *> many string_char <* char '"') >>| fun (meta, parts) ->
