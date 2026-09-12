@@ -19,7 +19,7 @@ let require_imports () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "../language_runtime.js";
 import * as mc from "../io/math/core.js";
 import * as fetch from "../effect_fetch.js";
 import * as promise from "../effects_promise/fetch.js";;
@@ -40,7 +40,7 @@ let string_require_import () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "../language_runtime.js";
 import * as t from "node:test";
 import * as w from "wrangler";
 import * as async_hooks from "node:async_hooks";;|}
@@ -73,7 +73,7 @@ let root_namespace_imports () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 import * as db from "./db.js";;|}
     js
 
@@ -90,7 +90,7 @@ let nested_namespace_imports () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "../../language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "../../language_runtime.js";
 import * as parent from "../../app/commands.js";
 import * as sibling from "../../app/commands/remove.js";
 import * as child from "../../app/commands/add/audit.js";
@@ -104,7 +104,7 @@ let string_literal_with_slash () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const test = (() => {
 return (list)("column", (hash_map)("text", "/"));
 });|}
@@ -122,7 +122,7 @@ let default_export () =
   in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const handle_fetch = ((request, env, ctx) => {
 return new Response("OK");
 });
@@ -148,7 +148,7 @@ let instance_method_call () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const test = ((value) => {
 return value.toString();
 });|}
@@ -161,7 +161,7 @@ let constructor_call () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const test = ((title) => {
 return new Widget(title);
 });|}
@@ -174,7 +174,7 @@ let constructor_call_with_nested_arg () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const test = ((value) => {
 return new Widget(value.toString());
 });|}
@@ -184,7 +184,7 @@ let cast_is_no_op () =
   let js = compile "(defn test [value] (cast java.util.List value))" in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const test = ((value) => {
 return value;
 });|}
@@ -199,7 +199,7 @@ let definition_visibility () =
 |} in
   Alcotest.(check string)
     "generated js"
-    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from "./language_runtime.js";
+    {|import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, reset_BANG_, swap_BANG_ } from "./language_runtime.js";
 export const public_f = (() => {
 return 1;
 });

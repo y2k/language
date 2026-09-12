@@ -124,7 +124,7 @@ let compile sexprs =
   in
   let runtime_import =
     "import { list, vector_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, \
-     _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop } from \""
-    ^ root_prefix ^ "language_runtime.js\";"
+     _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, map, reduce, drop, atom, deref, \
+     reset_BANG_, swap_BANG_ } from \"" ^ root_prefix ^ "language_runtime.js\";"
   in
   runtime_import :: List.map (fun sexpr -> compile_expr sexpr ^ ";") sexprs |> String.concat "\n"

@@ -1,6 +1,21 @@
 open Eval_types
 
 let list _ args = List args
+let atom _ = function [ value ] -> Atom (ref value) | _ -> raise (Eval_error "atom expects one value")
+let deref _ = function [ Atom cell ] -> !cell | _ -> raise (Eval_error "deref expects one atom")
+
+let reset_BANG_ _ = function
+  | [ Atom cell; value ] ->
+      cell := value;
+      value
+  | _ -> raise (Eval_error "reset! expects an atom and a value")
+
+let swap_BANG_ apply = function
+  | [ Atom cell; fn ] ->
+      let value = apply fn [ !cell ] in
+      cell := value;
+      value
+  | _ -> raise (Eval_error "swap! expects an atom and a function")
 
 let rec equal_value left right =
   match (left, right) with
@@ -116,6 +131,7 @@ let rec to_string = function
   | HashMap items ->
       "{" ^ String.concat " " (List.map (fun (key, value) -> to_string key ^ " " ^ to_string value) items) ^ "}"
   | Closure _ -> "#<function>"
+  | Atom _ -> "#<atom>"
 
 let str _ args = Symbol (String.concat "" (List.map to_string args))
 
@@ -128,6 +144,10 @@ let slurp _ = function
 let env =
   [
     ("list", Closure (Native list));
+    ("atom", Closure (Native atom));
+    ("deref", Closure (Native deref));
+    ("reset!", Closure (Native reset_BANG_));
+    ("swap!", Closure (Native swap_BANG_));
     ("=", Closure (Native equal));
     ("not=", Closure (Native not_equal));
     ("not", Closure (Native not));

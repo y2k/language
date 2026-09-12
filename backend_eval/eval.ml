@@ -120,6 +120,7 @@ let value_text = function
   | List _ -> "list"
   | HashMap _ -> "hash-map"
   | Closure _ -> "function"
+  | Atom _ -> "atom"
 
 let rec eval ?(context = create_context ()) = function
   | SAtom (_, name) -> find context name
