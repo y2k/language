@@ -34,6 +34,17 @@ let rec or_expr meta = function
 let and_macro = function SList (meta, Paren, SAtom (_, "and") :: items) -> Some (and_expr meta items) | _ -> None
 let or_macro = function SList (meta, Paren, SAtom (_, "or") :: items) -> Some (or_expr meta items) | _ -> None
 
+(* ponytail: Reuse if for short-circuiting; each condition occurs only once. *)
+let cond_macro = function
+  | SList (meta, Paren, SAtom (_, "cond") :: clauses) ->
+      let rec expand = function
+        | [] -> atom meta "nil"
+        | condition :: result :: rest -> SList (meta, Paren, [ atom meta "if"; condition; result; expand rest ])
+        | [ _ ] -> failwith "cond: expected test/result pairs"
+      in
+      Some (expand clauses)
+  | _ -> None
+
 let case_macro = function
   | SList (meta, Paren, SAtom (_, "case") :: value :: clauses) ->
       let name = Gensym.gensym meta in
@@ -245,6 +256,7 @@ let builtin_macros =
   [
     and_macro;
     or_macro;
+    cond_macro;
     case_macro;
     if_let_macro;
     thread_first_macro;

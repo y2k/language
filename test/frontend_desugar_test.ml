@@ -116,6 +116,30 @@ let private_defn () =
       Alcotest.(check bool) "private function definition" true private_
   | sexpr -> Alcotest.failf "expected private defn, got %s" (Frontend.show_sexpr sexpr)
 
+let cond_expansion () =
+  check_desugar "empty cond" "(cond)" "nil";
+  check_desugar "cond pairs" "(cond a x b y)" "(if a x (if b y nil))";
+  check_desugar "ordinary else" "(cond :else 1 true 2)" "(if \"else\" 1 (if true 2 nil))"
+
+let cond_metadata () =
+  let rec metadata = function
+    | SAtom (meta, _) -> [ meta ]
+    | SList (meta, _, items) -> meta :: List.concat_map metadata items
+  in
+  let actual = parse_one "(cond\n  a x\n  b y)" |> metadata in
+  let expected =
+    List.map
+      (fun (line, column) -> { loc = { line; column }; type_annotation = None; private_ = false })
+      [ (1, 1); (1, 1); (2, 3); (2, 5); (1, 1); (1, 1); (3, 3); (3, 5); (1, 1) ]
+  in
+  Alcotest.(check bool) "source and generated metadata" true (actual = expected)
+
+let cond_rejects_incomplete_pairs () =
+  List.iter
+    (fun input ->
+      Alcotest.check_raises input (Failure "cond: expected test/result pairs") (fun () -> ignore (parse_one input)))
+    [ "(cond true)"; "(cond true 1 false)"; "(cond :else 1 true)" ]
+
 let case_parts input =
   match parse_one input with
   | SList (_, _, [ SAtom (_, "let*"); SList (_, _, [ SAtom (_, name); value ]); body ]) -> (name, value, body)
@@ -242,6 +266,9 @@ let () =
           Alcotest.test_case "private def" `Quick private_def;
           Alcotest.test_case "private defn" `Quick private_defn;
           Alcotest.test_case "case with fallback" `Quick case_with_fallback;
+          Alcotest.test_case "cond expansion" `Quick cond_expansion;
+          Alcotest.test_case "cond metadata" `Quick cond_metadata;
+          Alcotest.test_case "cond rejects incomplete pairs" `Quick cond_rejects_incomplete_pairs;
           Alcotest.test_case "case without fallback" `Quick case_without_fallback;
           Alcotest.test_case "sequential if-let" `Quick if_let_sequential;
           Alcotest.test_case "if-let without else" `Quick if_let_without_else;

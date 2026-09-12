@@ -73,6 +73,11 @@ let rec compile_quote = function
 
 let rec compile_expr ctx = function
   | SAtom (meta, name) -> compile_atom ctx meta name
+  | SList (meta, _, SAtom (_, "do") :: body) ->
+      let lambda_meta = { meta with type_annotation = Some "java.util.function.Supplier<Object>" } in
+      let lambda = SList (lambda_meta, Paren, SAtom (meta, "fn*") :: SList (meta, Paren, []) :: body) in
+      (* ponytail: Reuse typed lambda generation for a statement block in value position. *)
+      compile_expr ctx lambda ^ ".get()"
   | SList (meta, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ->
       let ctx =
         {
