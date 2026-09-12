@@ -255,6 +255,22 @@ let unsupported_function_arity_reports_location () =
     (Failure "Java backend does not support function arity 5 for test [2:1]") (fun () ->
       ignore (compile "\n(defn test [a b c d e] nil)"))
 
+let unsupported_expression_call_arity_reports_location () =
+  Alcotest.check_raises "expression call arity location"
+    (Failure "Java backend does not support function arity 5 for expression [2:3]") (fun () ->
+      ignore (compile "(defn test [factory]\n  ((factory) 1 2 3 4 5))"))
+
+let expression_call_casts () =
+  List.iter
+    (fun (expression, expected) ->
+      let java = compile ("(defn test [x] " ^ expression ^ ")") in
+      Alcotest.(check bool) expression true (List.mem ("return " ^ expected ^ ";") (String.split_on_char '\n' java)))
+    [
+      ("((cast Fn1 x) 1)", "((Fn1) ((Fn1) x)).call(1)");
+      ("((cast java.util.concurrent.Callable x))", "((Fn0) ((java.util.concurrent.Callable) x)).call()");
+      ("(.call (cast java.util.concurrent.Callable x))", "((java.util.concurrent.Callable) x).call()");
+    ]
+
 let gen_class () =
   let java =
     compile
@@ -315,6 +331,9 @@ let () =
           Alcotest.test_case "void annotation requires type" `Quick void_annotation_requires_type;
           Alcotest.test_case "unsupported function arity reports location" `Quick
             unsupported_function_arity_reports_location;
+          Alcotest.test_case "unsupported expression call arity reports location" `Quick
+            unsupported_expression_call_arity_reports_location;
+          Alcotest.test_case "expression call casts" `Quick expression_call_casts;
           Alcotest.test_case "gen-class" `Quick gen_class;
         ] );
     ]
