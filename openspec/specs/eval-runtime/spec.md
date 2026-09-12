@@ -126,7 +126,7 @@ Evaluator SHALL обработать `(cast TYPE value)` как core-форму,
 
 ### Requirement: The eval stdlib SHALL provide the implemented functions
 
-The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `str`, `slurp`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*`, and `/`. `slurp` SHALL разрешать relative path от текущего рабочего каталога процесса.
+Stdlib SHALL предоставлять bindings `list`, `=`, `not=`, `not`, `>`, `<`, `>=`, `<=`, `vector?`, `concat`, `hash-map`, `get`, `get-in`, `str`, `slurp`, `count`, `map`, `reduce`, `drop`, `+`, `-`, `*` и `/`. Этот перечень SHALL NOT исключать bindings, заданные другими требованиями. `slurp` SHALL разрешать relative path от текущего рабочего каталога процесса.
 
 #### Scenario: Lists and hash maps
 - **WHEN** `list` is called with any arguments
@@ -179,6 +179,10 @@ The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not=`, `not`,
 - **WHEN** `get` is called with a list and non-negative integer index
 - **THEN** it returns the item at that index or `nil`
 
+#### Scenario: Get from nil
+- **WHEN** исполняется `(get nil :text)` или `(:text nil)`
+- **THEN** результат равен `nil`
+
 #### Scenario: Map and reduce
 - **WHEN** `map` receives a function and list
 - **THEN** it returns a list containing the function result for each item
@@ -213,6 +217,38 @@ The stdlib SHALL expose exactly these eval bindings: `list`, `=`, `not=`, `not`,
 - **WHEN** arithmetic stdlib functions receive integer symbol values
 - **THEN** they return integer symbol values
 - **AND** `/` uses integer division
+
+### Requirement: Evaluator SHALL предоставлять get-in с путём-вектором
+
+Evaluator SHALL поддерживать `(get-in collection keys)` с двумя аргументами и путём-вектором, в том числе полученным из переменной или функции. Результат SHALL соответствовать последовательному двухаргументному `get`, начиная с `collection`. Путь SHALL поддерживать map keys и неотрицательные целые индексы, включая смешанные пути. Пустой путь SHALL возвращать исходное значение. Отсутствующий ключ, индекс за границей или промежуточный `nil` SHALL давать `nil`; конечный `false` SHALL сохраняться. Продолжение пути через число, строку или boolean SHALL завершаться ошибкой. `nil`, map, строка и скаляры вместо пути SHALL отклоняться, даже при исходной коллекции `nil`. Точный текст ошибок не фиксируется. Поведение list-пути и некорректных индексов не специфицируется; существующая поддержка list-пути допустима. Трёхаргументный вариант не входит в контракт.
+
+#### Scenario: Вложенный ключ и смешанный путь
+- **WHEN** исполняются `(get-in {:chat {:id 42}} [:chat :id])` и `(get-in {:items [{:id 42}]} [:items 0 :id])`
+- **THEN** оба результата равны `42`
+
+#### Scenario: Путь из значения
+- **WHEN** исполняется `(let [path [:chat :id]] (get-in {:chat {:id 42}} path))`
+- **THEN** результат равен `42`
+
+#### Scenario: Отсутствующие данные
+- **WHEN** исполняются `(get-in {} [:chat :id])`, `(get-in {:chat nil} [:chat :id])`, `(get-in nil [:chat :id])` и `(get-in {:items []} [:items 0 :id])`
+- **THEN** каждый результат равен `nil`
+
+#### Scenario: Сохранение false
+- **WHEN** исполняется `(get-in {:enabled false} [:enabled])`
+- **THEN** результат равен `false`
+
+#### Scenario: Пустой путь
+- **WHEN** исполняются `(get-in {:id 42} [])`, `(get-in nil [])` и `(get-in false [])`
+- **THEN** результаты равны исходным значениям: map `{:id 42}`, `nil` и `false`
+
+#### Scenario: Скаляр внутри пути
+- **WHEN** исполняется `(get-in {:chat value} [:chat :id])`, где `value` равно `42`, `"hello"` или `false`
+- **THEN** исполнение завершается ошибкой
+
+#### Scenario: Неверный тип пути
+- **WHEN** `get-in` получает вместо пути `nil`, map, строку, число или boolean, в том числе при исходной коллекции `nil`
+- **THEN** исполнение завершается ошибкой
 
 ### Requirement: Unknown eval behavior SHALL remain unspecified
 

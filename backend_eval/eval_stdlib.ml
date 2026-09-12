@@ -65,12 +65,18 @@ let count _ = function
   | _ -> raise (Eval_error "count expects one collection")
 
 let get _ = function
+  | [ Symbol "nil"; _ ] -> Symbol "nil"
   | [ HashMap items; key ] -> Option.value (List.assoc_opt key items) ~default:(Symbol "nil")
   | [ List items; Symbol index ] -> (
       match int_of_string_opt index with
       | Some index -> Option.value (List.nth_opt items index) ~default:(Symbol "nil")
       | None -> raise (Eval_error "get expects a numeric list index"))
   | _ -> raise (Eval_error "get expects a hash-map/list and a key/index")
+
+let get_in apply = function
+  (* ponytail: vectors share List representation; no separate list-path contract. *)
+  | [ collection; List keys ] -> List.fold_left (fun value key -> get apply [ value; key ]) collection keys
+  | _ -> raise (Eval_error "get-in expects a collection and a vector path")
 
 let map apply = function
   | [ fn; List items ] -> List (List.map (fun item -> apply fn [ item ]) items)
@@ -160,6 +166,7 @@ let env =
     ("concat", Closure (Native concat));
     ("hash-map", Closure (Native hash_map));
     ("get", Closure (Native get));
+    ("get-in", Closure (Native get_in));
     ("str", Closure (Native str));
     ("slurp", Closure (Native slurp));
     ("count", Closure (Native count));
