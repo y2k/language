@@ -15,6 +15,12 @@ let string_value value = String.sub value 1 (String.length value - 2)
 let java_string = Target_syntax.string_literal
 let java_local_name name = if name = "this" then "this_" else Symbol_munge.munge name
 
+let is_reference_type_name name =
+  match name with
+  | "nil" | "true" | "false" | "boolean" | "byte" | "short" | "int" | "long" | "float" | "double" | "char" | "void" ->
+      false
+  | _ -> not (is_number name || is_string name || String.starts_with ~prefix:":" name)
+
 let split_class_name name =
   match List.rev (String.split_on_char '.' name) with
   | class_name :: package -> (List.rev package |> String.concat ".", Symbol_munge.munge class_name)
@@ -89,7 +95,8 @@ let rec compile_expr ctx = function
         }
       in
       let compile_value_body () =
-        compile_body ctx ~last:(fun expr -> "return " ^ expr ^ ";") ~empty:[ "return null;" ] body |> String.concat "\n"
+        compile_body ctx ~last:(fun ctx expr -> "return " ^ compile_expr ctx expr ^ ";") ~empty:[ "return null;" ] body
+        |> String.concat "\n"
       in
       let params =
         args |> List.map (function SAtom (_, x) -> java_local_name x | _ -> failwith __LOC__) |> String.concat ", "
@@ -100,7 +107,7 @@ let rec compile_expr ctx = function
             let body =
               match return_mode with
               | Value -> [ compile_value_body () ]
-              | Void -> compile_body ctx ~last:(fun expr -> expr ^ ";") ~empty:[] body
+              | Void -> compile_body ctx ~last:compile_discard ~empty:[] body
             in
             [
               [ "((" ^ target_type ^ ")"; "(" ^ params ^ ") -> {"; "try {" ];
@@ -116,6 +123,12 @@ let rec compile_expr ctx = function
             ])
       |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
+  | SList (_, _, SAtom (_, "instance?") :: args) as code -> (
+      match args with
+      | [ SAtom (_, type_name); value ] when is_reference_type_name type_name ->
+          "(((Object) " ^ compile_expr ctx value ^ ") instanceof " ^ type_name ^ ")"
+      | [ _; _ ] -> invalid_sexpr "instance?: expected a static reference type name" code
+      | _ -> invalid_sexpr "instance?: expected exactly two arguments" code)
   | SList (_, _, [ SAtom (_, "cast"); SAtom (_, type_name); value ]) ->
       "((" ^ type_name ^ ") " ^ compile_expr ctx value ^ ")"
   | SList (_, _, [ SAtom (_, "if"); condition; then_; else_ ]) ->
@@ -145,7 +158,7 @@ let rec compile_expr ctx = function
         | _ -> failwith __LOC__
       in
       let bindings, ctx = compile_let_binding ctx bingins in
-      bindings @ compile_body ctx ~last:(fun expr -> expr) ~empty:[] body |> String.concat "\n"
+      bindings @ compile_body ctx ~last:compile_expr ~empty:[] body |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "set!"); SAtom (_, name); value ]) -> java_local_name name ^ " = " ^ compile_expr ctx value
   | SList (_, _, SAtom (_, "new") :: SAtom (_, class_name) :: args) ->
       "new " ^ compile_qualified_name ctx class_name ^ "(" ^ String.concat ", " (List.map (compile_expr ctx) args) ^ ")"
@@ -167,11 +180,18 @@ let rec compile_expr ctx = function
       ^ ")"
   | SList _ as code -> invalid_sexpr __LOC__ code
 
+and compile_discard ctx expr =
+  let value = compile_expr ctx expr in
+  match expr with
+  | SList (meta, _, SAtom (_, "instance?") :: _) ->
+      "var " ^ java_local_name (Gensym.gensym_string meta) ^ " = " ^ value ^ ";"
+  | _ -> value ^ ";"
+
 and compile_body ctx ~last ~empty = function
   | [] -> empty
-  | [ expr ] -> [ last (compile_expr ctx expr) ]
+  | [ expr ] -> [ last ctx expr ]
   | expr :: rest ->
-      let statement = compile_expr ctx expr ^ ";" in
+      let statement = compile_discard ctx expr in
       let ctx =
         match expr with
         | SList (_, _, [ SAtom (_, "let*"); SAtom (_, name); _ ]) -> { ctx with locals = StringSet.add name ctx.locals }
@@ -192,7 +212,7 @@ let compile_function ctx code name args body =
     ^ String.concat ", " (List.map compile_arg args)
     ^ ") throws Exception {";
   ]
-  @ compile_body ctx ~last:(fun expr -> "return " ^ expr ^ ";") ~empty:[ "return null;" ] body
+  @ compile_body ctx ~last:(fun ctx expr -> "return " ^ compile_expr ctx expr ^ ";") ~empty:[ "return null;" ] body
   @ [ "}" ]
 
 let compile_statement ctx = function

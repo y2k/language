@@ -310,6 +310,47 @@ throw sneaky_throw(e);
 }|}
     java
 
+let instance_check () =
+  let java = compile "(ns user (:import [java.util List])) (defn test [value] (instance? List value))" in
+  let lines = String.split_on_char '\n' java in
+  Alcotest.(check bool) "import" true (List.mem "import java.util.List;" lines);
+  Alcotest.(check bool) "native check" true (List.mem "return (((Object) value) instanceof List);" lines);
+  let java = compile "(defn test [value] (instance? java.util.List value))" in
+  Alcotest.(check bool)
+    "qualified type" true
+    (List.mem "return (((Object) value) instanceof java.util.List);" (String.split_on_char '\n' java));
+  List.iter
+    (fun expression ->
+      let input = "(defn test [value]\n  " ^ expression ^ ")" in
+      match compile input with
+      | exception Failure message ->
+          Alcotest.(check bool) "form diagnostic" true (String.starts_with ~prefix:"instance?:" message);
+          Alcotest.(check bool) "source position" true (String.ends_with ~suffix:"[2:3]" message)
+      | _ -> Alcotest.failf "expected error: %s" expression)
+    ([ "(instance?)"; "(instance? String)"; "(instance? String value extra)" ]
+    @ List.map
+        (fun type_ -> "(instance? " ^ type_ ^ " value)")
+        [
+          "\"String\"";
+          ":String";
+          "42";
+          "nil";
+          "true";
+          "false";
+          "int";
+          "boolean";
+          "byte";
+          "short";
+          "long";
+          "float";
+          "double";
+          "char";
+          "void";
+          "(do String)";
+          "(if true String Object)";
+          "[]";
+        ])
+
 let () =
   Alcotest.run "java ns"
     [
@@ -322,6 +363,7 @@ let () =
           Alcotest.test_case "string literals" `Quick string_literals;
           Alcotest.test_case "instance method call" `Quick instance_method_call;
           Alcotest.test_case "cast" `Quick cast;
+          Alcotest.test_case "instance?" `Quick instance_check;
           Alcotest.test_case "constructor call" `Quick constructor_call;
           Alcotest.test_case "constructor call with nested arg" `Quick constructor_call_with_nested_arg;
           Alcotest.test_case "typed lambda interop" `Quick typed_lambda_interop;

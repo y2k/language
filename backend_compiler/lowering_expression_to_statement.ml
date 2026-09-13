@@ -24,6 +24,10 @@ and lower_expr expr =
 and lower_value = function
   | SAtom _ as atom -> ([], atom)
   | SList (_, _, [ SAtom (_, "quote"); _ ]) as quote -> ([], quote)
+  | SList (meta, bracket, [ (SAtom (_, "instance?") as op); type_; value ]) ->
+      let bindings, value = lower_value value in
+      (bindings, SList (meta, bracket, [ op; type_; value ]))
+  | SList (_, _, SAtom (_, "instance?") :: _) as expr -> ([], expr)
   | SList (meta, _, SAtom (_, "do") :: body) -> lower_body_value meta body
   | SList (meta, _, SAtom (_, "let*") :: SList (_, _, bindings) :: body) -> lower_let_star_value meta bindings body
   | SList (meta, _, [ SAtom (_, "if"); condition; then_ ]) -> lower_if meta condition then_ (atom meta "nil")
@@ -105,7 +109,10 @@ and lower_body_value meta = function
 
 and lower_discard expr =
   match expr with
-  | SAtom _ | SList (_, _, [ SAtom (_, "quote"); _ ]) | SList (_, _, SAtom (_, "fn*") :: _) ->
+  | SAtom _
+  | SList (_, _, [ SAtom (_, "quote"); _ ])
+  | SList (_, _, SAtom (_, "fn*") :: _)
+  | SList (_, _, SAtom (_, "instance?") :: _) ->
       let bindings, value = lower_value expr in
       let discard = Gensym.gensym (meta_of expr) in
       bindings @ [ let_star (meta_of expr) discard value ]

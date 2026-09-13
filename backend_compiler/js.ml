@@ -46,6 +46,7 @@ let rec compile_expr = function
       |> String.concat "\n"
   | SAtom (_, name) -> compile_atom name
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
+  | SList (_, _, SAtom (_, "instance?") :: _) -> failwith "instance? is supported only on the Java target"
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
   | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
       (if meta.private_ then "" else "export ") ^ "const " ^ Symbol_munge.munge name ^ " = " ^ compile_expr value

@@ -19,6 +19,34 @@ let function_patterns_are_normalized () =
     "symbol-only function parameters and bindings" true
     (lower {|(def f (fn [[a {:name n}]] (str a n)))|} |> List.for_all has_symbol_only_function_bindings)
 
+let instance_check () =
+  let input = "(instance? (do String) value)" in
+  let parsed = match Frontend.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e in
+  Alcotest.(check bool) "preserves type expression and metadata" true (parsed = lower input);
+  match lower "(do (instance? Object (effect)) nil)" with
+  | [
+   SList
+     ( _,
+       _,
+       [
+         SAtom (_, "do");
+         SList
+           ( _,
+             _,
+             [
+               SAtom (_, "let*");
+               SAtom (_, _);
+               SList (_, _, [ SAtom (_, "instance?"); SAtom (_, "Object"); SList (_, _, [ SAtom (_, "effect") ]) ]);
+             ] );
+         SAtom (_, "nil");
+       ] );
+  ] ->
+      ()
+  | _ -> Alcotest.fail "discarded instance? must bind its value once"
+
 let () =
   Alcotest.run "lowering"
-    [ ("fn patterns", [ Alcotest.test_case "normalizes destructuring" `Quick function_patterns_are_normalized ]) ]
+    [
+      ("fn patterns", [ Alcotest.test_case "normalizes destructuring" `Quick function_patterns_are_normalized ]);
+      ("instance?", [ Alcotest.test_case "type preservation and discard" `Quick instance_check ]);
+    ]
