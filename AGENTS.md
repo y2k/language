@@ -32,6 +32,7 @@
 
 ## Language Semantics
 
+- When changing user-facing compiler forms, standard library functions, or target behavior/limitations, update `skills/y2k-language/SKILL.md` in the same change; keep its English reference aligned with the implementation and tests.
 - `def` is supported only at top level. Do not add nested `def` forms or tests that rely on them.
 - Use `Gensym.gensym` for generated identifiers in compiler/lowering code; do not add local counters for fresh names.
 - Do not emit hardcoded generated temporaries like `__result`, `__tmp`, or any `__XXX` name; generated temporary identifiers must come from `Gensym.gensym`.
