@@ -18,7 +18,7 @@ let compiler_input path = sample_body path ^ "\n(print-result (test))\n"
 let java_input path = sample_body path
 let trim_output = String.trim
 
-let run_command_full ?failure_context main args input =
+let run_command_full ?failure_context ?(expected_exit = 0) main args input =
   let stdout, stdin, stderr = Unix.open_process_args_full main (Array.of_list (main :: args)) (Unix.environment ()) in
   output_string stdin input;
   close_out stdin;
@@ -26,7 +26,7 @@ let run_command_full ?failure_context main args input =
   let error = In_channel.input_all stderr in
   let error = match failure_context with Some context -> error ^ "\n" ^ context | None -> error in
   match Unix.close_process_full (stdout, stdin, stderr) with
-  | Unix.WEXITED 0 -> (output, error)
+  | Unix.WEXITED code when code = expected_exit -> (output, error)
   | Unix.WEXITED code -> Alcotest.failf "%s exited with code %d\nstderr: %s" main code error
   | Unix.WSIGNALED signal | Unix.WSTOPPED signal ->
       Alcotest.failf "%s stopped by signal %d\nstderr: %s" main signal error
@@ -99,6 +99,36 @@ let run_java path =
   |> ignore;
   run_command_full ~failure_context "java" [ "-cp"; out; runner_name ] "" |> fst |> trim_output
 
+let gen_class_entry_point () =
+  List.iter
+    (fun (method_, expected_exit) ->
+      let source =
+        run_language "java"
+          (Printf.sprintf
+             {|(ns checks.entry)
+(gen-class :name Runner :extends Object :methods [[%s [] void]])
+(defn -main [this] (println "ok"))|}
+             method_)
+      in
+      let tmp = Filename.temp_dir "language-java-entry-" "" in
+      let main_java = Filename.concat tmp "entry.java" in
+      write_file main_java source;
+      let _, error =
+        run_command_full ~failure_context:source ~expected_exit "javac"
+          [ "-d"; tmp; Sys.getenv "RUNTIME_JAVA"; main_java ]
+          ""
+      in
+      if expected_exit = 0 then
+        Alcotest.(check string)
+          "JDK 25 instance main" "ok"
+          (run_command "java" [ "-cp"; tmp; "checks.entry$Runner" ] "" |> trim_output)
+      else (
+        Alcotest.(check bool) "super call preserved" true (List.mem "super.main();" (String.split_on_char '\n' source));
+        Alcotest.(check bool)
+          "missing superclass method" true
+          (List.exists (String.ends_with ~suffix:"method main()") (String.split_on_char '\n' error))))
+    [ ("main", 0); ("^override main", 1) ]
+
 let clj_files dir =
   Sys.readdir dir |> Array.to_list
   |> List.filter (fun name -> Filename.check_suffix name ".clj")
@@ -139,4 +169,5 @@ let () =
           ("eval", List.map (sample_test samples) eval_files);
           ("js", List.map (js_sample_test samples) js_files);
           ("java", List.map (java_sample_test samples) java_files);
+          ("java entry point", [ Alcotest.test_case "gen-class main and missing super" `Slow gen_class_entry_point ]);
         ]

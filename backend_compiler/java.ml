@@ -285,7 +285,7 @@ let compile_gen_method helper_class_name { method_name; arg_types; return_type; 
   let call_args = "this" :: List.mapi (fun index _ -> "arg" ^ string_of_int index) arg_types in
   let super_args = List.mapi (fun index _ -> "arg" ^ string_of_int index) arg_types in
   let super_call = if call_super then [ "super." ^ method_name ^ "(" ^ String.concat ", " super_args ^ ");" ] else [] in
-  [ "@Override"; "public " ^ return_type ^ " " ^ method_name ^ "(" ^ String.concat ", " params ^ ") {"; "try {" ]
+  [ "public " ^ return_type ^ " " ^ method_name ^ "(" ^ String.concat ", " params ^ ") {"; "try {" ]
   @ super_call
   @ [
       helper_class_name ^ "." ^ Symbol_munge.munge ("-" ^ method_name) ^ "(" ^ String.concat ", " call_args ^ ");";

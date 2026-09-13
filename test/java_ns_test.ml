@@ -297,7 +297,6 @@ static Object _onCreate(Object this_, Object savedInstanceState) throws Exceptio
 return null;
 }
 public static class MainActivity extends android.app.Activity {
-@Override
 public void onCreate(android.os.Bundle arg0) {
 try {
 super.onCreate(arg0);
@@ -309,6 +308,19 @@ throw sneaky_throw(e);
 }
 }|}
     java
+
+let gen_class_instance_methods () =
+  List.iter
+    (fun (base, method_, super_count) ->
+      let java = compile (Printf.sprintf "(gen-class :name Runner :extends %s :methods [[%s [] void]])" base method_) in
+      let lines = String.split_on_char '\n' java in
+      Alcotest.(check bool) "no annotation" false (List.mem "@Override" lines);
+      Alcotest.(check int)
+        "super calls" super_count
+        (List.length (List.filter (String.starts_with ~prefix:"super.") lines)))
+    [ ("Object", "main", 0); ("java.util.ArrayList", "clear", 0); ("java.util.ArrayList", "^override clear", 1) ];
+  Alcotest.check_raises "non-void method" (Failure "gen-class: only void methods are supported") (fun () ->
+      ignore (compile "(gen-class :name Runner :extends Object :methods [[value [] String]])"))
 
 let instance_check () =
   let java = compile "(ns user (:import [java.util List])) (defn test [value] (instance? List value))" in
@@ -377,5 +389,6 @@ let () =
             unsupported_expression_call_arity_reports_location;
           Alcotest.test_case "expression call casts" `Quick expression_call_casts;
           Alcotest.test_case "gen-class" `Quick gen_class;
+          Alcotest.test_case "gen-class instance methods" `Quick gen_class_instance_methods;
         ] );
     ]

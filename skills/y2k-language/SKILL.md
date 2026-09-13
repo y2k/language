@@ -183,7 +183,7 @@ The example requires a host with `Response`, such as a current Node or a Fetch-c
 ;; test returns "X!" on Java
 ```
 
-**`gen-class`:** `(gen-class :name NAME :extends BASE :methods [[method [ARG-TYPES...] void] ...])` emits a public static nested subclass inside the helper. Define each implementation as top-level `(defn -method [this args...] body...)`. Only `void` overrides are supported. `^override` on the declared method calls `super.method(...)` before the helper implementation. The total implementation arity, including `this`, must fit Java's 0–4 limit. A qualified `:name` must match the namespace/package rules; prefer one declaration with a simple nested class name per source file. It generates a nested class, not a separate top-level source file.
+**`gen-class`:** `(gen-class :name NAME :extends BASE :methods [[method [ARG-TYPES...] void] ...])` emits a public static nested subclass inside the helper. Define each implementation as top-level `(defn -method [this args...] body...)`. New and overriding public `void` instance methods are supported; static and non-void methods are not. Generated methods have no `@Override` annotation: overriding follows Java's signature and inheritance rules, with no separate check of overriding intent. Without metadata, the method calls only the helper implementation. `^override` on the declared method calls `super.method(...)` first, then the helper after normal completion; it requires an accessible concrete superclass method and is not needed to override without calling `super`. The total implementation arity, including `this`, must fit Java's 0–4 limit. A qualified `:name` must match the namespace/package rules; prefer one declaration with a simple nested class name per source file. It generates a nested class, not a separate top-level source file.
 
 ```clojure
 (gen-class
@@ -200,6 +200,22 @@ The example requires a host with `Response`, such as a current Node or a Fetch-c
     (.isAlive t)))
 ;; test returns false on Java
 ```
+
+On JDK 25, declare an instance `main()` to launch the nested class directly, without a static-main wrapper or preview flags:
+
+```clojure
+(ns checks.entry)
+
+(gen-class
+ :name Runner
+ :extends Object
+ :methods [[main [] void]])
+
+(defn -main [this]
+  (println "ok"))
+```
+
+The generated source is `entry.java`. After the application's build compiles it together with the runtime into `out`, run `java -cp out 'checks.entry$Runner'` on JDK 25; it prints `ok`. Quote the binary name to protect `$` from shell expansion. JDK 25 is required for this direct instance entry point, not for ordinary new instance methods.
 
 ## CLI and project integration
 
