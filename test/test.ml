@@ -72,11 +72,11 @@ let java_package source =
       else None)
   |> Option.value ~default:""
 
-let run_java path =
+let run_java_source ?(expected_exit = 0) input =
   let tmp = Filename.temp_dir "language-java-" "" in
   let out = Filename.concat tmp "out" in
   Unix.mkdir out 0o755;
-  let main_source = run_language "java" (java_input path) in
+  let main_source = run_language "java" input in
   let package = java_package main_source in
   let class_name = java_class_name main_source in
   let main_java = Filename.concat tmp (class_name ^ ".java") in
@@ -97,7 +97,35 @@ let run_java path =
          ]));
   run_command_full ~failure_context "javac" [ "-d"; out; Sys.getenv "RUNTIME_JAVA"; main_java; runner_java ] ""
   |> ignore;
-  run_command_full ~failure_context "java" [ "-cp"; out; runner_name ] "" |> fst |> trim_output
+  run_command_full ~failure_context ~expected_exit "java" [ "-cp"; out; runner_name ] ""
+
+let run_java path = run_java_source (java_input path) |> fst |> trim_output
+
+let empty_subtraction target () =
+  let message = "- expects at least one number" in
+  if target = "eval" then
+    match Language_main.Runner.run ~target "(-)" with
+    | Error error -> Alcotest.(check string) "empty subtraction" message error
+    | Ok value -> Alcotest.failf "expected error, got %s" value
+  else
+    let source = "(defn test [] (-))" in
+    let _, error =
+      if target = "java" then run_java_source ~expected_exit:1 source
+      else (
+        ensure_runtime_js ();
+        run_command_full ~expected_exit:1 "node" [ "--input-type=module" ] (run_language "js" (source ^ "\n(test)")))
+    in
+    Alcotest.(check bool)
+      "empty subtraction diagnostic" true
+      (String.split_on_char '\n' error |> List.exists (String.ends_with ~suffix:message))
+
+let eval_fractional_round_trip () =
+  let expected = 1.2345678901234567 in
+  List.iter
+    (fun expression ->
+      let actual = run_language "eval" expression |> float_of_string in
+      Alcotest.(check bool) expression true (actual = expected))
+    [ "(+ 1.2345678901234567 0)"; "(* (+ 1.2345678901234567 0) 1)" ]
 
 let gen_class_entry_point () =
   List.iter
@@ -169,5 +197,12 @@ let () =
           ("eval", List.map (sample_test samples) eval_files);
           ("js", List.map (js_sample_test samples) js_files);
           ("java", List.map (java_sample_test samples) java_files);
+          ( "arithmetic",
+            [
+              Alcotest.test_case "eval empty subtraction" `Quick (empty_subtraction "eval");
+              Alcotest.test_case "js empty subtraction" `Slow (empty_subtraction "js");
+              Alcotest.test_case "java empty subtraction" `Slow (empty_subtraction "java");
+              Alcotest.test_case "eval fractional round-trip" `Quick eval_fractional_round_trip;
+            ] );
           ("java entry point", [ Alcotest.test_case "gen-class main and missing super" `Slow gen_class_entry_point ]);
         ]

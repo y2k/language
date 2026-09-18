@@ -119,13 +119,36 @@ let fold_numbers name init fn args =
   args |> List.fold_left (fun acc value -> fn acc (to_int name value)) init |> string_of_int |> fun value ->
   Symbol value
 
-let add _ args = fold_numbers "+" 0 Stdlib.( + ) args
+let float_text value =
+  if value >= -2147483648. && value <= 2147483647. && Float.is_integer value then string_of_int (int_of_float value)
+  else
+    (* ponytail: round-trip text, not cross-target exponent formatting; use a shared formatter if needed. *)
+    let rec format precision =
+      let text = Printf.sprintf "%.*g" precision value in
+      if precision = 17 || float_of_string text = value then text else format (precision + 1)
+    in
+    format 1
+
+let fold_arithmetic name int_fn float_fn first rest =
+  let is_integer = function Symbol value -> Option.is_some (int_of_string_opt value) | _ -> false in
+  if List.for_all is_integer (first :: rest) then fold_numbers name (to_int name first) int_fn rest
+  else
+    let to_float = function
+      | Symbol value -> (
+          match float_of_string_opt value with
+          | Some value -> value
+          | None -> raise (Eval_error (name ^ " expects numbers")))
+      | _ -> raise (Eval_error (name ^ " expects numbers"))
+    in
+    Symbol (float_text (List.fold_left (fun acc value -> float_fn acc (to_float value)) (to_float first) rest))
+
+let add _ args = fold_arithmetic "+" Stdlib.( + ) Stdlib.( +. ) (Symbol "0") args
 
 let subtract _ = function
   | [] -> raise (Eval_error "- expects at least one number")
-  | first :: rest -> fold_numbers "-" (to_int "-" first) Stdlib.( - ) rest
+  | first :: rest -> fold_arithmetic "-" Stdlib.( - ) Stdlib.( -. ) first rest
 
-let multiply _ args = fold_numbers "*" 1 Stdlib.( * ) args
+let multiply _ args = fold_arithmetic "*" Stdlib.( * ) Stdlib.( *. ) (Symbol "1") args
 
 let divide _ = function
   | [] -> raise (Eval_error "/ expects at least one number")

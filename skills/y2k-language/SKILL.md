@@ -21,7 +21,8 @@ Use this reference when writing application code. Y2K Language is an experimenta
 | Syntax | Meaning and limits |
 | --- | --- |
 | `nil`, `true`, `false` | Nil and boolean literals. |
-| `42`, `-7` | Use decimal integers for portable arithmetic. Keep operands and intermediate results within signed 32-bit range for Java; wider numbers and floating-point arithmetic are not portable. |
+| `42`, `-7` | Decimal integers. Keep integer operands and intermediate results within signed 32-bit range for portability; wider integer arithmetic differs by target. |
+| `0.2`, `-0.5` | Finite fractional numbers supported by `+`, `-`, `*`, including mixed integer/fractional arguments. Uses binary64 precision, not exact decimal arithmetic. Fractional division and ordering comparisons are not portable. |
 | `"text"` | Strings, including Unicode. Decode `\"`, `\\`, `\n`, `\t`, `\r` once. Other escapes, including `\b`, `\f`, `\/`, `\q`, `\u0041`, remain literal backslash sequences. |
 | `:name` | Becomes the string `"name"`; there is no separate keyword runtime type. |
 | `[a b]` | Eager list construction, equivalent to `(list a b)`. Vectors and lists share one runtime representation. |
@@ -96,10 +97,10 @@ These 26 functions are available without imports on all three targets. Signature
 | `(reduce f init collection)` | Left fold over every element; empty collection returns `init`. Both forms accept a list or map; map items are `[key value]` pairs. Do not rely on portable map iteration order. Callback takes accumulator and item. |
 | `(drop n items)` | List without first `n` items. Integer `n <= 0` keeps all; `n >= count` gives empty list. |
 | `(str values...)` | Concatenates textual values without separators; zero gives `""`. Nil is `"nil"`, lists use parentheses, maps braces, functions `"#<function>"`, atoms `"#<atom>"`. Not a serialization format. |
-| `(+ numbers...)` | Integer sum; zero arguments gives `0`. |
-| `(- n numbers...)` | Subtract remaining integers from `n`; at least one argument. **Unary form returns `n`, not its negation.** |
-| `(* numbers...)` | Integer product; zero arguments gives `1`. |
-| `(/ n numbers...)` | Divide left to right, truncating toward zero at each step; at least one argument. **Unary form returns `n`, not its reciprocal.** Zero-divisor behavior is not portable. |
+| `(+ numbers...)` | Sum integers and/or fractions left to right; zero arguments gives `0`. |
+| `(- n numbers...)` | Subtract remaining integers and/or fractions from `n` left to right; at least one argument. **Unary form returns the value of `n`, not its negation.** |
+| `(* numbers...)` | Multiply integers and/or fractions left to right; zero arguments gives `1`. |
+| `(/ n numbers...)` | Portable for integers only. Divide left to right, truncating toward zero at each step; at least one argument. **Unary form returns `n`, not its reciprocal.** Zero-divisor behavior is not portable. |
 | `(= a b)` | Portable equality for same-type nil, booleans, strings, and integers. Use exactly two arguments; collection, mixed-type, function, and Atom comparisons are not portable. |
 | `(not= a b)` | Negates binary `=` with the same portability limits. |
 | `(not value)` | Boolean negation of language truthiness, including textual `"false"`/`"nil"`. |
@@ -110,6 +111,10 @@ These 26 functions are available without imports on all three targets. Signature
 | `(swap! reference f)` | Calls unary `f` once with current value, stores and returns its result. No extra arguments. If callback fails, no result is written; callback side effects are not rolled back. Sequential semantics only, no host-thread synchronization guarantee. |
 
 Atom functions enforce arities 1, 1, 2, 2; invalid references or a non-callable update fail. Other APIs may report errors at compilation or execution depending on target.
+
+**Fractional arithmetic:** `+`, `-`, `*` preserve fractional operands without truncation. A result that is exactly an integer within signed 32-bit range is normalized to an integer, including negative zero becoming `0`. Thus `(str (+ 0.5 0.5))` is `"1"`, `(= (+ 0.5 0.5) 1)` is `true`, and the corresponding `not=` is `false`. This does not establish general mixed-literal equality such as `(= 1 1.0)`. Non-integer results retain binary64 precision when reused in arithmetic; no epsilon or decimal rounding is applied. For example, `(str (+ 1 0.2) " " (* 2 0.2))` is `"1.2 0.4"`, but `(+ 0.1 0.2)` need not equal `0.3` exactly. Exponent spelling and formatting of arbitrary fractional values can differ by target; `str` is not a portable numeric serialization format. Non-finite values and overflow remain outside the portable contract.
+
+Java runtime methods for `+`, `-`, `*` return `Number` (`Integer` or `Double`) rather than always `Integer`. Recompile Java consumers with the updated runtime and deploy it together with the compiler's matching runtime version.
 
 **Representation differences:** eval stores scalar text and compares lists/maps structurally (map pair order matters); JS uses identity equality for collections, Java uses host `equals`. JS/Java maps stringify keys and overwrite duplicate keys, whereas eval retains pairs and looks up the first matching key. JS may reorder integer-like keys. Avoid duplicate/non-string keys, collection equality, and ordering assumptions in portable code.
 
