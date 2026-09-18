@@ -252,20 +252,22 @@ Evaluator SHALL поддерживать `(get-in collection keys)` с двум�
 
 ### Requirement: Unknown eval behavior SHALL remain unspecified
 
-This spec SHALL mark behavior as unknown when the current code or tests do not provide a stable language-level answer.
+Спецификация SHALL оставлять поведение неопределённым там, где код, тесты и принятые требования не задают стабильный контракт языка.
 
 #### Scenario: Nested `def`
-- **WHEN** `def` appears outside the supported top-level language convention
-- **THEN** the language-level behavior is unknown and this spec does not require callers to rely on it
+- **WHEN** `def` появляется вне поддерживаемого соглашения о top-level формах
+- **THEN** поведение языка остаётся неопределённым и программа не должна полагаться на него
 
 #### Scenario: Decimal arithmetic
-- **WHEN** decimal number symbols are used with eval arithmetic
-- **THEN** the language-level numeric model is unknown beyond the current eval stdlib accepting only integer symbol values for arithmetic
+- **WHEN** дробные числа используются в `+`, `-` или `*` в пределах контракта `fractional-arithmetic`
+- **THEN** результат определяется этим контрактом и больше не считается неопределённым
+- **WHEN** дробные числа используются в `/`, операциях порядка или вне явно заданных числовых гарантий
+- **THEN** переносимое числовое поведение остаётся неопределённым
 
 #### Scenario: Negative list indexes
-- **WHEN** `get` receives a list and a negative integer index
-- **THEN** the language-level result and error shape are unknown
+- **WHEN** `get` получает list и отрицательный целый индекс
+- **THEN** результат и форма ошибки на уровне языка остаются неопределёнными
 
 #### Scenario: Division by zero
-- **WHEN** `/` receives zero as a divisor
-- **THEN** the language-level result and error shape are unknown
+- **WHEN** `/` получает ноль в качестве делителя
+- **THEN** результат и форма ошибки на уровне языка остаются неопределёнными

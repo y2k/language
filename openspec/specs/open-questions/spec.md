@@ -28,10 +28,10 @@ Track ambiguous observed behavior separately from accepted behavior and proposed
 - **THEN** их предполагаемый runtime/compiler эффект остаётся неясным за пределами сохранения metadata
 
 #### Scenario: Numeric model
-- **GIVEN** определение чисел в parser/compiler принимает floats через `float_of_string_opt`
-- **AND** арифметика eval преобразует значения через `int_of_string_opt`
-- **WHEN** десятичные числа используются в арифметике eval
-- **THEN** числовое поведение между targets остаётся неясным
+- **GIVEN** `fractional-arithmetic` определяет дробные `+`, `-`, `*` и нормализацию их целых результатов
+- **WHEN** программа использует дробное деление, операции порядка с дробями, большие целые, non-finite значения или смешанное числовое равенство вне этого контракта
+- **THEN** переносимое поведение этих случаев остаётся открытым вопросом
+- **AND** согласованные в `fractional-arithmetic` сценарии больше не относятся к неопределённому поведению
 
 #### Scenario: Hash map ordering and duplicate keys
 - **GIVEN** hash maps представлены association lists
