@@ -55,6 +55,14 @@ let parse_java_lambda_annotation = function
         Some { target_type; return_mode = Void })
       else Some { target_type = annotation; return_mode = Value }
 
+let compile_qualified_name ctx name =
+  match String.split_on_char '/' name with
+  | [ qualifier; member ] when qualifier <> "" && member <> "" -> (
+      match StringMap.find_opt qualifier ctx.requires with
+      | Some namespace -> namespace ^ "." ^ Symbol_munge.munge member
+      | None -> Symbol_munge.munge qualifier ^ "." ^ Symbol_munge.munge member)
+  | _ -> Symbol_munge.munge name
+
 let compile_atom ctx meta name =
   if name = "nil" then "null"
   else if is_number name then name
@@ -63,15 +71,7 @@ let compile_atom ctx meta name =
   else
     match StringMap.find_opt name ctx.top_fns with
     | Some arity -> "(" ^ fn_interface meta name arity ^ ") user::" ^ Symbol_munge.munge name
-    | None -> Symbol_munge.munge name
-
-let compile_qualified_name ctx name =
-  match String.split_on_char '/' name with
-  | [ qualifier; member ] when qualifier <> "" && member <> "" -> (
-      match StringMap.find_opt qualifier ctx.requires with
-      | Some namespace -> namespace ^ "." ^ Symbol_munge.munge member
-      | None -> Symbol_munge.munge qualifier ^ "." ^ Symbol_munge.munge member)
-  | _ -> Symbol_munge.munge name
+    | None -> compile_qualified_name ctx name
 
 let rec compile_quote = function
   | SAtom (_, name) -> java_string (if is_string name then string_value name else name)
@@ -199,7 +199,9 @@ and compile_body ctx ~last ~empty = function
       in
       statement :: compile_body ctx ~last ~empty rest
 
-let compile_function ctx code name args body =
+let visibility meta = if meta.private_ then "private" else "public"
+
+let compile_function ctx code meta name args body =
   let compile_arg = function SAtom (_, name) -> "Object " ^ java_local_name name | _ -> invalid_sexpr __LOC__ code in
   let locals =
     List.fold_left
@@ -208,7 +210,7 @@ let compile_function ctx code name args body =
   in
   let ctx = { ctx with locals } in
   [
-    "static Object " ^ Symbol_munge.munge name ^ "("
+    visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ "("
     ^ String.concat ", " (List.map compile_arg args)
     ^ ") throws Exception {";
   ]
@@ -218,19 +220,19 @@ let compile_function ctx code name args body =
 let compile_statement ctx = function
   | SList (_, _, SAtom (_, "compiler/ns") :: _) -> []
   | SList (_, _, SAtom (_, "compiler/gen-class") :: _) -> []
-  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ]) as
-    code ->
-      compile_function ctx code name args body
-  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); SAtom (value_meta, value) ]) ->
+  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ])
+    as code ->
+      compile_function ctx code meta name args body
+  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); SAtom (value_meta, value) ]) ->
       let value =
         match StringMap.find_opt value ctx.top_fns with
         | Some _ -> compile_atom { ctx with locals = StringSet.empty } value_meta value
         | None -> compile_atom { ctx with locals = StringSet.empty } value_meta value
       in
-      [ "static Object " ^ Symbol_munge.munge name ^ " = " ^ value ^ ";" ]
-  | SList (_, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
+      [ visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ " = " ^ value ^ ";" ]
+  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
       [
-        "static Object " ^ Symbol_munge.munge name ^ ";";
+        visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ ";";
         "static {";
         java_local_name name ^ " = " ^ compile_expr { ctx with locals = StringSet.empty } value ^ ";";
         "}";

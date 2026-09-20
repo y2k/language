@@ -9,7 +9,7 @@ let no_namespace () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return 1;
 }
 }|}
@@ -35,7 +35,7 @@ import static y2k.language.language_runtime.*;
 import java.time.LocalDate;
 
 public final class main {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return io.math.core.foo(LocalDate.now());
 }
 }|}
@@ -60,7 +60,7 @@ let multiple_requires () =
 import static y2k.language.language_runtime.*;
 
 public final class main {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return app.util.bar(io.math.core.foo(1));
 }
 }|}
@@ -78,7 +78,7 @@ let namespace_name_only () =
     {|import static y2k.language.language_runtime.*;
 
 public final class main {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return 1;
 }
 }|}
@@ -96,7 +96,7 @@ let string_literals () =
     {|import static y2k.language.language_runtime.*;
 
 public final class main {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return list("column", hash_map("text", "Start"));
 }
 }|}
@@ -111,7 +111,7 @@ let instance_method_call () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test(Object value) throws Exception {
+public static Object test(Object value) throws Exception {
 return value.toString();
 }
 }|}
@@ -126,7 +126,7 @@ let cast () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test(Object xs, Object i) throws Exception {
+public static Object test(Object xs, Object i) throws Exception {
 return ((java.util.List) xs).get(((int) i));
 }
 }|}
@@ -148,7 +148,7 @@ let constructor_call () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return new java.time.LocalDate(2024, 1, 2);
 }
 }|}
@@ -163,7 +163,7 @@ let constructor_call_with_nested_arg () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test(Object value) throws Exception {
+public static Object test(Object value) throws Exception {
 return new Widget(value.toString());
 }
 }|}
@@ -183,7 +183,7 @@ let typed_lambda_interop () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return java.util.Optional.of("X").map(((java.util.function.Function)
 (value) -> {
 try {
@@ -206,7 +206,7 @@ let typed_runnable_interop () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test() throws Exception {
+public static Object test() throws Exception {
 return ((java.lang.Runnable)
 () -> {
 try {
@@ -229,7 +229,7 @@ let typed_consumer_interop () =
     "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
-static Object test(Object xs) throws Exception {
+public static Object test(Object xs) throws Exception {
 return ((java.util.function.Consumer)
 (value) -> {
 try {
@@ -293,7 +293,7 @@ let gen_class () =
 import static y2k.language.language_runtime.*;
 
 public final class main {
-static Object _onCreate(Object this_, Object savedInstanceState) throws Exception {
+public static Object _onCreate(Object this_, Object savedInstanceState) throws Exception {
 return null;
 }
 public static class MainActivity extends android.app.Activity {
@@ -363,12 +363,55 @@ let instance_check () =
           "[]";
         ])
 
+let definition_visibility () =
+  List.iter
+    (fun ns ->
+      let lines =
+        compile
+          (ns
+         ^ "(defn visible [] 1) (defn- hidden [] 2) (def scalar 1) (def items [1 2]) (def- secret 3) (def- secrets [3 \
+            4])")
+        |> String.split_on_char '\n'
+      in
+      List.iter
+        (fun line -> Alcotest.(check bool) line true (List.mem line lines))
+        [
+          "public static Object visible() throws Exception {";
+          "private static Object hidden() throws Exception {";
+          "public static Object scalar = 1;";
+          "public static Object items;";
+          "private static Object secret = 3;";
+          "private static Object secrets;";
+        ])
+    [ ""; "(ns checks.visibility)" ]
+
+let qualified_values () =
+  let lines =
+    compile
+      {|(ns app.main (:require [words.dic.serbian :as serbian]))
+(def copied serbian/items)
+(defn read [] serbian/items)
+(defn literal [] "serbian/items")
+(defn local [serbian] serbian)|}
+    |> String.split_on_char '\n'
+  in
+  List.iter
+    (fun line -> Alcotest.(check bool) line true (List.mem line lines))
+    [
+      "public static Object copied = words.dic.serbian.items;";
+      "return words.dic.serbian.items;";
+      "return \"serbian/items\";";
+      "return serbian;";
+    ]
+
 let () =
   Alcotest.run "java ns"
     [
       ( "JAVA ns",
         [
           Alcotest.test_case "no namespace" `Quick no_namespace;
+          Alcotest.test_case "definition visibility" `Quick definition_visibility;
+          Alcotest.test_case "qualified values" `Quick qualified_values;
           Alcotest.test_case "require and import" `Quick require_and_import;
           Alcotest.test_case "multiple requires" `Quick multiple_requires;
           Alcotest.test_case "namespace name only" `Quick namespace_name_only;
