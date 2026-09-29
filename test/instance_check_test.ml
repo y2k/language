@@ -10,7 +10,7 @@ let unsupported_targets () =
   ignore (eval "(def counter (atom 0))");
   Alcotest.check_raises "eval diagnostic" (Backend_eval.Eval.Eval_error message) (fun () ->
       ignore (eval "(instance? String (reset! counter 1))"));
-  Alcotest.(check bool) "argument not evaluated" true (eval "(deref counter)" = [ Backend_eval.Eval.Symbol "0" ])
+  Alcotest.(check bool) "argument not evaluated" true (eval "(deref counter)" = [ Backend_eval.Eval.Int 0 ])
 
 let write_file path text = Out_channel.with_open_text path (fun output -> output_string output text)
 

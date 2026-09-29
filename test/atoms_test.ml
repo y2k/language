@@ -18,10 +18,10 @@ let eval context input =
   | Ok forms -> Backend_eval.Eval.eval_all ~context forms
   | Error message -> Alcotest.fail message
 
-let check_symbol context input expected =
+let check_int context input expected =
   match List.rev (eval context input) with
-  | Backend_eval.Eval.Symbol value :: _ -> Alcotest.(check string) input expected value
-  | _ -> Alcotest.fail "expected symbol"
+  | Backend_eval.Eval.Int value :: _ -> Alcotest.(check int) input expected value
+  | _ -> Alcotest.fail "expected integer"
 
 let expect_eval_error context input =
   match eval context input with
@@ -42,18 +42,20 @@ let eval_atoms () =
         invalid_operations)
     invalid_references;
   ignore (eval context "(def cell (atom 10)) (def calls (atom 0))");
-  check_symbol context "(deref cell)" "10";
-  check_symbol context "(reset! cell 20)" "20";
-  check_symbol context "(deref cell)" "20";
-  check_symbol context "(let [delta 3] (swap! cell (fn [x] (+ x delta))))" "23";
-  check_symbol context "(deref cell)" "23";
+  check_int context "(deref cell)" 10;
+  check_int context "(reset! cell 20)" 20;
+  check_int context "(deref cell)" 20;
+  check_int context "(let [delta 3] (swap! cell (fn [x] (+ x delta))))" 23;
+  check_int context "(deref cell)" 23;
   List.iter
     (fun expression ->
       expect_eval_error context expression;
-      check_symbol context "(deref cell)" "23")
+      check_int context "(deref cell)" 23)
     [ "(swap! cell 42)"; "(swap! cell (fn [x] (reset! calls 1) (deref nil)))" ];
-  check_symbol context "(deref calls)" "1";
-  check_symbol context "(reset! cell cell) (str cell)" "#<atom>"
+  check_int context "(deref calls)" 1;
+  match List.rev (eval context "(reset! cell cell) (str cell)") with
+  | Backend_eval.Eval.String value :: _ -> Alcotest.(check string) "atom rendering" "#<atom>" value
+  | _ -> Alcotest.fail "expected string"
 
 let read_file path = In_channel.with_open_text path In_channel.input_all
 let write_file path text = Out_channel.with_open_text path (fun output -> output_string output text)

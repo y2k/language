@@ -1,39 +1,23 @@
-# AGENTS.md
+# Замечания для дальнейшей работы
 
-## Commands
+## Интеграционные тесты
 
-- Full verification: `make test` (`dune build`, then `ALCOTEST_SHOW_ERRORS=1 dune runtest --profile test`).
-- Faster bail-on-first-failure run: `make test_smoke`.
-- Focused OCaml test binary example: `dune exec ./test/java_ns_test.exe`.
-- The sample suite `test/test.ml` depends on env vars from `test/dune`; prefer `make test`/`dune runtest` for it.
-- Run the CLI with `dune exec ./bin/main.exe -- --target eval|js|java`; input is read from stdin.
-- After editing `.ml`/`.mli`, run `ocamlformat -i` on the changed files.
+- Общие сценарии языка в первую очередь добавляйте в `test/samples/`: каждый `.clj` запускается на eval, JS и Java. Подкаталоги `test/samples/eval/`, `js/` и `java/` предназначены для специфичного поведения targets.
+- `assert` не является переносимой функцией. В общих fixtures выводите результаты проверок через `str`; sample-runner сравнит их с ожидаемым выводом в первой строке `;; ...`. Используйте бинарные `=` и `not=`.
+- Одинаковый текстовый вывод не доказывает равенство значений: `nil` и `"nil"` печатаются одинаково. Проверяйте равенство и истинность, а в целевых OCaml-тестах при необходимости — runtime-конструктор.
+- После изменения тестов запускайте `make test`: он проверяет сборку и suites всех трёх targets с нужными переменными окружения.
 
-## OpenSpec Language
+## Семантика и runtime
 
-- When working with OpenSpec (`/opsx-*`, `openspec-*` skills, or files under `openspec/`), answer the user in Russian.
-- Write OpenSpec artifacts in Russian, including `proposal.md`, `design.md`, `tasks.md`, and `specs/**/spec.md`; keep code identifiers, file paths, commands, language keywords, and quoted program output unchanged.
+- Проверяйте утверждения справочника по реализации и тестам: документация может отставать. При изменении поведения обновляйте английский справочник `skills/y2k-language/SKILL.md` в той же правке.
+- Строки `"nil"` и `"false"` истинны на всех трёх targets. Литералы `nil` и `false` ложны везде; eval хранит boolean отдельно от текста.
+- Цитирование `nil` различается: `'nil` даёт `Nil` в eval, но текстовое значение в JS/Java. Не включайте одинаковые ожидания для этого случая в общие fixtures.
+- При добавлении runtime-типа проверяйте все источники и потребители значения: литералы, `quote`, отсутствующие данные, деструктуризацию и её ключи, равенство, условия, диагностику, преобразование в текст и runner.
 
-## Project Map
+## OpenSpec
 
-- `frontend/`: parser, macro expansion/desugaring, AST, and `Gensym`.
-- `backend_eval/`: interpreter backend.
-- `backend_compiler/`: JS and Java compilers plus expression-to-statement lowering.
-- `bin/runner.ml`: shared CLI/test entrypoint; targets are `eval`, `js`, and `java`.
-- `test/java_ns_test.ml`, `test/js_ns_test.ml`, `test/eval_ns_test.ml`, `test/eval_deps_test.ml`: focused Alcotest suites.
-- `test/samples/*.clj`: cross-backend fixtures; the first line must be `;; expected-output`.
+- В блоках `MODIFIED Requirements` сохраняйте имена существующих сценариев и включайте обновлённый блок требования целиком. Перевод или переименование заголовка сценария валидатор может расценить как удаление. Проверяйте change командой `openspec validate <change> --strict`.
 
-## Build Gotchas
+## Взаимодействие
 
-- Root `dune` turns selected warnings into errors; unused code/imports can break the build.
-- `backend_compiler/language_runtime.ml` is generated from `language_runtime.java`; edit `language_runtime.java`, not the generated file.
-- JS sample tests write `language_runtime.js` into the test working directory before running Node.
-- Java sample tests compile generated Java together with `language_runtime.java` using `javac`.
-
-## Language Semantics
-
-- When changing user-facing compiler forms, standard library functions, or target behavior/limitations, update `skills/y2k-language/SKILL.md` in the same change; keep its English reference aligned with the implementation and tests.
-- `def` is supported only at top level. Do not add nested `def` forms or tests that rely on them.
-- Use `Gensym.gensym` for generated identifiers in compiler/lowering code; do not add local counters for fresh names.
-- Do not emit hardcoded generated temporaries like `__result`, `__tmp`, or any `__XXX` name; generated temporary identifiers must come from `Gensym.gensym`.
-- Do not create local `builtin_names`/`string_set` lists for compiler builtins; use a small predicate or shared central definition if builtin detection is needed.
+- После согласования плана и разрешения на выполнение переходите к работе без повторных запросов того же подтверждения. Повторный вопрос нужен при новой существенной развилке, расширении согласованного объёма или обязательном ограничении текущего режима.

@@ -15,7 +15,16 @@ let create_context ?(env = []) () = { namespaces = ref []; requires = ref []; cu
 let with_env context env = { context with env }
 let is_string name = String.length name >= 2 && name.[0] = '"' && name.[String.length name - 1] = '"'
 let string_value value = String.sub value 1 (String.length value - 2)
-let is_literal name = name = "nil" || name = "true" || name = "false" || Option.is_some (float_of_string_opt name)
+
+let literal = function
+  | "nil" -> Some Nil
+  | "true" -> Some (Bool true)
+  | "false" -> Some (Bool false)
+  | name -> (
+      match int_of_string_opt name with
+      | Some value -> Some (Int value)
+      | None -> Option.map (fun value -> Float value) (float_of_string_opt name))
+
 let read_package_files package version = Effect.perform (Read_package_files (package, version))
 let read_file path = In_channel.with_open_text path In_channel.input_all
 
@@ -72,7 +81,7 @@ let set_namespace context namespace requires =
   | SAtom (_, name) when is_string name ->
       context.current_namespace := string_value name;
       set_current_requires context (parse_requires requires);
-      Symbol "nil"
+      Nil
   | _ -> raise (Eval_error "compiler/ns expects string namespace")
 
 let find_in_namespace context namespace name =
@@ -86,7 +95,7 @@ let find_qualified context name =
   | _ -> None
 
 let find context name =
-  if is_string name then Symbol (string_value name)
+  if is_string name then String (string_value name)
   else
     match List.assoc_opt name context.env with
     | Some value -> value
@@ -99,8 +108,10 @@ let find context name =
             | None -> (
                 match find_qualified context name with
                 | Some value -> value
-                | None when is_literal name -> Symbol name
-                | None -> raise (Eval_error ("symbol not found: " ^ name)))))
+                | None -> (
+                    match literal name with
+                    | Some value -> value
+                    | None -> raise (Eval_error ("symbol not found: " ^ name))))))
 
 let define context name value =
   set_current_globals context ((name, value) :: List.remove_assoc name (current_globals context));
@@ -116,11 +127,17 @@ let rec sexpr_text = function
       opening ^ String.concat " " (List.map sexpr_text items) ^ closing
 
 let value_text = function
+  | Nil -> "nil"
+  | Bool value -> "boolean " ^ string_of_bool value
+  | String value -> Printf.sprintf "string %S" value
+  | Int value -> "integer " ^ string_of_int value
+  | Float value -> "float " ^ Eval_stdlib.float_text value
   | Symbol name -> Printf.sprintf "symbol %S" name
   | List _ -> "list"
   | HashMap _ -> "hash-map"
   | Closure _ -> "function"
   | Atom _ -> "atom"
+  | Regex _ -> "regex"
 
 let rec eval ?(context = create_context ()) = function
   | SAtom (_, name) -> find context name
@@ -136,7 +153,7 @@ let rec eval ?(context = create_context ()) = function
   | SList (_, Paren, [ SAtom (_, "if"); condition; then_; else_ ]) ->
       if truthy (eval ~context condition) then eval ~context then_ else eval ~context else_
   | SList (_, Paren, [ SAtom (_, "if"); condition; then_ ]) ->
-      if truthy (eval ~context condition) then eval ~context then_ else Symbol "nil"
+      if truthy (eval ~context condition) then eval ~context then_ else Nil
   | SList (_, Paren, SAtom (_, "if") :: _) ->
       raise (Eval_error "if expects condition, then branch, and optional else branch")
   | SList (_, Paren, SAtom (_, "fn*") :: SList (_, _, params) :: body) ->
@@ -155,20 +172,19 @@ let rec eval ?(context = create_context ()) = function
                   (sexpr_text first) (value_text value)))
       | _ -> assert false)
 
-and truthy = function Symbol "false" | Symbol "nil" -> false | _ -> true
-
 and quote = function
-  | SAtom (_, name) -> Symbol (if is_string name then string_value name else name)
+  | SAtom (_, name) when is_string name -> String (string_value name)
+  | SAtom (_, name) -> Option.value (literal name) ~default:(Symbol name)
   | SList (_, _, items) -> List (List.map quote items)
 
 and load_deps context = function
   | HashMap deps ->
       List.iter (load_dep context) deps;
-      Symbol "nil"
+      Nil
   | _ -> raise (Eval_error "deps expects a hash-map")
 
 and load_dep context = function
-  | Symbol package, Symbol version -> List.iter (load_package_file context) (read_package_files package version)
+  | String package, String version -> List.iter (load_package_file context) (read_package_files package version)
   | _ -> raise (Eval_error "deps expects string package/version pairs")
 
 and load_package_file context file =
@@ -241,7 +257,7 @@ and bind_list_pattern ~exact_list_length ~allow_hash_map env patterns values =
   match patterns with
   | [] -> env
   | pattern :: rest ->
-      let value, values = match values with value :: rest -> (value, rest) | [] -> (Symbol "nil", []) in
+      let value, values = match values with value :: rest -> (value, rest) | [] -> (Nil, []) in
       bind_list_pattern ~exact_list_length ~allow_hash_map
         (bind_pattern ~exact_list_length ~allow_hash_map env pattern value)
         rest values
@@ -249,9 +265,8 @@ and bind_list_pattern ~exact_list_length ~allow_hash_map env patterns values =
 and bind_hash_map_pattern ~exact_list_length ~allow_hash_map env patterns values =
   match patterns with
   | [] -> env
-  | SAtom (_, key) :: pattern :: rest ->
-      let key = Symbol (if is_string key then string_value key else key) in
-      let value = Option.value (List.assoc_opt key values) ~default:(Symbol "nil") in
+  | (SAtom _ as key) :: pattern :: rest ->
+      let value = Eval_stdlib.lookup (quote key) values in
       bind_hash_map_pattern ~exact_list_length ~allow_hash_map
         (bind_pattern ~exact_list_length ~allow_hash_map env pattern value)
         rest values

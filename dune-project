@@ -5,4 +5,4 @@
 (package
  (name language)
  (synopsis "A basic OCaml project")
- (depends angstrom (alcotest :with-test)))
+ (depends angstrom (re (= 1.13.2)) (alcotest :with-test)))

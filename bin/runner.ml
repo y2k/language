@@ -7,7 +7,8 @@ let run ~target input =
           | "eval" -> (
               try
                 match List.rev (Backend_eval.Eval.with_filesystem (fun () -> Backend_eval.Eval.eval_all sexprs)) with
-                | Backend_eval.Eval.Symbol value :: _ -> Ok value
+                | (Backend_eval.Eval.(String _ | Symbol _ | Int _ | Float _ | Bool _ | Nil) as value) :: _ ->
+                    Ok (Backend_eval.Eval_stdlib.to_string value)
                 | _ -> Ok ""
               with Backend_eval.Eval.Eval_error message -> Error message)
           | "js" -> Ok (Backend_compiler.Js.compile sexprs)

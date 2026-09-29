@@ -33,10 +33,10 @@ let eval_with_loader loader input =
   | Ok sexprs -> Eval.with_package_loader loader (fun () -> Eval.eval_all sexprs)
   | Error message -> Alcotest.fail message
 
-let last_symbol loader input =
+let last_string loader input =
   match List.rev (eval_with_loader loader input) with
-  | Eval.Symbol value :: _ -> value
-  | _ -> Alcotest.fail "expected symbol result"
+  | Eval.String value :: _ -> value
+  | _ -> Alcotest.fail "expected string result"
 
 let loads_package_def () =
   let loader package version =
@@ -44,7 +44,7 @@ let loads_package_def () =
     | "make", "0.1.0" -> [ package_file {|(def answer "42")|} ]
     | _ -> Alcotest.failf "unexpected package %s %s" package version
   in
-  Alcotest.(check string) "result" "42" (last_symbol loader {|(deps {:make "0.1.0"}) answer|})
+  Alcotest.(check string) "result" "42" (last_string loader {|(deps {:make "0.1.0"}) answer|})
 
 let loads_nested_deps () =
   let loader package version =
@@ -53,7 +53,7 @@ let loads_nested_deps () =
     | "b", "0.1.0" -> [ package_file {|(def from-b "nested")|} ]
     | _ -> Alcotest.failf "unexpected package %s %s" package version
   in
-  Alcotest.(check string) "result" "nested" (last_symbol loader {|(deps {:a "0.1.0"}) from-a|})
+  Alcotest.(check string) "result" "nested" (last_string loader {|(deps {:a "0.1.0"}) from-a|})
 
 let loads_at_form_position () =
   let loader package version =
@@ -63,7 +63,7 @@ let loads_at_form_position () =
   in
   Alcotest.check_raises "before deps" (Eval.Eval_error "symbol not found: answer") (fun () ->
       ignore (eval_with_loader loader {|answer (deps {:make "0.1.0"})|}));
-  Alcotest.(check string) "after deps" "42" (last_symbol loader {|(def local "before") (deps {:make "0.1.0"}) answer|})
+  Alcotest.(check string) "after deps" "42" (last_string loader {|(def local "before") (deps {:make "0.1.0"}) answer|})
 
 let qualified_lookup_uses_alias_after_deps () =
   let loader package version =
@@ -73,7 +73,7 @@ let qualified_lookup_uses_alias_after_deps () =
   in
   Alcotest.(check string)
     "result" "42"
-    (last_symbol loader {|(ns app (:require [make :as m])) (deps {:make "0.1.0"}) m/answer|})
+    (last_string loader {|(ns app (:require [make :as m])) (deps {:make "0.1.0"}) m/answer|})
 
 let renders_xml_manifest_package () =
   let loader package version =
@@ -106,7 +106,19 @@ let renders_xml_manifest_package () =
     ^ "<category  \
        android:name='android.intent.category.LAUNCHER'></category></intent-filter></activity></application></manifest>"
   in
-  Alcotest.(check string) "result" expected (last_symbol loader manifest)
+  Alcotest.(check string) "result" expected (last_string loader manifest)
+
+let rejects_non_string_pairs () =
+  List.iter
+    (fun input ->
+      Alcotest.check_raises input (Eval.Eval_error "deps expects string package/version pairs") (fun () ->
+          ignore (eval_with_loader (fun _ _ -> Alcotest.fail "invalid pair reached loader") input)))
+    [
+      "(deps {:package 1})";
+      "(deps {1 \"version\"})";
+      "(deps (hash-map 'package \"version\"))";
+      "(deps (hash-map \"package\" 'version))";
+    ]
 
 let () =
   Alcotest.run "eval deps"
@@ -118,5 +130,6 @@ let () =
           Alcotest.test_case "loads at form position" `Quick loads_at_form_position;
           Alcotest.test_case "qualified lookup uses alias after deps" `Quick qualified_lookup_uses_alias_after_deps;
           Alcotest.test_case "renders xml manifest package" `Quick renders_xml_manifest_package;
+          Alcotest.test_case "rejects non-string package/version" `Quick rejects_non_string_pairs;
         ] );
     ]
