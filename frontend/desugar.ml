@@ -7,6 +7,8 @@ let apply_macros macros sexpr = List.find_map (fun macro -> macro sexpr) macros
 
 let desugar ?(macros = builtin_macros) sexprs =
   let rec desugar_one sexpr =
+    match sexpr with SList (_, Paren, SAtom (_, "raw-code") :: _) -> sexpr | _ -> desugar_macros sexpr
+  and desugar_macros sexpr =
     match apply_macros macros sexpr with
     | Some sexpr -> desugar_one sexpr
     | None -> (

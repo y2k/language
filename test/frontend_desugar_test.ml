@@ -27,6 +27,13 @@ let string_escapes () =
     ]
 
 let method_call_shorthand () = check_desugar "method call shorthand" "(.foo obj 1 2)" "(. obj foo 1 2)"
+
+let raw_code_operands () =
+  List.iter
+    (fun source -> check_desugar "raw-code operands remain source forms" source source)
+    [ {|(raw-code "host();")|}; "(raw-code :text)"; "(raw-code (str :text))"; "(raw-code (cond true))" ];
+  check_desugar "surrounding macros still expand" "(fn [] (raw-code :text) :done)" "(fn* () (raw-code :text) \"done\")"
+
 let explicit_method_call_unchanged () = check_desugar "explicit method call" "(. obj foo 1 2)" "(. obj foo 1 2)"
 let constructor_shorthand () = check_desugar "constructor shorthand" "(LocalDate. 2024 1 2)" "(new LocalDate 2024 1 2)"
 let let_sequential_pattern () = check_desugar "let sequential pattern" "(let [[a b] xs] a)" "(let* ((list a b) xs) a)"
@@ -249,6 +256,7 @@ let () =
       ( "interop",
         [
           Alcotest.test_case "string escapes" `Quick string_escapes;
+          Alcotest.test_case "raw-code source operands" `Quick raw_code_operands;
           Alcotest.test_case "method call shorthand" `Quick method_call_shorthand;
           Alcotest.test_case "explicit method call unchanged" `Quick explicit_method_call_unchanged;
           Alcotest.test_case "constructor shorthand" `Quick constructor_shorthand;

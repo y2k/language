@@ -229,6 +229,16 @@ On all targets, `re-replace` replaces all non-overlapping matches, without resca
 
 Run `ly2k --target js < app.clj > compiled.js`, then `ly2k --target eval < build.clj > app.user.js` from the directory containing the three inputs. `header.txt` must include the `// ==UserScript==` and `// ==/UserScript==` delimiters. The compiler's JS runtime is `prelude/language_runtime.js`; place it beside these inputs as `language_runtime.js`. This is a text transformation for that input format, not a JavaScript parser or general bundler. Regex guarantees in this section apply to eval only.
 
+### Raw host code (`js` and `java`)
+
+`(raw-code "text")` is a **special form**, not a function or user macro. Use a single source string literal as its argument. Payload extraction rejects non-literal operands that remain after lowering; it does not guarantee rejection of expressions folded into literals. The parser decodes ordinary string escapes once; the compiler inserts that decoded text unchanged, without escaping, identifier munging, interpolation, parentheses, `return`, an extra `;`, or a wrapper. Supply any required host terminators yourself. An empty string inserts no code.
+
+Use it directly at top level, or as a non-final statement in a function's sequential body (including `let`/`do`). Finish the body with an ordinary language expression such as `nil`. Expression-valued raw-code is unsupported: do not use it as a call argument, callee, binding/def RHS, condition, direct `if` branch result or final body form. For conditional statements inside a function, use `(if condition (do (raw-code "...") nil) nil)`. Quoted forms remain data. The compiler does not validate source positions before lowering or guarantee diagnostics for unsupported placements. Arity and literal checks happen when emitting the payload.
+
+`raw-code` is reserved in call position, so a user function with that name cannot be called using this syntax. The payload is trusted host code, **not sandboxed** and not translated between targets. Host syntax, scope and type errors remain the host toolchain's responsibility. Host declarations are not registered in the compiler's function/local tables; use actual host identifiers, not assumed compiler temporary names.
+
+Eval rejects a reached raw-code form as supported only on JS/Java, without evaluating its arguments (even malformed ones). Quoted raw-code remains data, and an unselected `if` branch is not reached: `(if false (raw-code "...") "ok")` returns `"ok"` on eval.
+
 ### JavaScript (`js`)
 
 - Generates an ES module, not executed output. Public definitions become `export const`; `def-`/`defn-` become non-exported `const`. Hyphens in identifiers become underscores; punctuation is munged (for example `!` becomes `_BANG_`, `?` becomes `_QMARK_`).
@@ -237,6 +247,14 @@ Run `ly2k --target js < app.clj > compiled.js`, then `ly2k --target eval < build
 - Host calls: `(new Constructor args...)` or `(Constructor. args...)`; `(. receiver method args...)` or `(.method receiver args...)`; `(alias/function args...)` for a module function. Host APIs must exist in the actual application environment. No async/await language form is provided; use host callbacks/promises where appropriate.
 - `(cast TYPE value)` is transparent; Java type metadata does not provide runtime checking.
 - `(export-default :key value "other-key" other-value)` is a **top-level** ESM default export of an ordinary JS object. It takes one or more key/value pairs with literal keyword/string keys, not a map argument. Empty forms, odd argument counts, or computed keys fail. Ordinary map literals still use the language's null-prototype map representation.
+- Top-level `raw-code` inserts directly into the ES module, permitting host declarations/imports/exports. Within a function it inserts statements before the ordinary final expression:
+
+```clojure
+(raw-code "export const hostValue = 42;")
+(defn test []
+  (raw-code "console.log('hello');")
+  (str hostValue))
+```
 
 ```clojure
 (defn handle-fetch [request env ctx]
@@ -248,6 +266,15 @@ Run `ly2k --target js < app.clj > compiled.js`, then `ly2k --target eval < build
 The example requires a host with `Response`, such as a current Node or a Fetch-compatible worker. The build system places the module and its runtime; use the application's runner to invoke the exported handler.
 
 ### Java (`java`)
+
+- Top-level `raw-code` inserts **inside the generated helper class**, in source order. Write fields, methods, nested classes or explicit static blocks yourself; it does not automatically create a static initializer or move `import` outside the class. Within a function it inserts statements:
+
+```clojure
+(raw-code "public static int hostValue = 42;")
+(defn test []
+  (raw-code "System.out.println(\"hello\");")
+  (str hostValue))
+```
 
 - Generates a public helper class with static definitions and the language runtime import. No `ns` gives class `user`; `(ns app.main)` gives package `app`, class `main`, so the generated source filename must be `main.java`. Use the build system's Java entry point; no `main` method is generated automatically.
 - Source must contain top-level definitions, optional initial `ns`, and optional `gen-class`. Put executable expressions inside functions, not at Java file top level.

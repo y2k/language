@@ -148,6 +148,8 @@ let rec eval ?(context = create_context ()) = function
       raise (Eval_error "compiler/ns expects namespace, requires, imports")
   | SList (_, Paren, [ SAtom (_, "deps"); deps ]) -> load_deps context (eval ~context deps)
   | SList (_, Paren, [ SAtom (_, "quote"); value ]) -> quote value
+  | SList (_, Paren, SAtom (_, "raw-code") :: _) ->
+      raise (Eval_error "raw-code is supported only on the JS and Java targets")
   | SList (_, Paren, SAtom (_, "instance?") :: _) -> raise (Eval_error "instance? is supported only on the Java target")
   | SList (_, Paren, [ SAtom (_, "cast"); _; value ]) -> eval ~context value
   | SList (_, Paren, [ SAtom (_, "if"); condition; then_; else_ ]) ->

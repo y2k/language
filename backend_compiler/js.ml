@@ -46,6 +46,7 @@ let rec compile_expr = function
       |> String.concat "\n"
   | SAtom (_, name) -> compile_atom name
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
+  | SList (_, _, SAtom (_, "raw-code") :: _) as code -> Raw_code.error code "not allowed in an expression"
   | SList (_, _, SAtom (_, "instance?") :: _) -> failwith "instance? is supported only on the Java target"
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
   | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
@@ -103,6 +104,9 @@ and compile_returning_body ~empty = function
   | expr :: rest -> compile_statement expr :: compile_returning_body ~empty rest
 
 and compile_statement = function
+  | SList (_, _, SAtom (_, "raw-code") :: _) as code -> Raw_code.payload code
+  | SList (_, _, SAtom (_, "let*") :: SList (_, _, []) :: body) ->
+      "{\n" ^ String.concat "\n" (List.map compile_statement body) ^ "\n}"
   | SList (_, _, [ SAtom (_, "let*"); SAtom (_, name); value ]) ->
       "let " ^ Symbol_munge.munge name ^ " = " ^ compile_expr value ^ ";"
   | SList (_, _, [ SAtom (_, "if"); condition; then_; else_ ]) ->
@@ -128,4 +132,9 @@ let compile sexprs =
      _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, get_in, map, reduce, drop, atom, \
      deref, reset_BANG_, swap_BANG_, re_pattern, re_find, re_replace } from \"" ^ root_prefix ^ "language_runtime.js\";"
   in
-  runtime_import :: List.map (fun sexpr -> compile_expr sexpr ^ ";") sexprs |> String.concat "\n"
+  runtime_import
+  :: List.map
+       (function
+         | SList (_, _, SAtom (_, "raw-code") :: _) as code -> Raw_code.payload code | sexpr -> compile_expr sexpr ^ ";")
+       sexprs
+  |> String.concat "\n"

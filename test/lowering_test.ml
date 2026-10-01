@@ -44,9 +44,25 @@ let instance_check () =
       ()
   | _ -> Alcotest.fail "discarded instance? must bind its value once"
 
+let raw_code_preservation () =
+  let input = {|(defn test [] (raw-code "a();") (raw-code "b();") nil)|} in
+  let parsed = match Frontend.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e in
+  Alcotest.(check bool) "no generated bindings for raw instructions" true (lower input = parsed);
+  List.iter
+    (fun source -> ignore (lower source))
+    [
+      {|(raw-code "")|};
+      {|(quote (raw-code :invalid))|};
+      {|(defn test [] (let [] (raw-code "x") nil))|};
+      {|(defn test [] (do (raw-code "x") nil))|};
+      {|(defn test [] (if true (do (raw-code "x") nil) nil))|};
+      {|(defn test [] (f (fn [] (raw-code "x") nil)))|};
+    ]
+
 let () =
   Alcotest.run "lowering"
     [
       ("fn patterns", [ Alcotest.test_case "normalizes destructuring" `Quick function_patterns_are_normalized ]);
       ("instance?", [ Alcotest.test_case "type preservation and discard" `Quick instance_check ]);
+      ("raw-code", [ Alcotest.test_case "statement preservation" `Quick raw_code_preservation ]);
     ]

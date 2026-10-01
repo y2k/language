@@ -123,6 +123,7 @@ let rec compile_expr ctx = function
             ])
       |> String.concat "\n"
   | SList (_, _, [ SAtom (_, "quote"); value ]) -> compile_quote value
+  | SList (_, _, SAtom (_, "raw-code") :: _) as code -> Raw_code.error code "not allowed in an expression"
   | SList (_, _, SAtom (_, "instance?") :: args) as code -> (
       match args with
       | [ SAtom (_, type_name); value ] when is_reference_type_name type_name ->
@@ -181,11 +182,12 @@ let rec compile_expr ctx = function
   | SList _ as code -> invalid_sexpr __LOC__ code
 
 and compile_discard ctx expr =
-  let value = compile_expr ctx expr in
   match expr with
+  | SList (_, _, SAtom (_, "raw-code") :: _) -> Raw_code.payload expr
   | SList (meta, _, SAtom (_, "instance?") :: _) ->
+      let value = compile_expr ctx expr in
       "var " ^ java_local_name (Gensym.gensym_string meta) ^ " = " ^ value ^ ";"
-  | _ -> value ^ ";"
+  | _ -> compile_expr ctx expr ^ ";"
 
 and compile_body ctx ~last ~empty = function
   | [] -> empty
@@ -218,6 +220,7 @@ let compile_function ctx code meta name args body =
   @ [ "}" ]
 
 let compile_statement ctx = function
+  | SList (_, _, SAtom (_, "raw-code") :: _) as code -> [ Raw_code.payload code ]
   | SList (_, _, SAtom (_, "compiler/ns") :: _) -> []
   | SList (_, _, SAtom (_, "compiler/gen-class") :: _) -> []
   | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); SList (_, _, SAtom (_, "fn*") :: SList (_, _, args) :: body) ])
