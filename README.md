@@ -29,6 +29,13 @@ make test
 
 Use `make test_smoke` to stop at the first failing test.
 
+The JavaScript and Java runtime sources are tracked as regular files in `prelude/`.
+After a successful `dune build`, `make build` copies them to
+`$LY2K_PACKAGES_DIR/prelude/1.0.0/{js,java}/`, overwriting the package copies.
+Set the existing `LY2K_PACKAGES_DIR` environment variable before building.
+Edit the sources in `prelude/`, not the package copies.
+Both test commands also run this build step.
+
 ## Quick Start
 
 Evaluate a program from standard input:
