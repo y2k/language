@@ -318,6 +318,15 @@ public final class language_runtime {
     return result;
   }
 
+  public static Object run_BANG_(Object fn, Object collection) throws Exception {
+    if (!(collection instanceof java.util.List<?> items)) {
+      throw new RuntimeException("run! expects a function and a list");
+    }
+    for (Object item : items)
+      call_fn(fn, item);
+    return null;
+  }
+
   public static java.util.List<Object> drop(Object count, Object collection) {
     var items = (java.util.List<?>) collection;
     int start = Math.min(Math.max(((Number) count).intValue(), 0), items.size());

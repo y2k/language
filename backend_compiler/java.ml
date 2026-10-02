@@ -2,7 +2,7 @@ open Frontend
 module StringMap = Map.Make (String)
 module StringSet = Set.Make (String)
 
-type ctx = { top_fns : int StringMap.t; locals : StringSet.t; requires : string StringMap.t }
+type ctx = { top_fns : int StringMap.t; locals : StringSet.t; requires : string StringMap.t; helper_class : string }
 type gen_method = { method_name : string; arg_types : string list; return_type : string; call_super : bool }
 type gen_class = { class_name : string; extends_name : string; methods : gen_method list }
 type return_mode = Value | Void
@@ -70,7 +70,7 @@ let compile_atom ctx meta name =
   else if StringSet.mem name ctx.locals then java_local_name name
   else
     match StringMap.find_opt name ctx.top_fns with
-    | Some arity -> "(" ^ fn_interface meta name arity ^ ") user::" ^ Symbol_munge.munge name
+    | Some arity -> "(" ^ fn_interface meta name arity ^ ") " ^ ctx.helper_class ^ "::" ^ Symbol_munge.munge name
     | None -> compile_qualified_name ctx name
 
 let rec compile_quote = function
@@ -340,8 +340,9 @@ let compile sexprs =
       let lowered = Lowering_expression_to_statement.lower sexprs in
       let gen_class = List.find_map parse_gen_class lowered in
       let top_fns = collect_top_fns lowered in
-      let ctx = { top_fns; locals = StringSet.empty; requires = StringMap.empty } in
+      let ctx = { top_fns; locals = StringSet.empty; requires = StringMap.empty; helper_class = "user" } in
       let prefix, ctx, helper_class_name = compile_ns ctx gen_class (List.hd lowered) in
+      let ctx = { ctx with helper_class = helper_class_name } in
       let statements = List.concat_map (compile_statement ctx) lowered in
       match gen_class with
       | None ->

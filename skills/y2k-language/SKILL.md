@@ -97,6 +97,7 @@ These 26 functions are available without imports on all three targets. Signature
 | `(get collection key)` | Map lookup or list lookup by nonnegative integer index. Missing key/index or `nil` collection gives `nil`; preserves `false`. JS normalizes retrieved `undefined` to `nil`. No third default argument. |
 | `(get-in collection keys)` | Repeated `get` using a vector path, including mixed keys/indices and a runtime-computed path. Empty path returns collection unchanged. Missing intermediate data gives `nil`; `false` at the end is preserved. Scalar traversal and a non-vector path error. No third default argument. |
 | `(map f items)` | Eager unary mapping over one list. No multiple-collection or transducer overload. |
+| `(run! f items)` | Eager side-effect traversal of one list/vector in order, calling unary `f` once per item. Discards callback results without collecting them; returns actual `nil`, including for an empty collection (no callback calls). Callback errors stop traversal and propagate; earlier effects are not rolled back. |
 | `(reduce f collection)` | Left fold with first element as initial accumulator; empty collection errors. |
 | `(reduce f init collection)` | Left fold over every element; empty collection returns `init`. Both forms accept a list or map; map items are `[key value]` pairs. Do not rely on portable map iteration order. Callback takes accumulator and item. |
 | `(drop n items)` | List without first `n` items. Integer `n <= 0` keeps all; `n >= count` gives empty list. |
@@ -115,6 +116,8 @@ These 26 functions are available without imports on all three targets. Signature
 | `(swap! reference f)` | Calls unary `f` once with current value, stores and returns its result. No extra arguments. If callback fails, no result is written; callback side effects are not rolled back. Sequential semantics only, no host-thread synchronization guarantee. |
 
 Atom functions enforce arities 1, 1, 2, 2; invalid references or a non-callable update fail. Other APIs may report errors at compilation or execution depending on target.
+
+`run!` is an ordinary function, not a macro. Pass a named function, lambda, or local function value. Its collection contract excludes maps, `nil`, and arbitrary iterables. On JS, ordinary dense host arrays are supported without changing the element objects; convert a DOM `NodeList` with `Array.from` first. Direct `NodeList` traversal, mutation of the collection during traversal, and awaiting async callbacks are not part of the contract. JS/Java do not promise eval's argument diagnostics.
 
 **Fractional arithmetic:** `+`, `-`, `*` preserve fractional operands without truncation. A result that is exactly an integer within signed 32-bit range is normalized to an integer, including negative zero becoming `0`. Thus `(str (+ 0.5 0.5))` is `"1"`, `(= (+ 0.5 0.5) 1)` is `true`, and the corresponding `not=` is `false`. This does not establish general mixed-literal equality such as `(= 1 1.0)`. Non-integer results retain binary64 precision when reused in arithmetic; no epsilon or decimal rounding is applied. For example, `(str (+ 1 0.2) " " (* 2 0.2))` is `"1.2 0.4"`, but `(+ 0.1 0.2)` need not equal `0.3` exactly. Exponent spelling and formatting of arbitrary fractional values can differ by target; `str` is not a portable numeric serialization format. Non-finite values and overflow remain outside the portable contract.
 
@@ -178,6 +181,7 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | `get` | 2 | Map/any key; list/nonnegative integer index; nil/any key. |
 | `get-in` | 2 | Any initial value and a list/vector path; each step follows `get`. |
 | `map` | 2 | Function and list. |
+| `run!` | 2 | Function and list/vector; returns nil. |
 | `reduce` | 2 or 3 | Function, optional initial value, list/map; without init the collection must be nonempty. |
 | `drop` | 2 | Integer and list; count <= 0 keeps the list. |
 | `+`, `*` | 0+ | Integer/binary64 numbers; empty calls return 0/1. |
@@ -185,7 +189,7 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | `/` | 1+ | Integers; divisors must be nonzero; unary returns the argument, including `(/ 0)` → 0. |
 | `>`, `<`, `>=`, `<=` | 2 | Integers only. |
 
-`map`, both `reduce` forms, and `swap!` reject non-functions before iteration, including `(map 42 [])` and `(reduce 42 [1])`. A valid function is not called on an empty collection or a one-element reduce without init. Its parameter arity is checked only when called. Callback errors propagate unchanged; a failing `swap!` does not perform its final write, but callback effects (even an explicit `reset!` of the same Atom) remain.
+`map`, `run!`, both `reduce` forms, and `swap!` reject non-functions before iteration, including `(map 42 [])`, `(run! 42 [])`, and `(reduce 42 [1])`. A valid function is not called on an empty collection or a one-element reduce without init. Its parameter arity is checked only when called. Callback errors propagate unchanged; a failing `swap!` does not perform its final write, but callback effects (even an explicit `reset!` of the same Atom) remain.
 
 `get`, `get-in`, and let/function associative patterns share the numeric/type-sensitive key equality described above. Missing data stays nil: `(get nil -1)` and `(get-in {} [:missing -1])` return nil. `get-in` validates the entire path's list/vector type even when starting from nil; an empty path returns any starting value unchanged. Once a step reaches a list, an invalid index errors.
 

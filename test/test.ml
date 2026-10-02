@@ -44,8 +44,33 @@ let run path =
 let ensure_runtime_js () = write_file "language_runtime.js" (read_file (Sys.getenv "RUNTIME_JS"))
 
 let run_js path =
-  ensure_runtime_js ();
-  compiler_input path |> run_language "js" |> run_command "node" [ "--input-type=module" ] |> trim_output
+  let input = compiler_input path in
+  let forms =
+    match Frontend.parse_and_desugar input with Ok forms -> forms | Error message -> Alcotest.fail message
+  in
+  let namespace =
+    List.find_map
+      (function
+        | Frontend.SList (_, _, [ Frontend.SAtom (_, "compiler/ns"); Frontend.SAtom (_, name); _; _ ]) ->
+            Some (String.sub name 1 (String.length name - 2))
+        | _ -> None)
+      forms
+    |> Option.value ~default:"user"
+    |> Backend_compiler.Symbol_munge.munge |> String.split_on_char '.'
+  in
+  let tmp = Filename.temp_dir "language-js-" "" in
+  write_file (Filename.concat tmp "language_runtime.js") (read_file (Sys.getenv "RUNTIME_JS"));
+  let rec module_path dir = function
+    | [ name ] -> Filename.concat dir (name ^ ".mjs")
+    | name :: rest ->
+        let dir = Filename.concat dir name in
+        Unix.mkdir dir 0o755;
+        module_path dir rest
+    | [] -> assert false
+  in
+  let module_path = module_path tmp namespace in
+  write_file module_path (Backend_compiler.Js.compile forms);
+  run_command "node" [ module_path ] "" |> trim_output
 
 let java_class_name source =
   let prefix = "public final class " in

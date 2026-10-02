@@ -135,6 +135,15 @@ let matrix path =
     ( "map",
       [ ("(map (fn [x] x) [])", List []); ("(map (fn [x] (+ x 1)) [1 2])", List [ Int 2; Int 3 ]) ],
       [ "(map (fn [x] x))"; "(map (fn [x] x) [] [])"; "(map (fn [x] x) {})" ] );
+    ( "run!",
+      [ ("(run! (fn [x] x) [])", Nil); ("(run! (fn [x] x) [1 2])", Nil) ],
+      [
+        "(run!)";
+        "(run! (fn [x] x))";
+        "(run! (fn [x] x) [] nil)";
+        "(run! (fn [x] x) {})";
+        "(run! (fn [x] x) nil)";
+      ] );
     ( "reduce",
       [
         ("(reduce + [2])", Int 2);
@@ -200,6 +209,8 @@ let invalid_callbacks =
   [
     ("map", "(map 42 [])");
     ("map", "(map 42 [1])");
+    ("run!", "(run! 42 [])");
+    ("run!", "(run! 42 [1])");
     ("reduce", "(reduce 42 0 [])");
     ("reduce", "(reduce 42 0 {})");
     ("reduce", "(reduce 42 [1])");
@@ -214,6 +225,7 @@ let callbacks_are_only_called_when_needed () =
     (fun (source, expected) -> check source expected)
     [
       ("(map (fn [] (assert false)) [])", List []);
+      ("(run! (fn [a b] (assert false)) [])", Nil);
       ("(reduce (fn [] (assert false)) :init [])", String "init");
       ("(reduce (fn [] (assert false)) :init {})", String "init");
       ("(reduce (fn [] (assert false)) [42])", Int 42);
@@ -222,7 +234,13 @@ let callbacks_are_only_called_when_needed () =
   List.iter
     (fun source ->
       Alcotest.check_raises source (Eval_error "wrong number of arguments") (fun () -> ignore (eval source)))
-    [ "(map (fn [] 1) [1])"; "(reduce (fn [] 1) [1 2])"; "(reduce (fn [] 1) 0 [1])"; "(swap! (atom 1) (fn [] 1))" ];
+    [
+      "(map (fn [] 1) [1])";
+      "(run! (fn [a b] a) [1])";
+      "(reduce (fn [] 1) [1 2])";
+      "(reduce (fn [] 1) 0 [1])";
+      "(swap! (atom 1) (fn [] 1))";
+    ];
   List.iter
     (fun source -> Alcotest.check_raises source (Eval_error "assertion failed") (fun () -> ignore (eval source)))
     [
@@ -243,6 +261,17 @@ let swap_failure_preserves_callback_effects () =
   | exception Eval_error message -> check_message "map" "function" message
   | _ -> Alcotest.fail "expected callback rejection");
   Alcotest.check value "arguments evaluated eagerly" (Int 3) (eval ~context "(deref effects)")
+
+let run_failure_preserves_callback_effects () =
+  let context = Eval.create_context () in
+  ignore (eval ~context "(def effects (atom \"\"))");
+  Alcotest.check_raises "run! preserves callback error" (Eval_error "assertion failed") (fun () ->
+      ignore
+        (eval ~context
+           {|(run! (fn [item]
+              (swap! effects (fn [text] (str text item)))
+              (if (= item 2) (assert false) "ignored")) [1 2 3])|}));
+  Alcotest.check value "effects retained and third item skipped" (String "12") (eval ~context "(deref effects)")
 
 let operation_errors =
   [
@@ -325,6 +354,7 @@ let () =
             Alcotest.test_case "only invoke when needed and preserve errors" `Quick
               callbacks_are_only_called_when_needed;
             Alcotest.test_case "swap failure preserves callback effects" `Quick swap_failure_preserves_callback_effects;
+            Alcotest.test_case "run failure preserves callback effects" `Quick run_failure_preserves_callback_effects;
           ] );
       ( "errors",
         List.map

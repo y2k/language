@@ -231,6 +231,12 @@ export function map(fn, list) {
   return list.map((item) => fn(item));
 }
 
+export function run_BANG_(fn, list) {
+  if (!Array.isArray(list)) throw new Error("run! expects a function and a list");
+  for (const item of list) fn(item);
+  return null;
+}
+
 export function drop(count, list) {
   return list.slice(Math.max(0, count));
 }
