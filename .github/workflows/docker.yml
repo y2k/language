@@ -1,0 +1,23 @@
+name: Publish Docker image
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: y2khub
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build image
+        run: docker build --platform linux/amd64 -t y2khub/language:latest .
+      - name: Push tested image
+        run: docker push y2khub/language:latest

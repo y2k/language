@@ -1,0 +1,14 @@
+_build
+_opam
+.git
+.opam
+.opencode
+.agents
+.idea
+.vscode
+.DS_Store
+.env
+.env.*
+*.install
+*.merlin
+*~

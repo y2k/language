@@ -36,6 +36,74 @@ Set the existing `LY2K_PACKAGES_DIR` environment variable before building.
 Edit the sources in `prelude/`, not the package copies.
 Both test commands also run this build step.
 
+## Docker
+
+The image targets `linux/amd64`. Docker on ARM hosts needs amd64 emulation.
+Pull the published image, or build it locally from the repository root:
+
+```sh
+docker pull --platform linux/amd64 y2khub/language:latest
+# Alternatively, build locally:
+docker build --platform linux/amd64 -t y2khub/language:latest .
+```
+
+The multi-stage Dockerfile builds and runs `make test` for eval, JS and Java
+with OCaml 5.3, Node.js 24 and JDK 25 in its builder stage. The final
+`debian:bookworm-slim` image receives only the executable. No local toolchain
+installation is needed; a failing test stops the Docker build.
+
+The container reads stdin and defaults to `eval`:
+
+```sh
+printf '(str "Hello, " "world!")\n' | docker run --rm --platform linux/amd64 -i y2khub/language:latest
+# Prints: Hello, world!
+```
+
+Select a target by passing the usual CLI arguments:
+
+```sh
+printf '(defn hello [] "Hello, world!")\n' | docker run --rm --platform linux/amd64 -i y2khub/language:latest --target js > program.js
+printf '(defn hello [] "Hello, world!")\n' | docker run --rm --platform linux/amd64 -i y2khub/language:latest --target java > user.java
+```
+
+The image contains the CLI binary and system libraries. These targets generate
+source code; executing it requires Node.js or a JDK and the matching runtime
+file from this repository's `prelude/` directory.
+
+You can use `FROM y2khub/language:latest` as a base, or copy the binary into a
+compatible Debian 12 image of the same architecture:
+
+```dockerfile
+FROM debian:bookworm-slim
+COPY --from=y2khub/language:latest /usr/local/bin/language /usr/local/bin/language
+ENTRYPOINT ["/usr/local/bin/language"]
+```
+
+The binary uses system libraries; copying it alone does not guarantee it will
+run on Alpine, `scratch`, or another architecture. Fully static linking is
+planned as a separate task.
+
+### Publishing to Docker Hub
+
+On every push to `main`, `.github/workflows/docker.yml` checks out the code,
+logs in to Docker Hub, builds the image and pushes it as
+`docker.io/y2khub/language:latest`. Tests run inside the Dockerfile, not in
+separate workflow steps. Test packages stay in a temporary directory in the
+builder stage. A failed test or build prevents publication. Other branches
+do not publish.
+
+Before the first run:
+
+1. Create the Docker Hub repository `y2khub/language`.
+2. Create a Docker Hub access token for `y2khub` with write access to that repository.
+3. In the GitHub repository's **Settings → Secrets and variables → Actions**,
+   add a repository secret named `DOCKERHUB_TOKEN` with the token value.
+
+After a successful workflow run, pull the image and run the eval example above.
+The push step logs the published digest; save it to use that exact image later
+as `y2khub/language@sha256:…`. The mutable `latest` tag points to the last
+successful publication, which can finish out of commit order for concurrent runs.
+
 ## Quick Start
 
 Evaluate a program from standard input:
