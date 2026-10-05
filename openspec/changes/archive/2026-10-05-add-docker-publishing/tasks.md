@@ -17,6 +17,8 @@
 ## 3. Интеграционная приёмка
 
 - [x] 3.1 Проверить итоговую Docker-сборку с полным `make test` и сценарии контейнерной спецификации. Проверка: suites eval/JS/Java и локальные проверки финального контейнера проходят; `openspec validate add-docker-publishing --strict` успешен.
-- [ ] 3.2 После настройки владельцем репозитория `y2khub/language` и секрета `DOCKERHUB_TOKEN` проверить первый workflow на push в `main`: успешные login, build с тестами eval/JS/Java и push. Затем выполнить pull опубликованного образа и пример eval, сверить опубликованный digest с выводом push. Проверка: GitHub Actions run успешен, образ доступен из Docker Hub, запуск возвращает `Hello, world!`. До успешного внешнего запуска оставить задачу открытой.
+- [x] 3.2 После настройки владельцем репозитория `y2khub/language` и секрета `DOCKERHUB_TOKEN` проверить первый workflow на push в `main`: успешные login, build с тестами eval/JS/Java и push. Затем выполнить pull опубликованного образа и пример eval, сверить опубликованный digest с выводом push. Проверка: GitHub Actions run успешен, образ доступен из Docker Hub, запуск возвращает `Hello, world!`.
+
+Подтверждение 3.2: [GitHub Actions run 37361973838](https://github.com/y2k/language/actions/runs/37361973838), commit `c7ba2be`, 392 успешных теста внутри Docker-сборки. Pull `y2khub/language:latest` и запуск default/eval успешны. Digest совпадает с выводом CI push: `sha256:00103857fc03f881fdd868a6cbe847927fd51cd59860d4f541aeead981b751f2`.
 
 Статическая линковка с musl, проверка запуска в `scratch` и перенос одного самодостаточного бинарника относятся к отдельной будущей задаче, зафиксированной в `proposal.md`, и не входят в этот checklist.
