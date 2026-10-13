@@ -5,6 +5,16 @@ description: Use when writing or fixing Y2K Language applications, compiling .cl
 
 # Y2K Language applications
 
+## Repository and issues
+
+- Source and project documentation: https://github.com/y2k/language
+- Report compiler/language issues: https://github.com/y2k/language/issues
+- Create issues describing only the problem; do not include proposed solutions or implementation plans.
+
+For a useful bug report, include the target, minimal Y2K source, the exact command/build step, expected result, and actual output or error. Include host/tool versions and compiler revision when known. Reduce application dependencies where possible; distinguish a `ly2k` failure from generated JS/Java compilation or execution failure.
+
+## Usage
+
 Use this reference when writing application code. Y2K Language is an experimental Lisp-inspired language, **not a Clojure implementation**. A `.clj` extension alone does not imply Y2K Language: check the project for `ly2k` usage.
 
 - Determine the target (`eval`, `js`, or `java`) from the application's configuration and build commands. Ask if the project does not establish it.
@@ -351,10 +361,3 @@ The Java command assumes source without `ns`; use the declared helper class file
 Runtime files (`language_runtime.js`, `language_runtime.java`) are **automatically supplied by the application's build system**. Do not add manual copying, compile the compiler from source, or assume its checkout is the application's working directory. Generating JS/Java source does not run it. Follow existing build/run commands for module layout, dependencies, host entry points, and tests.
 
 For OpenCode installation, symlink the directory containing this `SKILL.md` into the application as `.opencode/skills/y2k-language`. No `opencode.json` edit is needed. Restart OpenCode after connecting or updating the skill so a new session loads it.
-
-## Repository and issues
-
-- Source and project documentation: https://github.com/y2k/language
-- Report compiler/language issues: https://github.com/y2k/language/issues
-
-For a useful bug report, include the target, minimal Y2K source, the exact command/build step, expected result, and actual output or error. Include host/tool versions and compiler revision when known. Reduce application dependencies where possible; distinguish a `ly2k` failure from generated JS/Java compilation or execution failure.
