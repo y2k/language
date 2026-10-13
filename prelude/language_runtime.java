@@ -318,6 +318,30 @@ public final class language_runtime {
     return result;
   }
 
+  public static java.util.List<Object> filter(Object fn, Object collection) throws Exception {
+    if (!(collection instanceof java.util.List<?> items)) {
+      throw new RuntimeException("filter expects a function and a list");
+    }
+    var result = new java.util.ArrayList<Object>();
+    for (Object item : items)
+      if (truthy(call_fn(fn, item)))
+        result.add(item);
+    return result;
+  }
+
+  public static java.util.List<Object> keep(Object fn, Object collection) throws Exception {
+    if (!(collection instanceof java.util.List<?> items)) {
+      throw new RuntimeException("keep expects a function and a list");
+    }
+    var result = new java.util.ArrayList<Object>();
+    for (Object item : items) {
+      Object value = call_fn(fn, item);
+      if (value != null)
+        result.add(value);
+    }
+    return result;
+  }
+
   public static Object run_BANG_(Object fn, Object collection) throws Exception {
     if (!(collection instanceof java.util.List<?> items)) {
       throw new RuntimeException("run! expects a function and a list");

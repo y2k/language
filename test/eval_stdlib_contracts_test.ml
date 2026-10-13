@@ -135,15 +135,27 @@ let matrix path =
     ( "map",
       [ ("(map (fn [x] x) [])", List []); ("(map (fn [x] (+ x 1)) [1 2])", List [ Int 2; Int 3 ]) ],
       [ "(map (fn [x] x))"; "(map (fn [x] x) [] [])"; "(map (fn [x] x) {})" ] );
+    ( "filter",
+      [
+        ("(filter (fn [x] x) [])", List []);
+        ({|(filter (fn [x] x) [nil false 0 "" "nil"])|}, List [ Int 0; String ""; String "nil" ]);
+      ],
+      [
+        "(filter)";
+        "(filter (fn [x] x))";
+        "(filter (fn [x] x) [] nil)";
+        "(filter (fn [x] x) {})";
+        "(filter (fn [x] x) nil)";
+      ] );
+    ( "keep",
+      [
+        ("(keep (fn [x] x) [])", List []);
+        ({|(keep (fn [x] x) [nil false 0 "" "nil"])|}, List [ Bool false; Int 0; String ""; String "nil" ]);
+      ],
+      [ "(keep)"; "(keep (fn [x] x))"; "(keep (fn [x] x) [] nil)"; "(keep (fn [x] x) {})"; "(keep (fn [x] x) nil)" ] );
     ( "run!",
       [ ("(run! (fn [x] x) [])", Nil); ("(run! (fn [x] x) [1 2])", Nil) ],
-      [
-        "(run!)";
-        "(run! (fn [x] x))";
-        "(run! (fn [x] x) [] nil)";
-        "(run! (fn [x] x) {})";
-        "(run! (fn [x] x) nil)";
-      ] );
+      [ "(run!)"; "(run! (fn [x] x))"; "(run! (fn [x] x) [] nil)"; "(run! (fn [x] x) {})"; "(run! (fn [x] x) nil)" ] );
     ( "reduce",
       [
         ("(reduce + [2])", Int 2);
@@ -209,6 +221,10 @@ let invalid_callbacks =
   [
     ("map", "(map 42 [])");
     ("map", "(map 42 [1])");
+    ("filter", "(filter 42 [])");
+    ("filter", "(filter 42 [1])");
+    ("keep", "(keep 42 [])");
+    ("keep", "(keep 42 [1])");
     ("run!", "(run! 42 [])");
     ("run!", "(run! 42 [1])");
     ("reduce", "(reduce 42 0 [])");
@@ -225,6 +241,8 @@ let callbacks_are_only_called_when_needed () =
     (fun (source, expected) -> check source expected)
     [
       ("(map (fn [] (assert false)) [])", List []);
+      ("(filter (fn [a b] (assert false)) [])", List []);
+      ("(keep (fn [a b] (assert false)) [])", List []);
       ("(run! (fn [a b] (assert false)) [])", Nil);
       ("(reduce (fn [] (assert false)) :init [])", String "init");
       ("(reduce (fn [] (assert false)) :init {})", String "init");
@@ -236,6 +254,8 @@ let callbacks_are_only_called_when_needed () =
       Alcotest.check_raises source (Eval_error "wrong number of arguments") (fun () -> ignore (eval source)))
     [
       "(map (fn [] 1) [1])";
+      "(filter (fn [a b] a) [1])";
+      "(keep (fn [a b] a) [1])";
       "(run! (fn [a b] a) [1])";
       "(reduce (fn [] 1) [1 2])";
       "(reduce (fn [] 1) 0 [1])";
@@ -262,15 +282,17 @@ let swap_failure_preserves_callback_effects () =
   | _ -> Alcotest.fail "expected callback rejection");
   Alcotest.check value "arguments evaluated eagerly" (Int 3) (eval ~context "(deref effects)")
 
-let run_failure_preserves_callback_effects () =
+let traversal_failure_preserves_callback_effects operation () =
   let context = Eval.create_context () in
   ignore (eval ~context "(def effects (atom \"\"))");
-  Alcotest.check_raises "run! preserves callback error" (Eval_error "assertion failed") (fun () ->
+  Alcotest.check_raises (operation ^ " preserves callback error") (Eval_error "assertion failed") (fun () ->
       ignore
         (eval ~context
-           {|(run! (fn [item]
-              (swap! effects (fn [text] (str text item)))
-              (if (= item 2) (assert false) "ignored")) [1 2 3])|}));
+           ("(" ^ operation
+          ^ {| (fn [item]
+               (swap! effects (fn [text] (str text item)))
+               (if (= item 2) (assert false) "ignored")) [1 2 3])|}
+           )));
   Alcotest.check value "effects retained and third item skipped" (String "12") (eval ~context "(deref effects)")
 
 let operation_errors =
@@ -354,7 +376,12 @@ let () =
             Alcotest.test_case "only invoke when needed and preserve errors" `Quick
               callbacks_are_only_called_when_needed;
             Alcotest.test_case "swap failure preserves callback effects" `Quick swap_failure_preserves_callback_effects;
-            Alcotest.test_case "run failure preserves callback effects" `Quick run_failure_preserves_callback_effects;
+            Alcotest.test_case "run failure preserves callback effects" `Quick
+              (traversal_failure_preserves_callback_effects "run!");
+            Alcotest.test_case "filter failure preserves callback effects" `Quick
+              (traversal_failure_preserves_callback_effects "filter");
+            Alcotest.test_case "keep failure preserves callback effects" `Quick
+              (traversal_failure_preserves_callback_effects "keep");
           ] );
       ( "errors",
         List.map

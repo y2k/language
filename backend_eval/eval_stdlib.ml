@@ -90,6 +90,15 @@ let map apply = function
   | [ (Closure _ as fn); List items ] -> List (List.map (fun item -> apply fn [ item ]) items)
   | _ -> raise (Eval_error "map expects a function and a list")
 
+let filter apply = function
+  | [ (Closure _ as fn); List items ] -> List (List.filter (fun item -> truthy (apply fn [ item ])) items)
+  | _ -> raise (Eval_error "filter expects a function and a list")
+
+let keep apply = function
+  | [ (Closure _ as fn); List items ] ->
+      List (List.filter_map (fun item -> match apply fn [ item ] with Nil -> None | value -> Some value) items)
+  | _ -> raise (Eval_error "keep expects a function and a list")
+
 let run_BANG_ apply = function
   | [ (Closure _ as fn); List items ] ->
       List.iter (fun item -> ignore (apply fn [ item ])) items;
@@ -227,6 +236,8 @@ let env =
     ("slurp", Closure (Native slurp));
     ("count", Closure (Native count));
     ("map", Closure (Native map));
+    ("filter", Closure (Native filter));
+    ("keep", Closure (Native keep));
     ("run!", Closure (Native run_BANG_));
     ("reduce", Closure (Native reduce));
     ("drop", Closure (Native drop));

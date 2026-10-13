@@ -231,6 +231,21 @@ export function map(fn, list) {
   return list.map((item) => fn(item));
 }
 
+export function filter(fn, list) {
+  if (!Array.isArray(list)) throw new Error("filter expects a function and a list");
+  return list.filter((item) => truthy(fn(item)));
+}
+
+export function keep(fn, list) {
+  if (!Array.isArray(list)) throw new Error("keep expects a function and a list");
+  const result = [];
+  for (const item of list) {
+    const value = fn(item);
+    if (value !== null && value !== undefined) result.push(value);
+  }
+  return result;
+}
+
 export function run_BANG_(fn, list) {
   if (!Array.isArray(list)) throw new Error("run! expects a function and a list");
   for (const item of list) fn(item);
