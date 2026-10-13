@@ -142,6 +142,10 @@ public final class language_runtime {
     return value instanceof java.util.List<?>;
   }
 
+  public static Boolean string_QMARK_(Object value) {
+    return value instanceof String;
+  }
+
   public static Boolean _EQ_(Object left, Object right) {
     if (left instanceof java.util.regex.Pattern || right instanceof java.util.regex.Pattern) return false;
     return java.util.Objects.equals(left, right);

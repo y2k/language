@@ -55,6 +55,11 @@ let vector_QMARK_ _ = function
   | [ _ ] -> Bool false
   | _ -> raise (Eval_error "vector? expects one value")
 
+let string_QMARK_ _ = function
+  | [ String _ ] -> Bool true
+  | [ _ ] -> Bool false
+  | _ -> raise (Eval_error "string? expects one value")
+
 let concat _ args =
   args |> List.concat_map (function List items -> items | _ -> raise (Eval_error "concat expects lists"))
   |> fun items -> List items
@@ -228,6 +233,7 @@ let env =
     (">=", Closure (Native (compare_numbers ">=" Stdlib.( >= ))));
     ("<=", Closure (Native (compare_numbers "<=" Stdlib.( <= ))));
     ("vector?", Closure (Native vector_QMARK_));
+    ("string?", Closure (Native string_QMARK_));
     ("concat", Closure (Native concat));
     ("hash-map", Closure (Native hash_map));
     ("get", Closure (Native get));

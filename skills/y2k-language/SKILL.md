@@ -101,6 +101,7 @@ These functions are available without imports on all three targets. Signatures s
 | --- | --- |
 | `(list values...)` | Eager list, any arity; zero gives an empty list. |
 | `(vector? value)` | True for the shared list/vector representation, false otherwise. |
+| `(string? value)` | Boolean true for runtime strings, including `""` and keywords; false for other types. Evaluates its one argument once, without converting it to text. |
 | `(concat lists...)` | Concatenates lists in order; zero gives an empty list. Does not concatenate strings or maps. |
 | `(hash-map key value ...)` | Any even number of arguments, including zero; odd count errors. Prefer unique string/keyword keys. |
 | `(count collection)` | Number of list items or map entries; not a string-length function. |
@@ -128,6 +129,8 @@ These functions are available without imports on all three targets. Signatures s
 | `(swap! reference f)` | Calls unary `f` once with current value, stores and returns its result. No extra arguments. If callback fails, no result is written; callback side effects are not rolled back. Sequential semantics only, no host-thread synchronization guarantee. |
 
 Atom functions enforce arities 1, 1, 2, 2; invalid references or a non-callable update fail. Other APIs may report errors at compilation or execution depending on target.
+
+**String checks:** `"nil"`, `"false"`, `"42"`, and `:name` are strings; nil, booleans, numbers, collections, functions, atoms, and regex values are not. Use `(string? value)` before string operations on external data. JS accepts primitive strings (including JSON.parse string results), not `new String("x")`, objects, or undefined. Java accepts `java.lang.String`, not `StringBuilder`. Quoted `'foo`, `'nil`, `'false`, and `'42` give false on eval but true on JS/Java, which represent quoted atoms as text; `'"text"` gives true everywhere. Use exactly one argument; incorrect arities on compiled targets are outside the portable contract.
 
 `filter` and `keep` are ordinary two-argument functions over one list/vector. Both run eagerly, calling a named function, lambda, or local function value once per item in order, with only that item as its argument. They preserve result order and do not mutate the input collection or copy its element objects. Empty input gives an empty list without callback calls; rejecting every item also gives an empty list, not nil. Callback errors stop traversal and propagate; prior effects remain. Maps, nil collections, arbitrary iterables, transducers, async waiting, and collection mutation during traversal are outside the contract. JS supports ordinary dense host arrays; sparse arrays are outside the contract. JS/Java do not promise eval's argument diagnostics.
 
@@ -187,7 +190,7 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | `hash-map` | Even, including 0 | Any key/value pairs; retain order and duplicates. |
 | `concat` | 0+ | Lists only. |
 | `=`, `not=` | 0+ | Any values; `=` tests whether all equal the first, `not=` negates that result. Zero/one argument gives `true`/`false` respectively. |
-| `not`, `assert`, `vector?` | 1 | Any value; `assert` returns true for truthy values, errors for nil/false. |
+| `not`, `assert`, `vector?`, `string?` | 1 | Any value; `assert` returns true for truthy values, errors for nil/false. |
 | `atom` | 1 | Any value. |
 | `deref` | 1 | Atom. |
 | `reset!` | 2 | Atom and any new value. |

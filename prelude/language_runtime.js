@@ -111,6 +111,10 @@ export function vector_QMARK_(value) {
   return Array.isArray(value);
 }
 
+export function string_QMARK_(value) {
+  return typeof value === "string";
+}
+
 export function _EQ_(left, right) {
   if (left instanceof Regex || right instanceof Regex) return false;
   return Object.is(left, right);

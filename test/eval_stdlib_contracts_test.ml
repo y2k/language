@@ -101,6 +101,9 @@ let matrix path =
       [ "(not)"; "(not 1 2)" ] );
     ("assert", [ ("(assert \"false\")", Bool true); ("(assert [])", Bool true) ], [ "(assert)"; "(assert 1 2)" ]);
     ("vector?", [ ("(vector? [])", Bool true); ("(vector? nil)", Bool false) ], [ "(vector?)"; "(vector? [] [])" ]);
+    ( "string?",
+      [ ({|(string? "")|}, Bool true); ("(string? :name)", Bool true); ("(string? nil)", Bool false) ],
+      [ "(string?)"; {|(string? "a" "b")|} ] );
     ("atom", [ ("(deref (atom nil))", Nil); ("(deref (atom false))", Bool false) ], [ "(atom)"; "(atom 1 2)" ]);
     ("deref", [ ("(deref (atom 42))", Int 42) ], [ "(deref)"; "(deref (atom 1) 2)"; "(deref false)" ]);
     ( "reset!",
