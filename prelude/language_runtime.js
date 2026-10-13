@@ -149,6 +149,11 @@ export function concat(...collections) {
   return result;
 }
 
+// ponytail: repeated append is quadratic; use a builder if large batches need it.
+export function conj(items, value) {
+  return concat(items, [value]);
+}
+
 export function hash_map(...items) {
   if (items.length % 2 !== 0) {
     throw new Error("hash-map arguments must be key/value pairs");

@@ -99,6 +99,9 @@ let matrix path =
         "(merge {} 42)";
       ] );
     ("str", [ ("(str)", String ""); ("(str nil false 1 'x)", String "nilfalse1x") ], []);
+    ( "conj",
+      [ ("(conj [] nil)", List [ Nil ]); ("(conj [1] false)", List [ Int 1; Bool false ]) ],
+      [ "(conj)"; "(conj [])"; "(conj [] 1 2)"; "(conj nil 1)"; "(conj {} 1)"; "(conj 42 1)" ] );
     ( "concat",
       [ ("(concat)", List []); ("(concat [] [1] [false])", List [ Int 1; Bool false ]) ],
       [ "(concat [] {})"; "(concat nil)" ] );

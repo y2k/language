@@ -181,6 +181,13 @@ public final class language_runtime {
     return result;
   }
 
+  // ponytail: repeated append is quadratic; use a builder if large batches need it.
+  public static java.util.List<Object> conj(Object items, Object value) {
+    var result = concat(items);
+    result.add(value);
+    return result;
+  }
+
   public static java.util.LinkedHashMap<String, Object> hash_map(Object... items) {
     if (items.length % 2 != 0) {
       throw new RuntimeException("hash-map arguments must be key/value pairs");

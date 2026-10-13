@@ -64,6 +64,11 @@ let concat _ args =
   args |> List.concat_map (function List items -> items | _ -> raise (Eval_error "concat expects lists"))
   |> fun items -> List items
 
+(* ponytail: repeated append is quadratic; use a builder if large batches need it. *)
+let conj _ = function
+  | [ List items; value ] -> List (items @ [ value ])
+  | _ -> raise (Eval_error "conj expects a list and a value")
+
 let hash_map _ args =
   let rec loop items acc =
     match items with
@@ -271,6 +276,7 @@ let env =
     ("vector?", Closure (Native vector_QMARK_));
     ("string?", Closure (Native string_QMARK_));
     ("concat", Closure (Native concat));
+    ("conj", Closure (Native conj));
     ("hash-map", Closure (Native hash_map));
     ("assoc", Closure (Native assoc));
     ("merge", Closure (Native merge));

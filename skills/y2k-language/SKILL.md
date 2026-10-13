@@ -103,6 +103,7 @@ These functions are available without imports on all three targets. Signatures s
 | `(vector? value)` | True for the shared list/vector representation, false otherwise. |
 | `(string? value)` | Boolean true for runtime strings, including `""` and keywords; false for other types. Evaluates its one argument once, without converting it to text. |
 | `(concat lists...)` | Concatenates lists in order; zero gives an empty list. Does not concatenate strings or maps. |
+| `(conj items value)` | Exactly two arguments. Returns a new list/vector with one value appended at the end, preserving the input. Lists and vectors both append at the end. |
 | `(hash-map key value ...)` | Any even number of arguments, including zero; odd count errors. Prefer unique string/keyword keys. |
 | `(assoc map key value)` | Exactly 3 arguments. Adds/replaces one field in a new shallow map; preserves the input. |
 | `(merge left right)` | Exactly 2 maps. New shallow map with right-hand fields winning conflicts; preserves both inputs. |
@@ -132,6 +133,8 @@ These functions are available without imports on all three targets. Signatures s
 | `(swap! reference f)` | Calls unary `f` once with current value, stores and returns its result. No extra arguments. If callback fails, no result is written; callback side effects are not rolled back. Sequential semantics only, no host-thread synchronization guarantee. |
 
 Atom functions enforce arities 1, 1, 2, 2; invalid references or a non-callable update fail. Other APIs may report errors at compilation or execution depending on target.
+
+**Appending:** `conj` copies the collection shallowly, preserving element references and values such as nil and false. A collection-valued second argument stays one nested element: `(conj [1] [2 3])` gives `[1 [2 3]]`. Use a list/vector (also a dense host array on JS); maps, nil collections, sparse arrays, arbitrary iterables, and other arities are outside the portable contract. Eval rejects incorrect arities and collection types. Repeated appends copy growing collections and take quadratic total time. Deploy the compiler with its matching runtime exporting `conj`.
 
 **Map updates:** `assoc` and `merge` require maps: nil, lists/vectors, and scalars in map positions error. Values such as nil, false, 0, and `""` are retained and overwrite previous values. Nested maps are replaced whole; nested objects and Atoms are shared, not cloned. Use unique string/keyword keys for portability, and check fields with `get` rather than relying on map equality or iteration order. Extra pairs/maps are not overloads; use nested calls:
 
@@ -216,6 +219,7 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | `assoc` | 3 | Map, any key, any value. |
 | `merge` | 2 | Two maps. |
 | `concat` | 0+ | Lists only. |
+| `conj` | 2 | List/vector and any value; appends one element at the end. |
 | `=`, `not=` | 0+ | Any values; `=` tests whether all equal the first, `not=` negates that result. Zero/one argument gives `true`/`false` respectively. |
 | `not`, `assert`, `vector?`, `string?` | 1 | Any value; `assert` returns true for truthy values, errors for nil/false. |
 | `atom` | 1 | Any value. |
