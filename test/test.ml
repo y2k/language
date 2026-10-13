@@ -182,6 +182,22 @@ let gen_class_entry_point () =
           (List.exists (String.ends_with ~suffix:"method main()") (String.split_on_char '\n' error))))
     [ ("main", 0); ("^override main", 1) ]
 
+let java_map_arities () =
+  let tmp = Filename.temp_dir "language-java-map-arities-" "" in
+  let path = Filename.concat tmp "user.java" in
+  List.iter
+    (fun expression ->
+      let source = run_language "java" ("(defn test [] " ^ expression ^ ")") in
+      write_file path source;
+      let _, error =
+        run_command_full ~expected_exit:1 ~failure_context:source "javac"
+          [ "-d"; tmp; Sys.getenv "RUNTIME_JAVA"; path ] ""
+      in
+      Alcotest.(check bool) "arity diagnostic" true
+        (String.split_on_char '\n' error
+        |> List.exists (String.ends_with ~suffix:"actual and formal argument lists differ in length")))
+    [ "(assoc {})"; "(assoc {} :a 1 :b 2)"; "(merge {})"; "(merge {} {} {})" ]
+
 let clj_files dir =
   Sys.readdir dir |> Array.to_list
   |> List.filter (fun name -> Filename.check_suffix name ".clj")
@@ -230,4 +246,5 @@ let () =
               Alcotest.test_case "eval fractional round-trip" `Quick eval_fractional_round_trip;
             ] );
           ("java entry point", [ Alcotest.test_case "gen-class main and missing super" `Slow gen_class_entry_point ]);
+          ("map contracts", [ Alcotest.test_case "java fixed arities" `Slow java_map_arities ]);
         ]

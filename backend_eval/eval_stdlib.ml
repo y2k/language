@@ -73,6 +73,19 @@ let hash_map _ args =
   in
   loop args []
 
+let assoc_items items key value =
+  (key, value) :: List.filter (fun (candidate, _) -> Stdlib.not (equal_value key candidate)) items
+
+let assoc _ = function
+  | [ HashMap items; key; value ] -> HashMap (assoc_items items key value)
+  | _ -> raise (Eval_error "assoc expects a hash-map, a key, and a value")
+
+let merge _ = function
+  | [ HashMap left; HashMap right ] ->
+      (* ponytail: quadratic list updates; change map storage if large maps need it. *)
+      HashMap (List.fold_left (fun items (key, value) -> assoc_items items key value) left right)
+  | _ -> raise (Eval_error "merge expects two hash-maps")
+
 let count _ = function
   | [ List items ] -> Int (List.length items)
   | [ HashMap items ] -> Int (List.length items)
@@ -236,6 +249,8 @@ let env =
     ("string?", Closure (Native string_QMARK_));
     ("concat", Closure (Native concat));
     ("hash-map", Closure (Native hash_map));
+    ("assoc", Closure (Native assoc));
+    ("merge", Closure (Native merge));
     ("get", Closure (Native get));
     ("get-in", Closure (Native get_in));
     ("str", Closure (Native str));

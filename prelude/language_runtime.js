@@ -161,6 +161,21 @@ export function hash_map(...items) {
   return result;
 }
 
+export function assoc(collection, key, value) {
+  if (arguments.length !== 3 || collection === null || typeof collection !== "object" || Array.isArray(collection))
+    throw new Error("assoc expects a hash-map, a key, and a value");
+  const result = Object.assign(Object.create(null), collection);
+  result[valueText(key)] = value;
+  return result;
+}
+
+export function merge(left, right) {
+  if (arguments.length !== 2 || left === null || typeof left !== "object" || Array.isArray(left) ||
+      right === null || typeof right !== "object" || Array.isArray(right))
+    throw new Error("merge expects two hash-maps");
+  return Object.assign(Object.create(null), left, right);
+}
+
 export function get(collection, key) {
   if (collection === null) return null;
   if (Array.isArray(collection)) return Number.isInteger(key) && key >= 0 ? collection[key] ?? null : null;

@@ -83,6 +83,21 @@ let matrix path =
     ( "hash-map",
       [ ("(hash-map)", HashMap []); ("(hash-map 1 false 1.0 nil)", HashMap [ (Int 1, Bool false); (Float 1., Nil) ]) ],
       [ "(hash-map 1)" ] );
+    ( "assoc",
+      [ ("(assoc {} :x nil)", HashMap [ (String "x", Nil) ]); ("(get (assoc {:x 1} :x false) :x)", Bool false) ],
+      [ "(assoc {})"; "(assoc {} :x)"; "(assoc {} :x 1 :y 2)"; "(assoc nil :x 1)"; "(assoc [] :x 1)"; "(assoc 42 :x 1)" ] );
+    ( "merge",
+      [ ("(merge {} {})", HashMap []); ("(get (merge {:x 1} {:x false}) :x)", Bool false) ],
+      [
+        "(merge {})";
+        "(merge {} {} {})";
+        "(merge nil {})";
+        "(merge {} nil)";
+        "(merge [] {})";
+        "(merge {} [])";
+        "(merge 42 {})";
+        "(merge {} 42)";
+      ] );
     ("str", [ ("(str)", String ""); ("(str nil false 1 'x)", String "nilfalse1x") ], []);
     ( "concat",
       [ ("(concat)", List []); ("(concat [] [1] [false])", List [ Int 1; Bool false ]) ],

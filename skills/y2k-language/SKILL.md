@@ -104,6 +104,8 @@ These functions are available without imports on all three targets. Signatures s
 | `(string? value)` | Boolean true for runtime strings, including `""` and keywords; false for other types. Evaluates its one argument once, without converting it to text. |
 | `(concat lists...)` | Concatenates lists in order; zero gives an empty list. Does not concatenate strings or maps. |
 | `(hash-map key value ...)` | Any even number of arguments, including zero; odd count errors. Prefer unique string/keyword keys. |
+| `(assoc map key value)` | Exactly 3 arguments. Adds/replaces one field in a new shallow map; preserves the input. |
+| `(merge left right)` | Exactly 2 maps. New shallow map with right-hand fields winning conflicts; preserves both inputs. |
 | `(count collection)` | Number of list items or map entries; not a string-length function. |
 | `(get collection key)` | Map lookup or list lookup by nonnegative integer index. Missing key/index or `nil` collection gives `nil`; preserves `false`. JS normalizes retrieved `undefined` to `nil`. No third default argument. |
 | `(get-in collection keys)` | Repeated `get` using a vector path, including mixed keys/indices and a runtime-computed path. Empty path returns collection unchanged. Missing intermediate data gives `nil`; `false` at the end is preserved. Scalar traversal and a non-vector path error. No third default argument. |
@@ -129,6 +131,16 @@ These functions are available without imports on all three targets. Signatures s
 | `(swap! reference f)` | Calls unary `f` once with current value, stores and returns its result. No extra arguments. If callback fails, no result is written; callback side effects are not rolled back. Sequential semantics only, no host-thread synchronization guarantee. |
 
 Atom functions enforce arities 1, 1, 2, 2; invalid references or a non-callable update fail. Other APIs may report errors at compilation or execution depending on target.
+
+**Map updates:** `assoc` and `merge` require maps: nil, lists/vectors, and scalars in map positions error. Values such as nil, false, 0, and `""` are retained and overwrite previous values. Nested maps are replaced whole; nested objects and Atoms are shared, not cloned. Use unique string/keyword keys for portability, and check fields with `get` rather than relying on map equality or iteration order. Extra pairs/maps are not overloads; use nested calls:
+
+```clojure
+(let [item {:reason "selected" :status "pending"}
+      result {:status "ready"}]
+  (assoc (merge item result) :selection_reason (:reason item)))
+```
+
+On eval, updates use `=` for keys. Assoc replaces all equal-key pairs with one pair; merge applies right-hand pairs left to right, so the last duplicate on the right wins. Existing `hash-map` construction and first-match `get` stay unchanged. JS/Java use their existing stringified keys. JS also accepts ordinary JSON objects, copies own enumerable string fields, and returns a null-prototype object where `__proto__` and `constructor` are ordinary data keys. Class instances, getters, proxies, and symbol keys are outside this contract. Deploy generated code with the matching runtime exporting both functions.
 
 **String checks:** `"nil"`, `"false"`, `"42"`, and `:name` are strings; nil, booleans, numbers, collections, functions, atoms, and regex values are not. Use `(string? value)` before string operations on external data. JS accepts primitive strings (including JSON.parse string results), not `new String("x")`, objects, or undefined. Java accepts `java.lang.String`, not `StringBuilder`. Quoted `'foo`, `'nil`, `'false`, and `'42` give false on eval but true on JS/Java, which represent quoted atoms as text; `'"text"` gives true everywhere. Use exactly one argument; incorrect arities on compiled targets are outside the portable contract.
 
@@ -188,6 +200,8 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | --- | --- | --- |
 | `list`, `str` | 0+ | Any values; results are list/string respectively. |
 | `hash-map` | Even, including 0 | Any key/value pairs; retain order and duplicates. |
+| `assoc` | 3 | Map, any key, any value. |
+| `merge` | 2 | Two maps. |
 | `concat` | 0+ | Lists only. |
 | `=`, `not=` | 0+ | Any values; `=` tests whether all equal the first, `not=` negates that result. Zero/one argument gives `true`/`false` respectively. |
 | `not`, `assert`, `vector?`, `string?` | 1 | Any value; `assert` returns true for truthy values, errors for nil/false. |

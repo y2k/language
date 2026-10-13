@@ -128,7 +128,7 @@ let compile sexprs =
     |> Option.value ~default:"./"
   in
   let runtime_import =
-    "import { list, vector_QMARK_, string_QMARK_, concat, hash_map, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, \
+    "import { list, vector_QMARK_, string_QMARK_, concat, hash_map, assoc, merge, truthy, not, print_result, println, eprintln, str, _EQ_, not_EQ_, \
      _PLUS_, _GT_, _LT_, _GT__EQ_, _LT__EQ_, _MINUS_, _STAR_, _SLASH_, count, get, get_in, map, filter, keep, \
      run_BANG_, reduce, drop, atom, deref, reset_BANG_, swap_BANG_, re_pattern, re_find, re_replace } from \""
     ^ root_prefix ^ "language_runtime.js\";"

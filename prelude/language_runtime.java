@@ -192,6 +192,22 @@ public final class language_runtime {
     return result;
   }
 
+  public static java.util.LinkedHashMap<Object, Object> assoc(Object collection, Object key, Object value) {
+    if (!(collection instanceof java.util.Map<?, ?> items))
+      throw new RuntimeException("assoc expects a hash-map, a key, and a value");
+    var result = new java.util.LinkedHashMap<Object, Object>(items);
+    result.put(value_text(key), value);
+    return result;
+  }
+
+  public static java.util.LinkedHashMap<Object, Object> merge(Object left, Object right) {
+    if (!(left instanceof java.util.Map<?, ?> leftItems) || !(right instanceof java.util.Map<?, ?> rightItems))
+      throw new RuntimeException("merge expects two hash-maps");
+    var result = new java.util.LinkedHashMap<Object, Object>(leftItems);
+    result.putAll(rightItems);
+    return result;
+  }
+
   public static Object get(Object collection, Object key) {
     if (collection == null) return null;
     if (collection instanceof java.util.List<?> items && key instanceof Number index) {
