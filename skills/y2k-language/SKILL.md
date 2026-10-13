@@ -112,6 +112,7 @@ These functions are available without imports on all three targets. Signatures s
 | `(map f items)` | Eager unary mapping over one list. No multiple-collection or transducer overload. |
 | `(filter pred items)` | Keeps original items whose unary predicate result is language-truthy: only nil/false reject an item (also undefined on JS). Zero, empty string, and text `"nil"`/`"false"` are truthy. |
 | `(keep f items)` | Maps each item and keeps results other than nil (also excludes undefined on JS). Preserves false, 0, empty string, and text `"nil"`. |
+| `(sort-by keyfn coll)` | Stable ascending sort by computed keys; returns a new list/vector without changing the input or cloning its elements. Exactly two arguments. |
 | `(run! f items)` | Eager side-effect traversal of one list/vector in order, calling unary `f` once per item. Discards callback results without collecting them; returns actual `nil`, including for an empty collection (no callback calls). Callback errors stop traversal and propagate; earlier effects are not rolled back. |
 | `(reduce f collection)` | Left fold with first element as initial accumulator; empty collection errors. |
 | `(reduce f init collection)` | Left fold over every element; empty collection returns `init`. Both forms accept a list or map; map items are `[key value]` pairs. Do not rely on portable map iteration order. Callback takes accumulator and item. |
@@ -152,6 +153,18 @@ On eval, updates use `=` for keys. Assoc replaces all equal-key pairs with one p
 ```
 
 `run!` is an ordinary function, not a macro. Pass a named function, lambda, or local function value. Its collection contract excludes maps, `nil`, and arbitrary iterables. On JS, ordinary dense host arrays are supported without changing the element objects; convert a DOM `NodeList` with `Array.from` first. Direct `NodeList` traversal, mutation of the collection during traversal, and awaiting async callbacks are not part of the contract. JS/Java do not promise eval's argument diagnostics.
+
+**Sorting:** `sort-by` calls a named, lambda, or local unary `keyfn` once per element, eagerly from left to right, before sorting. Equal keys keep their original order. Empty input returns an empty list/vector without calling `keyfn`; singleton input calls it once. Callback errors stop traversal and propagate, retaining earlier effects. Unlike Clojure `sort-by`, keys are computed only once and there is no comparator overload.
+
+Use either all string keys or all numeric keys in one call. Numeric keys can mix integers and finite binary64 values: order is numeric, without epsilon, and `1`/`1.0` and both signs of zero are ties. Eval preserves the order of large integers against binary64 without rounding the integer; cross-target portability remains limited by each target's numeric range. String keys (including keywords) use case-sensitive lexicographic order without locale: ASCII sorts identically everywhere; other Unicode is byte-ordered on eval and UTF-16-ordered on JS/Java. Nil, booleans, composite keys, mixed strings/numbers, and non-finite keys are outside the contract.
+
+Input is a list/vector (also a dense host array on JS). Maps, nil collections, arbitrary iterables, sparse arrays, and callback mutation of the input or its elements are outside the contract. Elements themselves can be any values if their computed keys are supported. Deploy with the matching runtime exporting `sort_by`.
+
+```clojure
+(sort-by (fn [event] (:priority event))
+         [{:id "A" :priority 20} {:id "B" :priority 3} {:id "C" :priority 20}])
+;; Returns the original events in order B, A, C.
+```
 
 **Fractional arithmetic:** `+`, `-`, `*` preserve fractional operands without truncation. A result that is exactly an integer within signed 32-bit range is normalized to an integer, including negative zero becoming `0`. Thus `(str (+ 0.5 0.5))` is `"1"`, `(= (+ 0.5 0.5) 1)` is `true`, and the corresponding `not=` is `false`. This does not establish general mixed-literal equality such as `(= 1 1.0)`. Non-integer results retain binary64 precision when reused in arithmetic; no epsilon or decimal rounding is applied. For example, `(str (+ 1 0.2) " " (* 2 0.2))` is `"1.2 0.4"`, but `(+ 0.1 0.2)` need not equal `0.3` exactly. Exponent spelling and formatting of arbitrary fractional values can differ by target; `str` is not a portable numeric serialization format. Non-finite values and overflow remain outside the portable contract.
 

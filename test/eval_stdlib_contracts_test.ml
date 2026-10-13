@@ -170,7 +170,10 @@ let matrix path =
         ("(keep (fn [x] x) [])", List []);
         ({|(keep (fn [x] x) [nil false 0 "" "nil"])|}, List [ Bool false; Int 0; String ""; String "nil" ]);
       ],
-      [ "(keep)"; "(keep (fn [x] x))"; "(keep (fn [x] x) [] nil)"; "(keep (fn [x] x) {})"; "(keep (fn [x] x) nil)" ] );
+       [ "(keep)"; "(keep (fn [x] x))"; "(keep (fn [x] x) [] nil)"; "(keep (fn [x] x) {})"; "(keep (fn [x] x) nil)" ] );
+    ( "sort-by",
+      [ ("(sort-by (fn [x] x) [])", List []); ("(sort-by (fn [x] x) [2 1])", List [ Int 1; Int 2 ]) ],
+      [] );
     ( "run!",
       [ ("(run! (fn [x] x) [])", Nil); ("(run! (fn [x] x) [1 2])", Nil) ],
       [ "(run!)"; "(run! (fn [x] x))"; "(run! (fn [x] x) [] nil)"; "(run! (fn [x] x) {})"; "(run! (fn [x] x) nil)" ] );
@@ -324,6 +327,22 @@ let operation_errors =
     ("/", "zero", "(/ 20 2 0)");
   ]
 
+let sort_by_numeric_keys () =
+  if Sys.int_size = 63 then (
+    check "(sort-by (fn [x] x) [9007199254740993 9007199254740992.0])"
+      (List [ Float 9007199254740992.; Int 9007199254740993 ]);
+    check "(sort-by (fn [x] x) [-9007199254740992.0 -9007199254740993])"
+      (List [ Int (-9007199254740993); Float (-9007199254740992.) ]));
+  let lower = float_of_int min_int in
+  let upper = -.lower in
+  let source = Printf.sprintf "(sort-by (fn [x] x) [%d %.1f %d %.1f])" max_int upper min_int (lower *. 2.) in
+  check source (List [ Float (lower *. 2.); Int min_int; Int max_int; Float upper ]);
+  check
+    {|(let [calls (atom "")]
+        (str (sort-by (fn [x] (swap! calls (fn [s] (str s x))) x) [3 1 2])
+             "|" (deref calls)))|}
+    (String "(1 2 3)|312")
+
 let exact_errors () =
   let nul_path = "bad\000path" in
   List.iter
@@ -400,7 +419,10 @@ let () =
               (traversal_failure_preserves_callback_effects "filter");
             Alcotest.test_case "keep failure preserves callback effects" `Quick
               (traversal_failure_preserves_callback_effects "keep");
+            Alcotest.test_case "sort-by failure preserves callback effects" `Quick
+              (traversal_failure_preserves_callback_effects "sort-by");
           ] );
+      ("sort-by", [ Alcotest.test_case "exact numeric keys and once-only callback" `Quick sort_by_numeric_keys ]);
       ( "errors",
         List.map
           (fun (name, reason, source) -> Alcotest.test_case source `Quick (fun () -> error name reason source))

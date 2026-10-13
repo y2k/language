@@ -371,6 +371,27 @@ public final class language_runtime {
     return null;
   }
 
+  private static int compare_sort_keys(Object left, Object right) {
+    if (left instanceof String text)
+      return text.compareTo((String) right);
+    double a = ((Number) left).doubleValue(), b = ((Number) right).doubleValue();
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
+  public static java.util.List<Object> sort_by(Object fn, Object collection) throws Exception {
+    if (!(collection instanceof java.util.List<?> items))
+      throw new RuntimeException("sort-by expects a function and a list");
+    record Keyed(Object key, Object item) {}
+    var keyed = new java.util.ArrayList<Keyed>();
+    for (Object item : items)
+      keyed.add(new Keyed(call_fn(fn, item), item));
+    keyed.sort((left, right) -> compare_sort_keys(left.key(), right.key()));
+    var result = new java.util.ArrayList<Object>();
+    for (var entry : keyed)
+      result.add(entry.item());
+    return result;
+  }
+
   public static java.util.List<Object> drop(Object count, Object collection) {
     var items = (java.util.List<?>) collection;
     int start = Math.min(Math.max(((Number) count).intValue(), 0), items.size());

@@ -117,6 +117,29 @@ let keep apply = function
       List (List.filter_map (fun item -> match apply fn [ item ] with Nil -> None | value -> Some value) items)
   | _ -> raise (Eval_error "keep expects a function and a list")
 
+let compare_int_float integer floating =
+  let lower = float_of_int min_int in
+  if floating < lower then 1
+  else if floating >= -.lower then -1
+  else
+    let order = Int.compare integer (int_of_float floating) in
+    if order <> 0 then order else Float.compare (float_of_int integer) floating
+
+let compare_sort_keys left right =
+  match (left, right) with
+  | Int left, Int right -> Int.compare left right
+  | Float left, Float right -> Float.compare left right
+  | Int integer, Float floating -> compare_int_float integer floating
+  | Float floating, Int integer -> -(compare_int_float integer floating)
+  | String left, String right -> String.compare left right
+  | _ -> raise (Eval_error "sort-by expects numeric keys or string keys")
+
+let sort_by apply = function
+  | [ (Closure _ as fn); List items ] ->
+      let keyed = List.map (fun item -> (apply fn [ item ], item)) items in
+      List (List.map snd (List.stable_sort (fun (left, _) (right, _) -> compare_sort_keys left right) keyed))
+  | _ -> raise (Eval_error "sort-by expects a function and a list")
+
 let run_BANG_ apply = function
   | [ (Closure _ as fn); List items ] ->
       List.iter (fun item -> ignore (apply fn [ item ])) items;
@@ -259,6 +282,7 @@ let env =
     ("map", Closure (Native map));
     ("filter", Closure (Native filter));
     ("keep", Closure (Native keep));
+    ("sort-by", Closure (Native sort_by));
     ("run!", Closure (Native run_BANG_));
     ("reduce", Closure (Native reduce));
     ("drop", Closure (Native drop));

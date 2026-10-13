@@ -271,6 +271,13 @@ export function run_BANG_(fn, list) {
   return null;
 }
 
+export function sort_by(fn, list) {
+  if (!Array.isArray(list)) throw new Error("sort-by expects a function and a list");
+  const keyed = list.map((item) => [fn(item), item]);
+  keyed.sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+  return keyed.map(([, item]) => item);
+}
+
 export function drop(count, list) {
   return list.slice(Math.max(0, count));
 }
