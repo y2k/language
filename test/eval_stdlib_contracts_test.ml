@@ -31,10 +31,15 @@ let error operation reason source =
 let matrix path =
   [
     ( "re-pattern",
-      [ ({|(str (re-pattern ""))|}, String "#<regex>"); ({|(str (re-pattern :x))|}, String "#<regex>") ],
+      [
+        ({|(str (re-pattern ""))|}, String "#<regex>");
+        ({|(str (re-pattern :x))|}, String "#<regex>");
+        ({|(re-find (re-pattern "x" "i") "X")|}, String "X");
+        ({|(re-find (re-pattern "x" "") "X")|}, Nil);
+      ],
       [
         "(re-pattern)";
-        {|(re-pattern "x" "flags")|};
+        {|(re-pattern "x" "i" "extra")|};
         "(re-pattern 'x)";
         "(re-pattern nil)";
         "(re-pattern false)";
@@ -58,6 +63,23 @@ let matrix path =
         {|(re-find (re-pattern "x") 'x)|};
         {|(re-find (re-pattern "x") false)|};
         {|(re-find (re-pattern "x") 1)|};
+      ] );
+    ( "re-find-groups",
+      [
+        ({|(re-find-groups (re-pattern "(x)" "i") "X")|}, List [ String "X"; String "X" ]);
+        ({|(re-find-groups (re-pattern :x) :x)|}, List [ String "x" ]);
+        ({|(re-find-groups (re-pattern "x") "")|}, Nil);
+      ],
+      [
+        "(re-find-groups)";
+        {|(re-find-groups (re-pattern "x"))|};
+        {|(re-find-groups (re-pattern "x") "x" "extra")|};
+        {|(re-find-groups "x" "")|};
+        {|(re-find-groups nil "")|};
+        {|(re-find-groups (re-pattern "x") nil)|};
+        {|(re-find-groups (re-pattern "x") 'x)|};
+        {|(re-find-groups (re-pattern "x") false)|};
+        {|(re-find-groups (re-pattern "x") 1)|};
       ] );
     ( "re-replace",
       [

@@ -228,8 +228,9 @@ These are **eval-specific** arities; continue using binary `=`/`not=` in portabl
 | `swap!` | 2 | Atom and function. |
 | `count` | 1 | List/map; returns integer size. |
 | `slurp` | 1 | String path. |
-| `re-pattern` | 1 | String pattern → compiled regex. |
+| `re-pattern` | 1 or 2 | String pattern, optional string flags (`""` or `"i"`) → compiled regex. |
 | `re-find` | 2 | Regex, string text → first full match string or nil. |
+| `re-find-groups` | 2 | Regex, string text → list of full match and capture groups, or nil. |
 | `re-replace` | 3 | String text, regex, string replacement → globally replaced string. |
 | `get` | 2 | Map/any key; list/nonnegative integer index; nil/any key. |
 | `get-in` | 2 | Any initial value and a list/vector path; each step follows `get`. |
@@ -251,23 +252,28 @@ Negative list indices raise `Eval_error`, even on empty lists. Every actual `/` 
 
 #### Regular expressions on all targets
 
-`re-pattern`, `re-find`, and `re-replace` are available without imports on eval, JavaScript, and Java, with arities 1/2/3 and argument order `(re-pattern pattern)`, `(re-find regex text)`, `(re-replace text regex replacement)`. JavaScript uses native `RegExp`; Java uses `java.util.regex.Pattern`.
+Regex functions are available without imports on eval, JavaScript, and Java: `(re-pattern pattern)` or `(re-pattern pattern flags)`, `(re-find regex text)`, `(re-find-groups regex text)`, and `(re-replace text regex replacement)`. JavaScript uses native `RegExp`; Java uses `java.util.regex.Pattern`.
+
+Omitted flags or `""` select case-sensitive matching; `"i"` ignores ASCII case in searches and replacements while preserving the original text in matches and groups. Other flags, including `"g"`, `"m"`, `"ii"`, and non-string values, are errors. Unicode case matching remains engine-specific.
 
 Regex values are opaque, truthy, and not callable on all targets. Functions, bindings, collection values, destructuring, and Atom preserve them. `str` produces `#<regex>`, including inside lists/maps. Binary `=` returns false whenever either direct operand is a regex, even the same value; binary `not=` returns true. This changes previous JS/Java identity equality. Recursive collection equality, regex map keys, unary equality, and final runner output are **not** unified: the stronger eval guarantees above remain eval-only. Reusing a compiled regex after any search or replacement starts a fresh operation, unaffected by previous match positions.
 
-Portable patterns and text use printable ASCII, TAB, and LF. The shared subset includes literals, escaped metacharacters, simple positive/negative classes and ranges, `\d`/`\D`/`\w`/`\W`/`\s`/`\S` inside and outside classes, `.`, concatenation, alternation, ordinary groups, greedy/lazy `*`/`+`/`?`/bounded quantifiers, and `^`/`$`. Matching is case-sensitive; dot excludes LF; anchors refer to the whole string, including a strict end (`foo$` does not match `"foo\n"`). Unicode and other control characters are target-specific. POSIX/nested/intersected classes, inline flags, lookaround, and backreferences are outside the portable guarantee; native JS/Java extensions need not be rejected just because eval rejects them. No flags argument or regex reader syntax is provided.
+Portable patterns and text use printable ASCII, TAB, and LF. The shared subset includes literals, escaped metacharacters, simple positive/negative classes and ranges, `\d`/`\D`/`\w`/`\W`/`\s`/`\S` inside and outside classes, `.`, concatenation, alternation, ordinary groups, greedy/lazy `*`/`+`/`?`/bounded quantifiers, and `^`/`$`. Dot excludes LF; anchors refer to the whole string, including a strict end (`foo$` does not match `"foo\n"`), also with `"i"`. Unicode and other control characters are target-specific. POSIX/nested/intersected classes, inline flags, lookaround, and backreferences are outside the portable guarantee; native JS/Java extensions need not be rejected just because eval rejects them. Regex reader syntax is not provided.
 
 The project uses Re **1.13.2**, pinned to avoid a Re 1.14.0 regression in bracketed `\W`. Both `"\\W+"` and `"[\\W]+"` match non-word characters; neither matches `"abc_42"`.
 
 ```clojure
 (re-find (re-pattern "foo([0-9]+)") "xfoo42 foo7") ; "foo42", not capture groups
+(get (re-find-groups (re-pattern "post-([0-9]+)" "i") "POST-5657") 1) ; "5657"
 (re-replace "foo1 foo22" (re-pattern "foo[0-9]+") "X") ; "X X"
 (re-replace "export function f() {}" (re-pattern "^export ") "") ; "function f() {}"
 ```
 
 `re-find` searches from the left. No match is actual falsey nil; an empty match is the truthy string `""`. Reuse a compiled regex through a binding. Text is never implicitly compiled. Each API enforces its arity and runtime types on all targets, even for empty input or absent matches. Keywords remain string values; numbers, booleans, nil, collections, and callbacks are not coerced to strings. Quoted symbols are distinct from strings on eval but may be runtime strings on compiled targets, so their rejection is not portable. Invalid patterns and argument errors name their builtin and the reason; exact messages and host exception types are not portable. Eval reports errors through its runner/CLI; an unhandled error in an executed Node/JVM program produces stderr and a nonzero exit status. The JS/Java compilation step does not execute regex calls or promise to diagnose invalid patterns.
 
-The eval dialect is **OCaml Re.Perl with default options**, a Perl-style subset, not Java Pattern or full Perl/PCRE compatibility. It supports literals, character classes (including `\\d`, `\\s`, `\\S` in language string literals), alternation, groups, greedy/lazy quantifiers, and anchors. Matching is case-sensitive and byte-based; Unicode text is not normalized and `.` can select one byte of a UTF-8 character. `.` excludes newline; `^`/`$` match the start/end of the whole string (`foo$` does not match `"foo\n"`). There is no flags argument. Eval rejects inline flags such as `(?m)`/`(?s)`, lookaround, and backreferences. For multiline extraction use `[\\s\\S]*?` in a language string. Regex literals `#"..."` are not supported.
+`re-find-groups` uses the same first-match search as `re-find`, returning an ordinary list/vector: full match at index 0, then groups in opening-parenthesis order. Use `get`, `count`, or positional destructuring. A match without groups returns a one-element collection; no match returns falsey nil. An unmatched optional group or alternative retains a nil slot (actual null on JS/Java), while a participating empty group is the truthy string `""`. For example, `"(a)?(b)"` on `"b"` yields `["b" nil "b"]`, and `"(a*)b"` yields `["b" ""]`. Captures inside repeated groups follow the native engine and are not portable; repeating characters inside one capture, as in `"post-([0-9]+)"`, is portable. `re-find` always keeps its string-or-nil result.
+
+The eval dialect is **OCaml Re.Perl**, using default options or `Caseless` for `"i"`: a Perl-style subset, not Java Pattern or full Perl/PCRE compatibility. It supports literals, character classes (including `\\d`, `\\s`, `\\S` in language string literals), alternation, groups, greedy/lazy quantifiers, and anchors. Matching is byte-based; Unicode text is not normalized and `.` can select one byte of a UTF-8 character. `.` excludes newline; `^`/`$` match the start/end of the whole string (`foo$` does not match `"foo\n"`). Eval rejects inline flags such as `(?m)`/`(?s)`, lookaround, and backreferences. For multiline extraction use `[\\s\\S]*?` in a language string. Regex literals `#"..."` are not supported.
 
 On all targets, `re-replace` replaces all non-overlapping matches, without rescanning inserted text. Replacement is literal: `$1`, `$&`, and backslash sequences are not capture substitutions; callback replacement is unavailable. No match preserves the input, and an empty replacement deletes matches. Empty matches insert the replacement and advance over one original ASCII character, preserving it; an empty match immediately after a nonempty match at the same position is skipped. End-of-input is processed at most once, and anchors remain relative to the whole original text. For example, replacing `""` with `"-"` in `"ab"` gives `"-a-b-"`; replacing `"a*"` gives `"-b-"`. This changes the previous JS/Java native replacement behavior (`"--b-"`). Outside the portable subset, empty-match advancement uses a byte on eval and a UTF-16 code unit on JS/Java; Unicode matching remains engine-specific.
 

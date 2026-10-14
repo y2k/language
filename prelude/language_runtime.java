@@ -4,8 +4,11 @@ public final class language_runtime {
   public static Object re_pattern(Object... args) {
     // A lone null literal is passed by javac as a null varargs array.
     if (args == null) throw new RuntimeException("re-pattern expects a string");
-    if (args.length != 1) throw new RuntimeException("re-pattern expects 1 argument");
+    if (args.length != 1 && args.length != 2) throw new RuntimeException("re-pattern expects 1 or 2 arguments");
     if (!(args[0] instanceof String pattern)) throw new RuntimeException("re-pattern expects a string");
+    Object flags = args.length == 1 ? "" : args[1];
+    if (!"".equals(flags) && !"i".equals(flags))
+      throw new RuntimeException("re-pattern expects flags to be \"\" or \"i\"");
     var normalized = new StringBuilder();
     boolean inClass = false;
     for (int i = 0; i < pattern.length(); i++) {
@@ -21,7 +24,8 @@ public final class language_runtime {
       }
     }
     try {
-      return java.util.regex.Pattern.compile(normalized.toString());
+      return java.util.regex.Pattern.compile(normalized.toString(),
+          "i".equals(flags) ? java.util.regex.Pattern.CASE_INSENSITIVE : 0);
     } catch (java.util.regex.PatternSyntaxException error) {
       throw new RuntimeException("re-pattern: invalid pattern", error);
     }
@@ -33,6 +37,17 @@ public final class language_runtime {
     if (!(args[1] instanceof String text)) throw new RuntimeException("re-find expects a string text");
     var matcher = regex.matcher(text);
     return matcher.find() ? matcher.group() : null;
+  }
+
+  public static Object re_find_groups(Object... args) {
+    if (args == null || args.length != 2) throw new RuntimeException("re-find-groups expects 2 arguments");
+    if (!(args[0] instanceof java.util.regex.Pattern regex)) throw new RuntimeException("re-find-groups expects a regex");
+    if (!(args[1] instanceof String text)) throw new RuntimeException("re-find-groups expects a string text");
+    var matcher = regex.matcher(text);
+    if (!matcher.find()) return null;
+    var groups = new java.util.ArrayList<Object>();
+    for (int i = 0; i <= matcher.groupCount(); i++) groups.add(matcher.group(i));
+    return groups;
   }
 
   public static Object re_replace(Object... args) {

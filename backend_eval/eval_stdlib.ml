@@ -239,17 +239,37 @@ let slurp _ = function
       with Sys_error _ -> raise (Eval_error ("slurp failed: " ^ path)))
   | _ -> raise (Eval_error "slurp expects one path")
 
-let re_pattern _ = function
-  | [ String pattern ] -> (
-      try Regex (Re.Perl.compile_pat pattern) with
-      | Re.Perl.Parse_error -> raise (Eval_error "re-pattern: invalid pattern")
-      | Re.Perl.Not_supported -> raise (Eval_error "re-pattern: unsupported pattern"))
-  | _ -> raise (Eval_error "re-pattern expects one string pattern")
+let re_pattern _ args =
+  let pattern, flags =
+    match args with
+    | [ String pattern ] -> (pattern, String "")
+    | [ String pattern; flags ] -> (pattern, flags)
+    | _ -> raise (Eval_error "re-pattern expects a string pattern and optional string flags")
+  in
+  let opts =
+    match flags with
+    | String "" -> []
+    | String "i" -> [ `Caseless ]
+    | _ -> raise (Eval_error "re-pattern expects flags to be \"\" or \"i\"")
+  in
+  try Regex (Re.Perl.compile_pat ~opts pattern) with
+  | Re.Perl.Parse_error -> raise (Eval_error "re-pattern: invalid pattern")
+  | Re.Perl.Not_supported -> raise (Eval_error "re-pattern: unsupported pattern")
 
 let re_find _ = function
   | [ Regex regex; String text ] -> (
       match Re.exec_opt regex text with Some groups -> String (Re.Group.get groups 0) | None -> Nil)
   | _ -> raise (Eval_error "re-find expects a regex and a string")
+
+let re_find_groups _ = function
+  | [ Regex regex; String text ] -> (
+      match Re.exec_opt regex text with
+      | Some groups ->
+          List
+            (List.init (Re.Group.nb_groups groups) (fun i ->
+                 match Re.Group.get_opt groups i with Some text -> String text | None -> Nil))
+      | None -> Nil)
+  | _ -> raise (Eval_error "re-find-groups expects a regex and a string")
 
 let re_replace _ = function
   | [ String text; Regex regex; String replacement ] -> String (Re.replace_string ~all:true regex ~by:replacement text)
@@ -259,6 +279,7 @@ let env =
   [
     ("re-pattern", Closure (Native re_pattern));
     ("re-find", Closure (Native re_find));
+    ("re-find-groups", Closure (Native re_find_groups));
     ("re-replace", Closure (Native re_replace));
     ("list", Closure (Native list));
     ("atom", Closure (Native atom));

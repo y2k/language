@@ -5,16 +5,18 @@ class Atom {
 }
 
 class Regex {
-  constructor(pattern) {
-    this.compiled = new RegExp(pattern);
+  constructor(pattern, flags) {
+    this.compiled = new RegExp(pattern, flags);
   }
 }
 
-export function re_pattern(pattern) {
-  if (arguments.length !== 1) throw new Error("re-pattern expects 1 argument");
+export function re_pattern(pattern, flags) {
+  if (arguments.length !== 1 && arguments.length !== 2) throw new Error("re-pattern expects 1 or 2 arguments");
   if (typeof pattern !== "string") throw new Error("re-pattern expects a string");
+  if (arguments.length === 1) flags = "";
+  if (flags !== "" && flags !== "i") throw new Error('re-pattern expects flags to be "" or "i"');
   try {
-    return new Regex(pattern);
+    return new Regex(pattern, flags);
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("re-pattern: invalid pattern");
     throw error;
@@ -29,12 +31,20 @@ export function re_find(regex, text) {
   return match === null ? null : match[0];
 }
 
+export function re_find_groups(regex, text) {
+  if (arguments.length !== 2) throw new Error("re-find-groups expects 2 arguments");
+  if (!(regex instanceof Regex)) throw new Error("re-find-groups expects a regex");
+  if (typeof text !== "string") throw new Error("re-find-groups expects a string text");
+  const match = regex.compiled.exec(text);
+  return match === null ? null : Array.from(match, group => group ?? null);
+}
+
 export function re_replace(text, regex, replacement) {
   if (arguments.length !== 3) throw new Error("re-replace expects 3 arguments");
   if (!(regex instanceof Regex)) throw new Error("re-replace expects a regex");
   if (typeof text !== "string" || typeof replacement !== "string")
     throw new Error("re-replace expects string text and replacement");
-  const matcher = new RegExp(regex.compiled.source, "g");
+  const matcher = new RegExp(regex.compiled.source, regex.compiled.flags + "g");
   const parts = [];
   let copied = 0;
   let nonemptyEnd = -1;

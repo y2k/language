@@ -101,6 +101,17 @@ let search_results () =
   check {|(let [x (re-find (re-pattern "") "abc")] (if x (= x "") false))|} (Bool true);
   check {|(= (re-find (re-pattern "x") "abc") "nil")|} (Bool false)
 
+let groups_and_flags () =
+  check {|(get (re-find-groups (re-pattern "post-([0-9]+)" "i") "POST-5657") 1)|} (String "5657");
+  (match eval {|(re-find-groups (re-pattern "(a)?(b)") "b")|} with
+  | List [ String "b"; Nil; String "b" ] -> ()
+  | _ -> Alcotest.fail "expected a list with actual Nil for the absent group");
+  check {|(re-find (re-pattern "post-([0-9]+)" "i") "POST-5657")|} (String "POST-5657");
+  check {|(re-find (re-pattern "post" "") "POST")|} Nil;
+  List.iter
+    (fun flags -> error "re-pattern" "flags" (Printf.sprintf "(re-pattern \"x\" %s)" flags))
+    [ "nil"; "false"; "42"; "[]"; {|"g"|}; {|"m"|}; {|"ii"|}; {|"I"|}; {|"flags"|} ]
+
 let replacement_cases =
   [
     ("foo1 foo22", "foo[0-9]+", "X", "X X");
@@ -207,7 +218,13 @@ let runner_cli () =
       (replace_source "xx" "x" "z", "zz");
     ];
   let errors =
-    [ "(re-pattern)"; {|(re-find "x" "")|}; {|(re-replace "" (re-pattern "x") nil)|} ]
+    [
+      "(re-pattern)";
+      {|(re-find "x" "")|};
+      {|(re-replace "" (re-pattern "x") nil)|};
+      {|(re-pattern "x" "g")|};
+      {|(re-find-groups "x" "")|};
+    ]
     @ List.map (Printf.sprintf "(re-pattern %S)") invalid_patterns
   in
   List.iter
@@ -273,6 +290,7 @@ let () =
           [
             ("opaque runtime", runtime);
             ("search and dialect", search_results);
+            ("groups and flags", groups_and_flags);
             ("literal global replacement", replacements);
             ("non-word classes exclude word characters", nonword_character_class);
             ("invalid patterns", pattern_errors);

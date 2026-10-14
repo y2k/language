@@ -31,8 +31,10 @@ let compile target source =
 let namespace_source =
   {|(ns checks.regex.core)
 (defn test []
-  (let [r (re-pattern "foo[0-9]+")]
-    (str (re-find r "xfoo42") "|" (re-replace "foo1 foo2" r "X"))))|}
+  (let [r (re-pattern "foo([0-9]+)" "i")]
+    (str (re-find r "xFOO42") "|" (re-replace "FOO1 foo2" r "X") "|"
+         (get (re-find-groups r "FOO7") 1))))
+(defn optional [] (re-find-groups (re-pattern "(a)?(b)") "b"))|}
 
 let namespace target () =
   with_temp_dir (fun dir ->
@@ -44,7 +46,9 @@ let namespace target () =
           let regex = Filename.concat checks "regex" in
           Unix.mkdir regex 0o755;
           let path = Filename.concat regex "core.mjs" in
-          write_file path (compile target (namespace_source ^ "\n(println (test))"));
+          write_file path
+            (compile target (namespace_source ^ "\n(println (test))")
+            ^ "\nimport assert from 'node:assert/strict';\nassert.deepStrictEqual(optional(), ['b', null, 'b']);\n");
           run "node" [ path ])
         else
           let path = Filename.concat dir "core.java" in
@@ -54,12 +58,14 @@ let namespace target () =
             {|public class RegexChecks {
 public static void main(String[] args) throws Exception {
   System.out.println(checks.regex.core.test());
+  if (!java.util.Arrays.asList("b", null, "b").equals(checks.regex.core.optional()))
+    throw new AssertionError("absent group must retain its null slot");
 }
 }|};
           ignore (run "javac" [ "-d"; dir; Sys.getenv "RUNTIME_JAVA"; path; runner ]);
           run "java" [ "-cp"; dir; "RegexChecks" ]
       in
-      Alcotest.(check string) "nested namespace API" "foo42|X X\n" output)
+      Alcotest.(check string) "nested namespace API" "FOO42|X X|7\n" output)
 
 let contains text part =
   let rec loop i =
@@ -70,7 +76,7 @@ let contains text part =
 let errors =
   [
     ("re-pattern", "expects", "(re-pattern)");
-    ("re-pattern", "expects", {|(re-pattern "x" "flags")|});
+    ("re-pattern", "expects", {|(re-pattern "x" "i" "extra")|});
     ("re-find", "expects", "(re-find)");
     ("re-find", "expects", {|(re-find (re-pattern "x"))|});
     ("re-find", "expects", {|(re-find (re-pattern "x") "x" "extra")|});
@@ -78,18 +84,26 @@ let errors =
     ("re-replace", "expects", {|(re-replace "" (re-pattern "x"))|});
     ("re-replace", "expects", {|(re-replace "" (re-pattern "x") "-" "extra")|});
     ("re-pattern", "invalid", {|(re-pattern "[")|});
+    ("re-find-groups", "expects", "(re-find-groups)");
+    ("re-find-groups", "expects", {|(re-find-groups (re-pattern "x"))|});
+    ("re-find-groups", "expects", {|(re-find-groups (re-pattern "x") "x" "extra")|});
   ]
+  @ List.map
+      (fun flags -> ("re-pattern", "flags", Printf.sprintf "(re-pattern \"x\" %s)" flags))
+      [ "nil"; "false"; "42"; "[]"; {|"g"|}; {|"m"|}; {|"ii"|}; {|"I"|}; {|"flags"|} ]
   @ List.concat_map
       (fun value ->
         [
           ("re-pattern", "expects", "(re-pattern " ^ value ^ ")");
           ("re-find", "expects", "(re-find (re-pattern \"x\") " ^ value ^ ")");
+          ("re-find-groups", "expects", "(re-find-groups (re-pattern \"x\") " ^ value ^ ")");
           ("re-replace", "expects", "(re-replace " ^ value ^ " (re-pattern \"x\") \"-\")");
         ]
         @ List.concat_map
             (fun text ->
               [
                 ("re-find", "expects", Printf.sprintf "(re-find %s %s)" value text);
+                ("re-find-groups", "expects", Printf.sprintf "(re-find-groups %s %s)" value text);
                 ("re-replace", "expects", Printf.sprintf "(re-replace %s %s \"-\")" text value);
                 ("re-replace", "expects", Printf.sprintf "(re-replace %s (re-pattern \"x\") %s)" text value);
               ])
@@ -97,6 +111,7 @@ let errors =
       [ "nil"; "42"; "false"; "[]"; "{}"; "(fn [x] x)" ]
   @ [
       ("re-find", "expects", {|(re-find "x" "")|});
+      ("re-find-groups", "expects", {|(re-find-groups "x" "")|});
       ("re-replace", "expects", {|(re-replace "" "x" "-")|});
       ("", "", {|(let [r (re-pattern "x")] (r))|});
     ]
@@ -171,7 +186,7 @@ public class RegexChecks {
         (fun index ->
           let operation, reason, _ = List.nth errors index in
           check_unhandled program args index operation reason)
-        [ 0; 8; 9 ])
+        [ 0; 8; 9; 12 ])
 
 let () =
   Alcotest.run "regex targets"
