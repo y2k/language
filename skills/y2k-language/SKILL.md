@@ -410,4 +410,25 @@ The Java command assumes source without `ns`; use the declared helper class file
 
 Runtime files (`language_runtime.js`, `language_runtime.java`) are **automatically supplied by the application's build system**. Do not add manual copying, compile the compiler from source, or assume its checkout is the application's working directory. Generating JS/Java source does not run it. Follow existing build/run commands for module layout, dependencies, host entry points, and tests.
 
+### JavaScript source maps
+
+For Node error stacks, compile with `--source-map` and execute the saved ES module with source maps enabled.
+For a source saved as `src/my demo.clj`, assuming the build supplies `dist/language_runtime.js`:
+
+```sh
+ly2k --target js --source-map --source-file "../src/my demo.clj" < "src/my demo.clj" > dist/demo.mjs
+node --enable-source-maps dist/demo.mjs
+```
+
+The inline Source Map v3 embeds the exact stdin text. `--source-file PATH` sets its source name; relative paths
+resolve from the generated JS directory, so the example points to `src/my demo.clj`. Pass literal filenames,
+including spaces, `#`, `?`, and `%`; URL escaping is handled by the compiler. PATH is metadata only: the compiler
+reads stdin, never PATH, and does not make it absolute. `--source-file` alone has no effect on output.
+Without `--source-file`, the name is `user.clj`, resolved beside the generated JS; that file need not exist.
+Frames point to the **start of the failing expression**, including nested calls, callbacks/Promise, threading
+steps, and calls inside `let`, destructuring, `if`, and `do`. A failing call indented two spaces on line 3 maps
+to `3:3` (`user.clj:3:3` by default); columns use UTF-16 units. An entire `raw-code` payload maps to the start
+of its form, and runtime frames retain their JS positions. Maps do not restore frames omitted by Node.
+The flag is JS-only; eval/Java reject it. Compilation without the flag preserves ordinary JS output.
+
 For OpenCode installation, symlink the directory containing this `SKILL.md` into the application as `.opencode/skills/y2k-language`. No `opencode.json` edit is needed. Restart OpenCode after connecting or updating the skill so a new session loads it.

@@ -151,6 +151,43 @@ namespace, also lives in that root and imports `./language_runtime.js`. A nested
 the same root: `app.commands.add` maps to `app/commands/add.js`, which imports `../../language_runtime.js`. Symbolic
 namespace imports use the same output-root prefix followed by the required namespace path.
 
+For Node.js error stacks with source locations, add `--source-map` and run a saved `.mjs` file:
+
+```sh
+mkdir -p out
+cp prelude/language_runtime.js out/
+cat <<'EOF' | dune exec ./bin/main.exe -- --target js --source-map > out/demo.mjs
+(ns demo)
+(defn fail []
+  (.parse JSON "invalid-json"))
+(fail)
+EOF
+node --enable-source-maps out/demo.mjs
+```
+
+This intentionally exits nonzero with `SyntaxError`; the first user frame points to `user.clj:3:3`,
+the start of the failing `.parse` expression. Nested calls, callbacks, threading steps and calls inside
+`let`, destructuring, `if`, and `do` retain their source positions. Columns use UTF-16 units, as in JavaScript.
+`user.clj` is the default source name, resolved beside the generated JS; no source file needs to exist.
+The inline Source Map v3 embeds the exact stdin text, including Unicode and line endings, in the JS file.
+An entire `raw-code` payload maps to the start of its source form; runtime frames keep their own JS locations.
+The map does not restore frames omitted by Node. Without `--source-map`, generated JS is unchanged;
+the flag is supported only for `js` and reports an error for `eval` or `java`.
+
+Use `--source-file PATH` to name the source in the stack. For a source saved as `src/my demo.clj`:
+
+```sh
+mkdir -p dist
+cp prelude/language_runtime.js dist/
+dune exec ./bin/main.exe -- --target js --source-map --source-file "../src/my demo.clj" < "src/my demo.clj" > dist/demo.mjs
+node --enable-source-maps dist/demo.mjs
+```
+
+Relative source paths resolve from the generated JS directory, so this stack points to `src/my demo.clj`.
+Pass the literal filename, including spaces, `#`, `?`, or `%`; the compiler handles URL escaping in the map.
+`--source-file` only sets map metadata: the compiler still reads stdin, never PATH, and does not make it absolute.
+Without `--source-map`, `--source-file` has no effect. Naming the source preserves expression-level precision.
+
 Generate Java source:
 
 ```sh
