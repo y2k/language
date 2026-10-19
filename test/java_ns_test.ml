@@ -66,6 +66,21 @@ return app.util.bar(io.math.core.foo(1));
 }|}
     java
 
+let multiple_require_vectors () =
+  List.iter
+    (fun requires ->
+      Alcotest.(check string)
+        "issue 35"
+        {|import static y2k.language.language_runtime.*;
+
+public final class probe {
+public static Object check() throws Exception {
+return beta.core.value(alpha.core.value());
+}
+}|}
+        (compile ("(ns probe " ^ requires ^ ") (defn check [] (b/value (a/value)))")))
+    [ "(:require [alpha.core :as a] [beta.core :as b])"; "(:require [alpha.core :as a]) (:require [beta.core :as b])" ]
+
 let namespace_name_only () =
   let java = compile {|
 (ns main)
@@ -414,6 +429,7 @@ let () =
           Alcotest.test_case "qualified values" `Quick qualified_values;
           Alcotest.test_case "require and import" `Quick require_and_import;
           Alcotest.test_case "multiple requires" `Quick multiple_requires;
+          Alcotest.test_case "multiple require vectors" `Quick multiple_require_vectors;
           Alcotest.test_case "namespace name only" `Quick namespace_name_only;
           Alcotest.test_case "string literals" `Quick string_literals;
           Alcotest.test_case "instance method call" `Quick instance_method_call;

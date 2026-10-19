@@ -10,12 +10,13 @@ let apply = function
       let import_items = ref [] in
       let pair left right = SList (meta, Paren, [ string_atom meta left; string_atom meta right ]) in
       let add_clause = function
-        | SList
-            ( _,
-              Paren,
-              [ SAtom (_, ":require"); SList (_, Bracket, [ SAtom (_, required); SAtom (_, ":as"); SAtom (_, alias) ]) ]
-            ) ->
-            require_items := pair required alias :: !require_items
+        | SList (_, Paren, SAtom (_, ":require") :: (_ :: _ as requires)) ->
+            List.iter
+              (function
+                | SList (_, Bracket, [ SAtom (_, required); SAtom (_, ":as"); SAtom (_, alias) ]) ->
+                    require_items := pair required alias :: !require_items
+                | _ -> ns_error "expected (:require [namespace :as alias]) or (:import [package Class ...])")
+              requires
         | SList (_, Paren, SAtom (_, ":import") :: imports) ->
             let add_import = function
               | SList (_, Bracket, SAtom (_, package) :: classes) ->

@@ -50,6 +50,16 @@ let qualified_lookup_uses_alias () =
     "result" 1
     (last_int {|(compiler/ns "a" () ()) (def x 1) (compiler/ns "b" (("a" "aa")) ()) aa/x|})
 
+let multiple_require_vectors () =
+  List.iter
+    (fun requires ->
+      Alcotest.(check bool)
+        "both aliases resolve" true
+        (last_boolean
+           ("(ns alpha.core) (def value 17) (ns beta.core) (def value 29) (ns probe " ^ requires
+          ^ ") (and (= a/value 17) (= b/value 29))")))
+    [ "(:require [alpha.core :as a] [beta.core :as b])"; "(:require [alpha.core :as a]) (:require [beta.core :as b])" ]
+
 let get_reads_list_by_index () =
   Alcotest.(check string) "result" "20 nil" (last_string {|(str (get [10 20 30] 1) " " (get [10] 2))|})
 
@@ -368,6 +378,7 @@ let () =
           Alcotest.test_case "context keeps current namespace" `Quick context_keeps_current_namespace;
           Alcotest.test_case "qualified lookup uses namespace" `Quick qualified_lookup_uses_namespace;
           Alcotest.test_case "qualified lookup uses alias" `Quick qualified_lookup_uses_alias;
+          Alcotest.test_case "multiple require vectors" `Quick multiple_require_vectors;
         ] );
       ( "stdlib",
         [

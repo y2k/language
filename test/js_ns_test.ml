@@ -46,6 +46,25 @@ import * as w from "wrangler";
 import * as async_hooks from "node:async_hooks";;|}
     js
 
+let multiple_require_vectors () =
+  List.iter
+    (fun (first, second, expected) ->
+      List.iter
+        (fun requires ->
+          match String.split_on_char '\n' (compile ("(ns probe " ^ requires ^ ")")) with
+          | _runtime_import :: lines ->
+              Alcotest.(check string) "both imports in source order" expected (String.concat "\n" lines)
+          | [] -> Alcotest.fail "expected generated module")
+        [ "(:require " ^ first ^ " " ^ second ^ ")"; "(:require " ^ first ^ ") (:require " ^ second ^ ")" ])
+    [
+      ( "[alpha.core :as a]",
+        "[beta.core :as b]",
+        "import * as a from \"./alpha/core.js\";\nimport * as b from \"./beta/core.js\";;" );
+      ( "[\"node:path\" :as path]",
+        "[\"node:url\" :as url]",
+        "import * as path from \"node:path\";\nimport * as url from \"node:url\";;" );
+    ]
+
 let string_escapes () =
   let check input expected =
     match String.split_on_char '\n' (compile input) with
@@ -217,6 +236,7 @@ let () =
         [
           Alcotest.test_case "require imports" `Quick require_imports;
           Alcotest.test_case "string require import" `Quick string_require_import;
+          Alcotest.test_case "multiple require vectors" `Quick multiple_require_vectors;
           Alcotest.test_case "string escapes" `Quick string_escapes;
           Alcotest.test_case "root namespace imports" `Quick root_namespace_imports;
           Alcotest.test_case "nested namespace imports" `Quick nested_namespace_imports;

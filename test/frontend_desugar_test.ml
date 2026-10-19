@@ -43,6 +43,23 @@ let keyword_lookup () =
 
 let keyword_map_key () = check_desugar "keyword map key" "{:key value}" "(hash-map \"key\" value)"
 
+let multiple_require_vectors () =
+  let expected =
+    {|(compiler/ns "probe" (("alpha.core" "a") ("beta.core" "b") ("gamma.core" "c")) (("LocalDate" "java.time.LocalDate")))|}
+    |> parse_one |> Frontend.show_sexpr
+  in
+  List.iter
+    (fun input -> check_desugar "require order and imports" input expected)
+    [
+      "(ns probe (:require [alpha.core :as a] [beta.core :as b]) (:import [java.time LocalDate]) (:require [gamma.core :as c]))";
+      "(ns probe (:require [alpha.core :as a]) (:require [beta.core :as b]) (:import [java.time LocalDate]) (:require [gamma.core :as c]))";
+    ]
+
+let empty_require () =
+  Alcotest.check_raises "empty require"
+    (Failure "ns: expected (:require [namespace :as alias]) or (:import [package Class ...])")
+    (fun () -> ignore (parse_one "(ns probe (:require))"))
+
 let multiple_import_vectors () =
   check_desugar "multiple import vectors" "(ns app.main (:import [java.time LocalDate] [java.util UUID]))"
     {|(compiler/ns
@@ -264,6 +281,8 @@ let () =
           Alcotest.test_case "keyword lookup" `Quick keyword_lookup;
           Alcotest.test_case "keyword map key" `Quick keyword_map_key;
           Alcotest.test_case "multiple import vectors" `Quick multiple_import_vectors;
+          Alcotest.test_case "multiple require vectors" `Quick multiple_require_vectors;
+          Alcotest.test_case "empty require" `Quick empty_require;
           Alcotest.test_case "let associative pattern" `Quick let_associative_pattern;
           Alcotest.test_case "let reversed associative pattern" `Quick let_reversed_associative_pattern;
           Alcotest.test_case "fn reversed associative pattern" `Quick fn_reversed_associative_pattern;

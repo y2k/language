@@ -70,7 +70,7 @@ In signatures, `...` denotes repetition, not source syntax.
 | `(->> value step...)` | Inserts value as the last argument of each step. |
 | `(:key collection)` | Exactly one collection argument: equivalent to `(get collection "key")`. No default-value overload. |
 | `(cast TYPE value)` | Evaluates value once. Transparent in `eval` and JS; a Java cast in Java. |
-| `(ns app.main (:require [dep.core :as dep]))` | Namespace declaration and alias. Use one namespace at the beginning of a compiled file. Each `:require` clause accepts **one** vector; repeat the clause for multiple dependencies. Use `dep/function` for a qualified call. Resolution/loading is target-specific. |
+| `(ns app.main (:require [dep.core :as dep]))` | Namespace declaration and alias. Use one namespace at the beginning of a compiled file. Each `:require` clause accepts **one or more** vectors, e.g. `(:require [alpha.core :as a] [beta.core :as b])`; separate clauses are equivalent and preserve dependency order. Empty `(:require)` is an error. Use `dep/function` for a qualified call. Resolution/loading is target-specific. |
 
 User forms are expanded internally; do not write compiler-generated `compiler/*`, `let*`, `fn*`, or `set!` as an application API. Use Atom for mutable state. Reader shorthand `@cell`, `#(...)`, sets, syntax-quote, custom `defmacro`, `loop`/`recur`, and Clojure destructuring directives are not supported application syntax.
 
@@ -307,7 +307,7 @@ Eval rejects a reached raw-code form as supported only on JS/Java, without evalu
 
 - Generates an ES module, not executed output. Public definitions become `export const`; `def-`/`defn-` become non-exported `const`. Hyphens in identifiers become underscores; punctuation is munged (for example `!` becomes `_BANG_`, `?` becomes `_QMARK_`).
 - Symbolic namespace requires become relative `.js` imports. Output layout follows namespace segments: `app.commands.add` corresponds to `app/commands/add.js`. Runtime import is relative to the output root (`../../language_runtime.js` in this example). Required namespace names are munged before dots become `/`.
-- String requires preserve their decoded ESM module specifier: `(:require ["node:test" :as t])`, for example. No extra `.js` or namespace prefix is added; aliases are munged. Repeat `:require` clauses for multiple modules. Java `:import` clauses do not import JavaScript modules.
+- String requires preserve their decoded ESM module specifier: `(:require ["node:path" :as path] ["node:url" :as url])`, for example. No extra `.js` or namespace prefix is added; aliases are munged. Java `:import` clauses do not import JavaScript modules.
 - Host calls: `(new Constructor args...)` or `(Constructor. args...)`; `(. receiver method args...)` or `(.method receiver args...)`; `(alias/function args...)` for a module function. Host APIs must exist in the actual application environment. No async/await language form is provided; use host callbacks/promises where appropriate.
 - `(cast TYPE value)` is transparent; Java type metadata does not provide runtime checking.
 - `(export-default :key value "other-key" other-value)` is a **top-level** ESM default export of an ordinary JS object. It takes one or more key/value pairs with literal keyword/string keys, not a map argument. Empty forms, odd argument counts, or computed keys fail. Ordinary map literals still use the language's null-prototype map representation.
