@@ -68,7 +68,7 @@ In signatures, `...` denotes repetition, not source syntax.
 | `(if-let [name expr ...] then else)` | Nonempty vector of symbol/value pairs, checked left to right. Stops on the first falsey value. Later bindings see earlier ones; `then` sees all. Optional `else` defaults to `nil`; do not rely on bindings being available in `else`. No destructuring here. |
 | `(-> value step...)` | Inserts value as the first argument of each step; a bare function name is a step too. |
 | `(->> value step...)` | Inserts value as the last argument of each step. |
-| `(:key collection)` | Exactly one collection argument: equivalent to `(get collection "key")`. No default-value overload. |
+| `(:key dic)` | Shorthand for `(get dic :key)` (also equivalent to `(get dic "key")`); use either form for map lookup. Exactly one collection argument; no default-value overload. |
 | `(cast TYPE value)` | Evaluates value once. Transparent in `eval` and JS; a Java cast in Java. |
 | `(ns app.main (:require [dep.core :as dep]))` | Namespace declaration and alias. Use one namespace at the beginning of a compiled file. Each `:require` clause accepts **one or more** vectors, e.g. `(:require [alpha.core :as a] [beta.core :as b])`; separate clauses are equivalent and preserve dependency order. Empty `(:require)` is an error. Use `dep/function` for a qualified call. Resolution/loading is target-specific. |
 
@@ -348,6 +348,19 @@ The example requires a host with `Response`, such as a current Node or a Fetch-c
 - `(:import [java.time LocalDate] [java.util UUID])` imports classes; multiple class names per vector and multiple vectors per clause are supported.
 - `(Class/staticMethod args...)` calls a static method; `(new Class args...)` and `(Class. args...)` call constructors; `(. value method args...)` and `(.method value args...)` call instance methods. Use actual accessible host constructors and signatures.
 - `(cast TYPE value)` emits a Java cast. Use it to call methods on `Object` results or supply primitive host arguments. `^TYPE` on a symbol in `let` casts its RHS before binding; on a symbol parameter of `fn`/`defn`/`defn-` it introduces a local cast binding. These rules do not provide type inference or typed destructuring.
+
+```clojure
+(defn make-text []
+  "foo")
+
+(defn test []
+  (let [^java.lang.String text (make-text)]
+    (.concat text "!")))
+;; Returns "foo!" on Java.
+```
+
+Here `make-text` returns `Object`; `^java.lang.String` explicitly casts its result before binding `text`, allowing the `.concat` call.
+
 - `(instance? TYPE value)` is a Java-only special form, not a first-class function. `TYPE` is a static class/interface symbol, imported or fully qualified (for example, `(instance? java.util.List xs)`). It emits native `instanceof`, evaluates `value` exactly once even when its result is discarded, and returns a boolean: subclasses/interface implementations match; `nil` and unrelated objects do not. Primitive values are boxed (`(instance? Integer 42)` is true). It does not narrow the value's static type; use `cast` or a type hint for subsequent interop. Invalid arity, literal/expression type operands, and primitive type names are rejected during generation; unknown or inaccessible classes fail in `javac`. Dynamic Class values, parameterized types, and special array-type syntax are outside the contract. JS compilation and eval execution explicitly reject this form; eval does not evaluate its arguments.
 - Annotate a lambda with `^java.util.function.Function` (or another compatible value-returning interface) for Java callbacks. Use `^void:java.lang.Runnable` or `^void:java.util.function.Consumer` for void-returning interfaces. The `void:` prefix requires a nonempty target type. Exceptions are rethrown through the runtime bridge.
 
