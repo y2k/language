@@ -423,6 +423,18 @@ The Java command assumes source without `ns`; use the declared helper class file
 
 Runtime files (`language_runtime.js`, `language_runtime.java`) are **automatically supplied by the application's build system**. Do not add manual copying, compile the compiler from source, or assume its checkout is the application's working directory. Generating JS/Java source does not run it. Follow existing build/run commands for module layout, dependencies, host entry points, and tests.
 
+### Printing and diagnostics
+
+`println` and `eprintln` are available without imports on eval, JS, and Java. They accept zero or more values, format each as `str` does, join them with one space, and add a newline. With no arguments they print a blank line. `println` writes to stdout and `eprintln` to stderr (JS uses `console.log` and `console.error`). Both return nil in eval, null in Java, and undefined in JS.
+
+Eval CLI prints the final result separately: `(eprintln "hello")` writes `hello\n` to stderr and `nil\n` to stdout, with exit status 0. `(println "hello")` writes `hello\nnil\n` to stdout. For diagnostics alongside a useful result:
+
+```clojure
+(do (eprintln "processing") "result")
+```
+
+On eval this writes `processing\n` to stderr and `result\n` to stdout. Use `eprintln` to keep diagnostics out of redirected result output.
+
 ### JavaScript source maps
 
 For Node error stacks, compile with `--source-map` and execute the saved ES module with source maps enabled.

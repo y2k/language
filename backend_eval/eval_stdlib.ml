@@ -233,6 +233,14 @@ let rec to_string = function
 
 let str _ args = String (String.concat "" (List.map to_string args))
 
+let println _ args =
+  print_endline (String.concat " " (List.map to_string args));
+  Nil
+
+let eprintln _ args =
+  prerr_endline (String.concat " " (List.map to_string args));
+  Nil
+
 let slurp _ = function
   | [ String path ] -> (
       try String (In_channel.with_open_text path In_channel.input_all)
@@ -304,6 +312,8 @@ let env =
     ("get", Closure (Native get));
     ("get-in", Closure (Native get_in));
     ("str", Closure (Native str));
+    ("println", Closure (Native println));
+    ("eprintln", Closure (Native eprintln));
     ("slurp", Closure (Native slurp));
     ("count", Closure (Native count));
     ("map", Closure (Native map));

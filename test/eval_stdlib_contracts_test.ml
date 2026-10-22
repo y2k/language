@@ -121,6 +121,8 @@ let matrix path =
         "(merge {} 42)";
       ] );
     ("str", [ ("(str)", String ""); ("(str nil false 1 'x)", String "nilfalse1x") ], []);
+    ("println", [ ("(println)", Nil); ("(println 42)", Nil); ("(println nil false 1 'x)", Nil) ], []);
+    ("eprintln", [ ("(eprintln)", Nil); ("(eprintln 42)", Nil); ("(eprintln nil false 1 'x)", Nil) ], []);
     ( "conj",
       [ ("(conj [] nil)", List [ Nil ]); ("(conj [1] false)", List [ Int 1; Bool false ]) ],
       [ "(conj)"; "(conj [])"; "(conj [] 1 2)"; "(conj nil 1)"; "(conj {} 1)"; "(conj 42 1)" ] );
@@ -385,6 +387,52 @@ let exact_errors () =
         (Eval_error ("slurp failed: " ^ missing))
         (fun () -> ignore (eval ("(slurp \"" ^ missing ^ "\")"))))
 
+let run_cli source =
+  let program = "../bin/main.exe" in
+  let channels = Unix.open_process_args_full program [| program; "--target"; "eval" |] (Unix.environment ()) in
+  let stdout, stdin, stderr = channels in
+  output_string stdin source;
+  close_out stdin;
+  let output = In_channel.input_all stdout in
+  let error = In_channel.input_all stderr in
+  (Unix.close_process_full channels, output, error)
+
+let printing operation () =
+  List.iter
+    (fun (args, line) ->
+      let source = "(" ^ operation ^ " " ^ args ^ ")" in
+      check source Nil;
+      let status, output, error = run_cli source in
+      Alcotest.(check bool) "success" true (status = Unix.WEXITED 0);
+      Alcotest.(check string) "stdout" (if operation = "println" then line ^ "nil\n" else "nil\n") output;
+      Alcotest.(check string) "stderr" (if operation = "eprintln" then line else "") error)
+    [
+      ("", "\n");
+      ({|"hello"|}, "hello\n");
+      ({|"" "x"|}, " x\n");
+      ({|"a" 42 0.25 false nil :key 'sym [1 nil] {:x false}|}, "a 42 0.25 false nil key sym (1 nil) {x false}\n");
+      ({|(fn [] nil) (atom 1) (re-pattern "x")|}, "#<function> #<atom> #<regex>\n");
+    ];
+  let source =
+    "(let [emit " ^ operation
+    ^ {| r (emit "hello")] (str (= r nil) "|" (= r "nil") "|" (if r true false)))|}
+  in
+  check source (String "true|false|false");
+  let status, output, error = run_cli source in
+  Alcotest.(check bool) "local callable success" true (status = Unix.WEXITED 0);
+  Alcotest.(check string) "local callable stdout"
+    (if operation = "println" then "hello\ntrue|false|false\n" else "true|false|false\n") output;
+  Alcotest.(check string) "local callable stderr" (if operation = "eprintln" then "hello\n" else "") error
+
+let printing_and_final_result () =
+  let source = {|(do (println "out") (eprintln "err") "done")|} in
+  Alcotest.(check (result string string)) "runner result excludes effects" (Ok "done")
+    (Language_main.Runner.run ~target:"eval" source);
+  let status, output, error = run_cli source in
+  Alcotest.(check bool) "success" true (status = Unix.WEXITED 0);
+  Alcotest.(check string) "stdout" "out\ndone\n" output;
+  Alcotest.(check string) "stderr" "err\n" error
+
 let runner_and_cli_errors () =
   with_file (fun path ->
       let cases =
@@ -408,14 +456,7 @@ let runner_and_cli_errors () =
                 message
             | Ok output -> Alcotest.failf "expected runner error, got %S" output
           in
-          let program = "../bin/main.exe" in
-          let channels = Unix.open_process_args_full program [| program; "--target"; "eval" |] (Unix.environment ()) in
-          let stdout, stdin, stderr = channels in
-          output_string stdin source;
-          close_out stdin;
-          let output = In_channel.input_all stdout in
-          let error = In_channel.input_all stderr in
-          let status = Unix.close_process_full channels in
+          let status, output, error = run_cli source in
           Alcotest.(check bool) "nonzero exit" true (match status with Unix.WEXITED n -> n <> 0 | _ -> false);
           Alcotest.(check string) "no success output" "" output;
           Alcotest.(check string) "CLI stderr preserves runner error" (message ^ "\n") error)
@@ -429,6 +470,12 @@ let () =
           Alcotest.test_case "covers every binding" `Quick matrix_covers_env;
           Alcotest.test_case "valid boundaries" `Quick valid_boundaries;
           Alcotest.test_case "invalid arguments" `Quick invalid_arguments;
+        ] );
+      ( "printing",
+        [
+          Alcotest.test_case "println" `Quick (printing "println");
+          Alcotest.test_case "eprintln" `Quick (printing "eprintln");
+          Alcotest.test_case "separate effects and final result" `Quick printing_and_final_result;
         ] );
       ( "callbacks",
         List.map
