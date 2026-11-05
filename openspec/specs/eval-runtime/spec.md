@@ -6,6 +6,41 @@ Describe the current interpreter target, runtime values, core eval forms, and ev
 
 ## Requirements
 
+### Requirement: Eval SHALL отличать nil от текстового значения во всех операциях
+
+Eval SHALL считать `nil` равным только `nil`, в том числе при структурном сравнении коллекций и поиске ключей hash map. Операции `not` и `assert` SHALL использовать ту же истинность, что и `if`. `get` и `get-in` SHALL распространять отсутствие данных как `nil`, а строку `"nil"` обрабатывать как обычный скаляр. Преобразование `nil` в текст через `str` SHALL давать `nil`, в том числе внутри коллекций.
+
+#### Scenario: Равенство nil и текста
+- **WHEN** вычисляются `(= nil nil)`, `(= nil "nil")` и `(not= nil "nil")`
+- **THEN** результаты равны `true`, `false` и `true` соответственно
+
+#### Scenario: Равенство коллекций
+- **WHEN** вычисляются `(= [nil] [nil])`, `(= [nil] ["nil"])` и `(= {:x nil} {:x "nil"})`
+- **THEN** результаты равны `true`, `false` и `false` соответственно
+
+#### Scenario: Различные ключи hash map
+- **WHEN** вычисляется `(let [m (hash-map nil 1 "nil" 2)] (str (get m nil) " " (get m "nil")))`
+- **THEN** результат равен `"1 2"`
+
+#### Scenario: Логические операции
+- **WHEN** вычисляются `(if "nil" 1 2)`, `(not nil)`, `(not "nil")` и `(assert "nil")`
+- **THEN** результаты равны `1`, `true`, `false` и `true` соответственно
+- **WHEN** вычисляется `(assert nil)`
+- **THEN** возникает `Eval_error` с сообщением `assertion failed`
+
+#### Scenario: Отсутствующие данные
+- **WHEN** вычисляются `(get {} :missing)`, `(get [] 0)`, `(get nil :x)` и `(get-in {:x nil} [:x :y])`
+- **THEN** каждый результат равен `nil` и не равен строке `"nil"`
+
+#### Scenario: Текст nil в позиции коллекции
+- **WHEN** вычисляется `(get "nil" :x)` или `(get-in {:x "nil"} [:x :y])`
+- **THEN** возникает ошибка eval, как при обходе другого строкового скаляра
+
+#### Scenario: Текстовое представление
+- **WHEN** вычисляются `(str nil)`, `(str [nil])` и `(str {"x" nil})`
+- **THEN** результаты равны `"nil"`, `"(nil)"` и `"{x nil}"` соответственно
+- **AND** результат `(str nil)` является истинным текстовым значением, отличным от `nil`
+
 ### Requirement: Eval SHALL предоставлять двухаргументный conj
 
 Eval SHALL предоставлять без импорта обычную функцию `(conj items value)` для list/vector и одного значения. Результат SHALL быть новым list с исходными элементами в прежнем порядке и value в конце. Исходная коллекция SHALL NOT изменяться. Для list и vector действует одно правило добавления в конец.
@@ -40,7 +75,7 @@ Conj SHALL принимать ровно два аргумента, первый
 - **WHEN** выполняются `(conj [])`, `(conj [] 1 2)`, `(conj nil 1)` или `(conj {} 1)`
 - **THEN** каждый вызов завершается Eval_error, называющим conj
 
-### Requirement: The eval target SHALL return only the final symbol value
+### Requirement: The eval target SHALL return the final symbol or nil value
 
 Runner SHALL вычислять формы через eval и возвращать только финальный scalar value: строку, символ, число, boolean либо nil. Строки и символы SHALL возвращаться без кавычек, числа — по правилам `str`, boolean — как `true`/`false`, nil — как `nil`. Финальная коллекция, функция, Atom либо отсутствие результата SHALL давать пустую строку. Побочный вывод println/eprintln SHALL выполняться отдельно и не входить в строку результата runner. CLI SHALL печатать результат runner в stdout с переводом строки. Историческое имя требования не ограничивает перечисленные типы.
 

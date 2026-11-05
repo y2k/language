@@ -1,6 +1,6 @@
 ---
 name: y2k-language
-description: Use when writing or fixing Y2K Language applications, compiling .clj source with ly2k, or checking supported language forms and standard library functions for eval, JavaScript, and Java targets.
+description: Use when writing or fixing Y2K Language applications, compiling .clj source with ly2k, or checking supported forms and functions for eval, JavaScript, Java, and FEX targets.
 ---
 
 # Y2K Language applications
@@ -18,6 +18,7 @@ Read this common reference and the target reference for the task:
 | `js` | [JavaScript](references/js.md) | Writing, compiling, or debugging JavaScript-target code, its modules, host APIs, or source maps. |
 | `eval` | [Eval](references/eval.md) | Working on code executed by eval, including an eval-run build script. |
 | `java` | [Java](references/java.md) | Writing, compiling, or debugging Java-target code, host interop, or generated classes. |
+| `fex` | [FEX](references/fex.md) | Compiling or unpacking portable definition bundles, checking FEX's supported subset, canonical keys, or RHS records. |
 
 Resolve these paths relative to the directory containing this `SKILL.md`, including when that directory is symlinked into an application; they are not relative to the application's working directory. Load only the references for affected targets. For a JS application with an eval-run `build.clj`, add the eval reference when the task touches that script. A build change that uses no eval code needs no eval reference. For changes to shared compiler semantics, read the references for every affected target.
 
@@ -36,6 +37,8 @@ For a useful bug report, include the target, minimal Y2K source, the exact comma
 <!-- ponytail: one current-compiler reference; split by version only when applications need pinned older compilers. -->
 
 ## Common language
+
+This common language and library reference describes the executable eval/JS/Java targets. For FEX, use the narrower source and builtin subset in [FEX](references/fex.md); its current compiler emits bundles without executing them.
 
 ### Values and reader syntax
 
@@ -224,17 +227,21 @@ On all targets, `re-replace` replaces all non-overlapping matches, without resca
 
 ## CLI and project integration
 
-`ly2k` reads source from **stdin**. It accepts `--target eval`, `--target js`, or `--target java`; default is `eval`. A source filename is not a positional argument.
+`ly2k` reads source from **stdin**. It accepts `--target eval`, `--target js`, `--target java`, or `--target fex`; default is `eval`. A source filename is not a positional argument.
 
 ```sh
 ly2k --target eval < program.clj
 ly2k --target js < program.clj > program.js
 ly2k --target java < program.clj > user.java
+ly2k --target fex < program.clj > program.fex
+ly2k --unpack-fex --output-dir out < program.fex > load-order.txt
 ```
 
-The Java command assumes source without `ns`; use the declared helper class filename otherwise. Evaluation prints the final scalar; compilation writes generated source to stdout. Reported parse/eval errors go to stderr with a nonzero exit status; other compilation failures can also terminate with an error. Inspect both the compiler and the host runtime/build diagnostics.
+The Java command assumes source without `ns`; use the declared helper class filename otherwise. Evaluation prints the final scalar; JS/Java compilation writes generated source to stdout, while FEX writes a bundle. Reported parse/eval errors go to stderr with a nonzero exit status; other compilation failures can also terminate with an error. Inspect both the compiler and the host runtime/build diagnostics.
 
 Runtime files (`language_runtime.js`, `language_runtime.java`) are **automatically supplied by the application's build system**. Do not add manual copying, compile the compiler from source, or assume its checkout is the application's working directory. Generating JS/Java source does not run it. Follow existing build/run commands for module layout, dependencies, host entry points, and tests.
+
+FEX emits one text bundle per source, with canonical-key/Base64-RHS line pairs. See [FEX integration](references/fex.md#cli-and-integration) for the compiler-only workflow and the separate unpacker/interpreter changes.
 
 ### Printing and diagnostics
 

@@ -16,4 +16,5 @@ let run ?(source_map = false) ?source_file ~target input =
             | "js" ->
                 Ok (Backend_compiler.Js.compile ?source_file ?source:(if source_map then Some input else None) sexprs)
             | "java" -> Ok (Backend_compiler.Java.compile sexprs)
+            | "fex" -> Ok (Backend_compiler.Fex.compile sexprs)
             | target -> Error ("unknown target: " ^ target)))
