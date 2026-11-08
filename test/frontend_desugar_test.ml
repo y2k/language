@@ -267,12 +267,28 @@ let if_let_rejects_malformed_forms () =
       ("(if-let [x value] yes no extra)", "expected non-empty [name value ...], then branch, and optional else branch");
     ]
 
+let with_open_expansion () =
+  let expected =
+    parse_one
+      "(let [a (open-a)] (try (let [b (open-b a)] (try (do (use a b)) (finally (.close (cast java.lang.AutoCloseable \
+       b))))) (finally (.close (cast java.lang.AutoCloseable a)))))"
+    |> Frontend.show_sexpr
+  in
+  check_desugar "nested resource protection" "(with-open [a (open-a) b (open-b a)] (use a b))" expected;
+  check_desugar "empty bindings" "(with-open [] 42)" "(do 42)";
+  check_desugar "empty body" "(with-open [])" "nil";
+  match parse_one "(with-open [^java.io.Reader r (source)] (.read r))" with
+  | SList (_, _, SAtom (_, "let*") :: SList (_, _, [ SAtom (meta, "r"); _ ]) :: _) ->
+      Alcotest.(check (option string)) "binding type" (Some "java.io.Reader") meta.type_annotation
+  | _ -> Alcotest.fail "expected annotated resource binding"
+
 let () =
   Alcotest.run "frontend desugar"
     [
       ( "interop",
         [
           Alcotest.test_case "string escapes" `Quick string_escapes;
+          Alcotest.test_case "with-open expansion" `Quick with_open_expansion;
           Alcotest.test_case "raw-code source operands" `Quick raw_code_operands;
           Alcotest.test_case "method call shorthand" `Quick method_call_shorthand;
           Alcotest.test_case "explicit method call unchanged" `Quick explicit_method_call_unchanged;

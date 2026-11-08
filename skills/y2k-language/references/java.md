@@ -121,6 +121,36 @@ intercept it. `(throw expression)` evaluates its operand once and accepts a
 Generated throw calls runtime `throw_value`, backed by `sneaky_throw`. Update the
 compiler and Java runtime together. Try needs no Supplier or helper callback.
 
+## Resource cleanup: with-open
+
+Java supports `(with-open [name resource ...] body...)`. Bindings are simple
+unqualified symbols, optionally type-hinted; destructuring is unsupported.
+Initializers run once, left to right, and can use earlier bindings. Resources
+close once in reverse order, including on exceptions. If an initializer fails,
+previous resources close and the body does not run.
+
+```clojure
+(with-open [^java.io.Reader r (new java.io.StringReader "A")]
+  (.read r))
+;; Returns 65 after closing the reader.
+```
+
+Cleanup calls `.close` after casting to `java.lang.AutoCloseable`, so a factory
+returning `Object` needs no hint for cleanup. Resource-specific methods in the
+body still need ordinary hints/casts. An incompatible `Object` fails at cleanup
+with `ClassCastException`; `nil` fails with `NullPointerException`, after the
+body runs. Statically incompatible types such as `String` may fail in `javac`.
+
+The result is the last body value after successful cleanup; an empty body
+returns `nil`. An empty binding vector simply executes the body. Both value
+and discarded-result positions are supported. A value-returning body must end
+in a value rather than a host void call.
+
+Semantics follow nested `try/finally`: a close exception replaces the body
+result or pending exception, without automatic suppressed exceptions. Outer
+resources still close; if they also fail, the outermost failing close wins.
+This form's supported execution target is Java, not eval, JS, or FEX.
+
 ## Raw host code
 
 `(raw-code "text")` is a **special form**, not a function or user macro. Use a single source string literal as its argument. Payload extraction rejects non-literal operands that remain after lowering; it does not guarantee rejection of expressions folded into literals. The parser decodes ordinary string escapes once; the compiler inserts that decoded text unchanged, without escaping, identifier munging, interpolation, parentheses, `return`, an extra `;`, or a wrapper. Supply any required host terminators yourself. An empty string inserts no code.

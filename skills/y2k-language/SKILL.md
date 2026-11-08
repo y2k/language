@@ -121,7 +121,9 @@ uses native statements at its execution site, including function bodies and
 definition initializers, rather than a function wrapper for its result.
 
 Protect each resource immediately after successfully opening it. Nest cleanup
-so an inner close failure still runs the outer close; `with-open` is not provided.
+so an inner close failure still runs the outer close. Java also provides
+`(with-open [name resource ...] body...)` for `AutoCloseable` resources; see
+`references/java.md` for its resource and error contract.
 With application-defined opening/processing/closing functions:
 
 ```clojure

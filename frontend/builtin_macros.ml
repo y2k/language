@@ -99,6 +99,28 @@ let if_let_macro = function
       if_let_error "expected non-empty [name value ...], then branch, and optional else branch"
   | _ -> None
 
+let with_open_macro = function
+  | SList (meta, Paren, SAtom (_, "with-open") :: SList (bindings_meta, Bracket, bindings) :: body) ->
+      let form items = SList (meta, Paren, items) in
+      let rec expand = function
+        | [] -> if body = [] then atom meta "nil" else form (atom meta "do" :: body)
+        | (SAtom (_, symbol) as name) :: value :: rest when is_binding_symbol name && not (String.contains symbol '/')
+          ->
+            let close =
+              form [ atom meta ".close"; form [ atom meta "cast"; atom meta "java.lang.AutoCloseable"; name ] ]
+            in
+            form
+              [
+                atom meta "let";
+                SList (bindings_meta, Bracket, [ name; value ]);
+                form [ atom meta "try"; expand rest; form [ atom meta "finally"; close ] ];
+              ]
+        | _ -> failwith "with-open: expected simple symbol/value pairs"
+      in
+      Some (expand bindings)
+  | SList (_, Paren, SAtom (_, "with-open") :: _) -> failwith "with-open: expected a binding vector"
+  | _ -> None
+
 let keyword_lookup_macro = function
   | SList (meta, Paren, [ SAtom (key_meta, name); collection ]) when is_keyword name ->
       Some
@@ -259,6 +281,7 @@ let builtin_macros =
     cond_macro;
     case_macro;
     if_let_macro;
+    with_open_macro;
     thread_first_macro;
     thread_last_macro;
     private_def_macro;
