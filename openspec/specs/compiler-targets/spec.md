@@ -6,6 +6,204 @@ Describe the current runner target dispatch, compiler lowering, JavaScript gener
 
 ## Requirements
 
+### Requirement: Generated try SHALL NOT introduce function wrappers
+
+На JS/Java generated `try` SHALL исполняться непосредственно в исходном body или initializer. Compiler SHALL NOT создавать Supplier, IIFE, callback или helper-метод ради результата try, включая обёртку через enclosing do/let/if. Пользовательские функции и callbacks SHALL сохраняться как границы исполнения. Это ограничение generated source, а не требование к JIT.
+
+#### Scenario: Try в значении без дополнительной функции
+- **WHEN** try находится в результате функции, аргументе, условии, RHS let, nested do/if либо операнде throw
+- **THEN** generated source содержит native try и доступный потребителю результат без дополнительной функции вокруг try
+- **AND** statements остаются в исходной ветке или защищённой секции, включая вложенные try
+
+#### Scenario: Отброшенный try без результата
+- **WHEN** результат try не используется, в том числе в непоследней форме функции или финальной форме Java void-callback
+- **THEN** generated source содержит native try без result binding, return результата или вызываемой обёртки
+
+#### Scenario: Try в определении
+- **WHEN** initializer top-level def содержит try, непосредственно или внутри do/let/if/вызова
+- **THEN** инициализация исполняет native try без дополнительной функции и публикует полученное значение определения
+- **AND** определения инициализируются в исходном порядке
+
+### Requirement: Lowered try SHALL сохранять порядок вычисления операндов
+
+JS/Java SHALL сохранять вычисление операндов слева направо при извлечении statements из try: вычисляемый callee или receiver, затем аргументы; значения коллекций — в исходном порядке. Ошибка SHALL прекращать последующие вычисления. Извлечение SHALL NOT расширять защищённую область try на соседние операнды.
+
+#### Scenario: Эффекты до и после try
+- **WHEN** `(f (before) (try (work) (finally (clean))) (after))` записывает имена исполняемых операций
+- **THEN** успешный журнал равен before,work,clean,after,f, каждая операция выполнена один раз
+
+#### Scenario: Ошибка раннего операнда
+- **WHEN** before выбрасывает ошибку до try в следующем аргументе того же вызова
+- **THEN** тело, catch и finally этого try не исполняются, поздние аргументы и сам вызов не исполняются
+- **AND** ошибка достигает внешней защищённой области, если она есть
+
+#### Scenario: Ошибка защищённого операнда
+- **WHEN** try в аргументе завершается необработанной ошибкой
+- **THEN** более ранние операнды уже вычислены, cleanup исполнен один раз, а более поздние операнды и вызов не исполняются
+
+#### Scenario: Callee receiver и несколько try
+- **WHEN** вычисляемый callee или host receiver имеет эффект, а два аргумента содержат try
+- **THEN** callee/receiver вычисляется один раз первым, затем оба аргумента со своими cleanup последовательно, затем выполняется вызов
+- **AND** host typing и привязка receiver сохраняются
+
+#### Scenario: Try в значениях коллекции
+- **WHEN** list/vector/map содержит значения с эффектами до и после значения с try
+- **THEN** эффекты происходят в исходном порядке, а значения и их identity сохраняются
+
+#### Scenario: Невыбранная ветка и отложенная функция
+- **WHEN** try находится в невыбранной ветке if или внутри созданного, но ещё не вызванного callback
+- **THEN** ни тело, ни catch, ни finally этого try не исполняются
+
+### Requirement: Java statement try SHALL поддерживать host-контексты
+
+Java SHALL компилировать try с checked exceptions в methods, typed value/void callbacks, gen-class bridges и static initializers, сохраняя правила host boundary. Во void/discard позиции SHALL допускаться финальный host void call; ранее вычисленные значения SHALL не становиться недопустимыми Java statements. Java-specific metadata SHALL NOT менять семантику JS functions.
+
+#### Scenario: Непоследние значения
+- **WHEN** выполняются `(try 1 2 (finally nil))` и `(try (throw error) (catch e 1 2))`
+- **THEN** generated Java компилируется и оба результата равны 2
+
+#### Scenario: Void callback и discarded try
+- **WHEN** финальный host void call находится в discarded try обычной функции или в финальном try callback с аннотацией void:java.lang.Runnable
+- **THEN** Java компилируется, выполняет вызов и cleanup без попытки вернуть void как Object
+
+#### Scenario: Java metadata на JS
+- **WHEN** JS вызывает `^void:java.lang.Runnable (fn [] nil)`
+- **THEN** результат равен nil, metadata не превращает возвращаемое значение в некорректную statement-форму
+
+#### Scenario: Checked exception в initializer
+- **WHEN** top-level def содержит try, перехватывающий checked host exception и возвращающий восстановленное значение
+- **THEN** generated Java компилируется и поле получает восстановленное значение при инициализации класса без Supplier вокруг try
+
+### Requirement: Try SHALL возвращать результат выбранного пути
+
+JS/Java SHALL исполнять формы тела `try` последовательно до завершения или ошибки. При успехе SHALL возвращаться последнее значение тела без выполнения `catch`; при обработанной ошибке — последнее значение обработчика. `Try` SHALL работать в позиции результата, аргумента, условия, RHS binding и с отброшенным результатом. Значения SHALL сохраняться без проверки на истинность.
+
+#### Scenario: Успех и falsey значения
+- **WHEN** тело последовательно возвращает в отдельных запусках `nil`, `false` и `42`, а `finally` успешно возвращает другое значение
+- **THEN** результат `try` равен соответственно `nil`, `false` и `42`, без выполнения обработчика
+- **AND** `nil` и `false` не превращаются в строки
+
+#### Scenario: Восстановление результата
+- **WHEN** тело выбрасывает ошибку, а обработчик возвращает `nil`, `false` или обычное значение
+- **THEN** `try` успешно возвращает именно результат обработчика
+
+#### Scenario: Позиции выражения
+- **WHEN** корректный `try` используется как аргумент функции, условие `if`, RHS `let`, результат функции или непоследняя форма её тела
+- **THEN** оба targets компилируют и исполняют программу, сохраняя однократность выбранного пути и результат согласно позиции
+
+### Requirement: Catch SHALL получать исходную синхронную ошибку
+
+JS SHALL перехватывать любое синхронно выброшенное значение, Java — экземпляры `java.lang.Exception`, включая checked exceptions. Ошибки вложенных Y2K-вызовов, callbacks и host API SHALL достигать окружающего `catch`. Binding SHALL содержать исходный объект/значение без обёртки или преобразования в строку. Java `Error` SHALL проходить мимо обработчика.
+
+#### Scenario: Вложенный host сбой
+- **WHEN** функция внутри `try` вызывает host API, выбрасывающий исключение
+- **THEN** обработчик получает тот же объект, пригодный для host-логирования и чтения сообщения
+- **AND** выражения тела после ошибочного вызова не выполняются
+
+#### Scenario: Java checked exception через callback
+- **WHEN** callback языка вызывает Java API с checked exception внутри защищённого вызова
+- **THEN** generated Java компилируется и окружающий обработчик получает исходный exception
+
+#### Scenario: Java Error
+- **WHEN** тело выбрасывает экземпляр `java.lang.Error`
+- **THEN** `catch` не выполняется, `finally` выполняется, а при успешной очистке наружу выходит тот же `Error`
+
+#### Scenario: JS произвольное выброшенное значение
+- **WHEN** JS-код выбрасывает объект, строку, `false` или `null`
+- **THEN** обработчик получает в каждом случае исходное значение, без проверки его истинности
+
+### Requirement: Throw SHALL сохранять исходное значение ошибки
+
+JS/Java SHALL вычислять аргумент `(throw expression)` ровно один раз и прерывать нормальное выполнение. На Java допустимое значение SHALL быть `Throwable`, на JS — любое значение. Повторное выбрасывание SHALL сохранять identity. Форма SHALL работать в позиции значения и инструкции, включая ветку `if`; ошибка вычисления аргумента SHALL распространяться обычным образом.
+
+#### Scenario: Выборочное повторное выбрасывание
+- **WHEN** обработчик внутреннего `try` выполняет `(throw e)`, а внешний обработчик ловит эту ошибку
+- **THEN** внешний обработчик получает исходный объект без промежуточной обёртки
+
+#### Scenario: Выражение и однократность
+- **WHEN** аргумент `throw` содержит `let`, `do` или `if` и увеличивает счётчик перед возвратом ошибки
+- **THEN** счётчик увеличивается один раз и выполнение после `throw` не продолжается
+- **AND** форма компилируется как ветка `if`, аргумент вызова и результат функции
+
+#### Scenario: Синтаксическое продолжение после throw
+- **WHEN** корректная программа содержит `(do (throw error) 42)` внутри функции или защищённого тела
+- **THEN** JS/Java compilation успешна, исполнение выбрасывает исходную ошибку и не достигает 42
+
+#### Scenario: Try в аргументе throw
+- **WHEN** `(throw (try (make-error) (finally (clean))))` вычисляет исходный объект ошибки
+- **THEN** make-error и clean исполняются один раз, затем выбрасывается тот же объект
+- **AND** generated source не содержит дополнительной функции вокруг вложенного try
+
+### Requirement: Finally SHALL исполняться один раз при выходе
+
+Указанная очистка SHALL выполняться ровно один раз после тела и возможного обработчика, при успехе, необработанной ошибке и ошибке обработчика. Её значение SHALL игнорироваться. При успешной очистке результат или исходная распространяющаяся ошибка SHALL сохраняться. Гарантия относится к обычному выполнению и раскрутке исключений, не к принудительному завершению процесса.
+
+#### Scenario: Порядок эффектов
+- **WHEN** тело записывает `body`, обработчик при ошибке — `catch`, а очистка — `finally`
+- **THEN** при успехе журнал равен `body,finally`, при обработанной ошибке — `body,catch,finally`
+- **AND** каждая запись появляется ровно один раз
+
+#### Scenario: Ошибка без обработчика
+- **WHEN** тело `try` без `catch` выбрасывает ошибку, а очистка успешна
+- **THEN** очистка выполняется один раз и наружу выходит та же ошибка
+
+#### Scenario: Ошибка обработчика
+- **WHEN** обработчик выбрасывает новую ошибку, а очистка успешна
+- **THEN** очистка выполняется один раз и наружу выходит ошибка обработчика
+- **AND** этот же обработчик повторно не вызывается
+
+### Requirement: Ошибка finally SHALL заменять предыдущий исход
+
+Если очистка выбрасывает ошибку, `try` SHALL завершаться этой ошибкой независимо от успеха либо ошибки тела/обработчика. Собственный `catch` SHALL NOT перехватывать ошибку своего `finally`. Предыдущая ошибка SHALL NOT автоматически присоединяться как cause, suppressed exception или иной дополнительный результат.
+
+#### Scenario: Ошибка очистки после успеха
+- **WHEN** тело успешно возвращает значение, а `finally` выбрасывает ошибку
+- **THEN** вызывающий получает ошибку очистки, не успешный результат
+
+#### Scenario: Две ошибки
+- **WHEN** тело или обработчик выбрасывает ошибку A, а затем очистка выбрасывает B
+- **THEN** внешний обработчик получает исходный объект B
+- **AND** A автоматически не сохраняется в B
+
+### Requirement: Вложенная очистка SHALL поддерживать сценарии загрузчика
+
+Вложенные `try`/`finally` SHALL позволять очищать каждое успешно открытое состояние при сбое последующей операции. Исключение SHALL прекращать текущий путь, сохраняя уже выполненные эффекты. Публикация, явно расположенная после успешного вычисления, SHALL NOT выполняться при ошибке этого вычисления; автоматический откат SHALL NOT вводиться.
+
+#### Scenario: Неудачный reload
+- **WHEN** вычисление нового значения ошибочно, публикация стоит после вычисления, а очистка loader state — в `finally`
+- **THEN** прежняя привязка registry остаётся, loader state очищается, ошибка выходит наружу
+- **AND** уже выполненные эффекты инициализатора сохраняются
+
+#### Scenario: Чтение и финализация
+- **WHEN** защищённая операция чтения завершается EOF, ошибкой чтения, декодирования или финализации
+- **THEN** предусмотренные закрытие ресурса и очистка loader state выполняются
+- **AND** после ошибки чтения последующее чтение и успешная финализация не выполняются
+
+#### Scenario: Ошибка открытия второго ресурса
+- **WHEN** первый ресурс открыт и защищён внешним `finally`, а открытие второго внутри тела завершается ошибкой
+- **THEN** первый ресурс закрывается и ошибка распространяется наружу
+
+#### Scenario: Ошибка внутреннего закрытия
+- **WHEN** внутренний `finally` выбрасывает ошибку во время закрытия ресурса
+- **THEN** внешний `finally` также выполняется; итоговая ошибка определяется обычным правилом замены ошибкой очистки
+
+#### Scenario: Проверка ожидаемой ошибки
+- **WHEN** helper возвращает `false` после нормального вызова и `true` только из `catch`
+- **THEN** выброшенная ошибка даёт `true`, а обычный возврат `nil` или `false` — `false`
+- **AND** после обработанной ошибки продолжаются следующие проверки
+
+### Requirement: Try SHALL оставаться синхронным и ограниченным JS/Java
+
+JS `try` SHALL NOT ожидать Promise или перехватывать его последующее отклонение. Возвращённый Promise SHALL быть обычным результатом, а очистка SHALL происходить при синхронном выходе. FEX compilation SHALL отклонять исполняемые `try`/`throw`, не выдавая их как обычные вызовы; цитированные формы SHALL оставаться данными.
+
+#### Scenario: Promise возвращён без ожидания
+- **WHEN** тело возвращает Promise, который отклоняется после возврата `try`
+- **THEN** `try` возвращает этот Promise, очистка уже выполнена, а `catch` этого `try` не вызывается
+
+#### Scenario: FEX неподдерживаемая форма
+- **WHEN** RHS определения FEX содержит исполняемый `try` или `throw`
+- **THEN** compilation завершается ошибкой неподдерживаемой формы
+
 ### Requirement: CLI SHALL предоставлять текстовый target fex
 
 CLI SHALL принимать `--target fex`, читать исходник из stdin и возвращать один текстовый bundle в stdout без записи code-файлов и без требования output directory. Bundle SHALL содержать RHS верхнеуровневых `def` в исходном порядке. `--source-map` SHALL оставаться доступным только для JS. Существующие eval/JS/Java SHALL сохранять свои интерфейсы.
@@ -368,11 +566,98 @@ The shared runner SHALL parse and desugar input once, then dispatch by target na
 
 ### Requirement: Compiler targets SHALL lower expressions into statement-safe forms
 
-Before JavaScript or Java code generation, compiler targets SHALL lower expression-valued control flow into explicit `do`, `let*`, `if`, and `set!` forms with generated temporaries.
+Before JavaScript or Java code generation, compiler targets SHALL lower expression-valued control flow into statement-safe forms. Existing `if` lowering SHALL use explicit `do`, `let*`, `if`, and `set!` forms with generated temporaries. Value-position `try` SHALL produce a native statement and a generated result binding assigned by its body or handler; discard-position `try` SHALL produce a native statement without a result binding. Lowering SHALL preserve protected boundaries, lexical scope, evaluation order, single evaluation, and expression results without moving body, handler, or cleanup effects outside their respective regions.
 
 #### Scenario: If expression in value position
 - **WHEN** an `if` expression is used where a value is required
 - **THEN** lowering creates a generated result binding and assigns branch results before returning that binding
+
+#### Scenario: Ошибка внутри преобразованного binding
+- **WHEN** внутри `try` RHS `let` использует вложенные `do` и `if`, а выбранный путь выбрасывает исключение
+- **THEN** исключение попадает в обработчик этого `try`, а очистка выполняется после обработчика
+- **AND** вычисления RHS не происходят до входа в защищённую область
+
+### Requirement: Value-if SHALL исполняться без дополнительной функции
+
+JS/Java SHALL генерировать value-if как инструкции и результат в исходном теле или initializer, без Supplier, IIFE, callback, helper-метода или switch-expression ради значения if. Вложенные do/let SHALL NOT восстанавливать такую обёртку. Пользовательские функции SHALL сохранять свои границы исполнения, а bindings — lexical scope.
+
+#### Scenario: Значение в разных позициях
+- **WHEN** if используется как результат функции, аргумент, условие другого if, RHS let, внутри do/let или initializer top-level def
+- **THEN** generated source передаёт результат выбранной ветки без дополнительной функции вокруг if
+- **AND** nil, false и неявный nil отсутствующей else сохраняют свои значения
+
+#### Scenario: Ветка и отложенный callback
+- **WHEN** if находится в невыбранной ветке или теле созданного, но ещё не вызванного callback
+- **THEN** его условие и ветви не исполняются до достижения соответствующего пути
+
+#### Scenario: Shadowing и discarded позиции
+- **WHEN** ветви содержат вложенные let с затенением, а результат внешнего if отброшен
+- **THEN** bindings не выходят за исходную область и результаты не требуют result temporary
+- **AND** Java void callback допускает финальный if с void-вызовами без return значения
+
+#### Scenario: Порядок инициализации
+- **WHEN** несколько top-level def содержат if с эффектами
+- **THEN** эффекты и публикация значений происходят в исходном порядке без дополнительных функций
+
+### Requirement: Statement prefixes SHALL сохранять порядок операндов
+
+При извлечении инструкций из операндов JS/Java SHALL сохранять вычисление слева направо и ровно один раз: вычисляемый callee или receiver, затем аргументы; элементы коллекций в исходном порядке. Ошибка SHALL прекращать последующие вычисления. Синтаксические class/type/method позиции SHALL сохраняться, вычисляемые JS callee/constructor SHALL сохранять момент lookup. Явные Java hints/casts и source-map позиции SHALL сохраняться; inferred тип за границей сложного выражения не гарантируется.
+
+#### Scenario: Ранний аргумент перед условием позднего
+- **WHEN** выполняется `(f (before) (if (condition) (selected) (unused)) (after))` и condition истинно
+- **THEN** журнал равен before,condition,selected,after,f без повторений и unused
+- **AND** существующий sample if_value.clj сохраняет вывод `7|12|3|nil|false|3|ab`
+
+#### Scenario: Ошибка раннего операнда
+- **WHEN** before выбрасывает host-ошибку до if в следующем аргументе
+- **THEN** условие, ветви, поздние аргументы и f не исполняются
+- **AND** исходная ошибка распространяется без изменения
+
+#### Scenario: Несколько prefixes и вычисляемый callee
+- **WHEN** вычисляемый callee или host receiver имеет эффект, а два аргумента содержат if
+- **THEN** callee/receiver вычисляется первым, затем аргументы последовательно, затем вызов
+- **AND** host method binding и Java typing позволяют скомпилировать и выполнить вызов
+
+#### Scenario: Коллекции и синтаксические имена
+- **WHEN** list/vector/map содержит if среди эффектных значений либо if находится в аргументе new, host method, cast или instance?
+- **THEN** вычисляемые значения сохраняют исходный порядок и identity
+- **AND** Java class/static method и type/method в синтаксических позициях не становятся runtime-переменными
+
+#### Scenario: Явный Java тип результата let
+- **WHEN** результат `let` используется как host receiver через явно типизированный внешний binding либо cast, включая результат `new` или host method call
+- **THEN** вызов компилируется и выполняется; неаннотированный промежуточный результат может иметь тип Object
+- **AND** `(defn f [] (let [^String text (let [x (new String "a")] x)] (.concat text "b")))` возвращает `"ab"`
+- **AND** наличие `if` в позднем аргументе сохраняет вычисление receiver перед условием, однократность вызова и отсутствие дополнительных функций-обёрток
+- **AND** metadata внутреннего binding не переносится автоматически на тип результата всего let; универсальный expression hint не добавляется
+
+#### Scenario: Java static-вызов
+- **WHEN** static-вызов использует документированную форму `Class/method` и аргумент содержит if
+- **THEN** сохраняются имя метода и порядок аргументов
+- **AND** распознавание class qualifier в receiver-позиции `.` не требуется
+
+#### Scenario: Java nil перед поздним prefix
+- **WHEN** литерал nil является ранним аргументом host-вызова, а поздний аргумент содержит инструкции do/if
+- **THEN** nil остаётся Java null без промежуточного Object, сохраняя выбор перегрузки
+- **AND** инструкции позднего аргумента выполняются ровно один раз в исходном порядке
+
+#### Scenario: JS lookup и this
+- **WHEN** аргумент с if заменяет host-функцию, метод или constructor либо receiver имеет getter метода
+- **THEN** callee/constructor и lookup метода вычисляются до аргументов, ровно один раз
+- **AND** сохранённый метод вызывается с исходным receiver как this; проверка callable не опережает вычисление аргументов
+
+#### Scenario: Исходное окружение позднего аргумента
+- **WHEN** ранний операнд содержит `let` с локальным binding, одноимённым внешнему binding, а поздний аргумент использует внешнее имя и содержит `if`
+- **THEN** поздний аргумент использует внешнее значение независимо от размещения generated statements внутри lexical blocks
+- **AND** порядок эффектов и границы отложенных callbacks сохраняются
+
+#### Scenario: Raw-code и локальные имена
+- **WHEN** корректный raw-code обращается к локальному binding, затеняющему global/field, либо содержит выходящий Java return
+- **THEN** локальное имя и исходная граница выхода сохраняются, payload не разбирается и не изменяется
+- **AND** поздние операнды за пределами этого let сохраняют своё окружение, включая host-имена из raw-code
+
+#### Scenario: Source map после переноса инструкций
+- **WHEN** пользовательский вызов в условии или выбранной ветке завершается ошибкой и включена JS source map
+- **THEN** пользовательский frame указывает исходную позицию этого вызова
 
 ### Requirement: Compiler targets SHALL call local function values
 

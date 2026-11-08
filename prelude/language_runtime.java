@@ -144,6 +144,10 @@ public final class language_runtime {
     return null;
   }
 
+  public static Object throw_value(Object value) {
+    throw sneaky_throw((Throwable) value);
+  }
+
   @SuppressWarnings("unchecked")
   private static <T extends Throwable> void sneaky_throw_unchecked(Throwable throwable) throws T {
     throw (T) throwable;

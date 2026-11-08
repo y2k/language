@@ -105,6 +105,27 @@ let eval_rejection () =
     "runner returns language error" true
     (Language_main.Runner.run ~target:"eval" {|(raw-code "x")|} = Error message)
 
+let eval_exception_rejection () =
+  let context = Backend_eval.Eval.create_context () in
+  let eval source = Backend_eval.Eval.eval_all ~context (parse source) in
+  ignore (eval "(def counter (atom 0))");
+  List.iter
+    (fun (name, source) ->
+      let message = name ^ " is supported only on the JS and Java targets" in
+      Alcotest.check_raises "unsupported exception form" (Backend_eval.Eval.Eval_error message) (fun () ->
+          ignore (eval source));
+      Alcotest.(check bool) "no operand or section effects" true (eval "(deref counter)" = [ Backend_eval.Eval.Int 0 ]);
+      Alcotest.(check bool)
+        "unreached branch" true
+        (eval ("(if false " ^ source ^ " \"ok\")") = [ Backend_eval.Eval.String "ok" ]);
+      Alcotest.(check bool)
+        "quote remains data" true
+        (eval ("'(" ^ name ^ ")") = [ Backend_eval.Eval.List [ Backend_eval.Eval.Symbol name ] ]))
+    [
+      ("try", "(try (reset! counter 1) (catch e (reset! counter 2)) (finally (reset! counter 3)))");
+      ("throw", "(throw (reset! counter 1))");
+    ]
+
 let () =
   Alcotest.run "raw-code"
     [
@@ -120,5 +141,9 @@ let () =
           Alcotest.test_case "generation" `Quick java_generation;
           Alcotest.test_case "diagnostics" `Quick (diagnostics java_compile);
         ] );
-      ("eval", [ Alcotest.test_case "unsupported without argument evaluation" `Quick eval_rejection ]);
+      ( "eval",
+        [
+          Alcotest.test_case "unsupported without argument evaluation" `Quick eval_rejection;
+          Alcotest.test_case "unsupported exceptions without effects" `Quick eval_exception_rejection;
+        ] );
     ]

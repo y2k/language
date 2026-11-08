@@ -353,6 +353,10 @@ let rejected_forms () =
       Alcotest.(check bool) "stderr diagnostic" true (String.length error > 0))
     [
       "(def x (raw-code \"1\"))";
+      "(def x (try 1 (catch e 2)))";
+      "(def x (throw nil))";
+      "(defn f [] (if true 1 (try 2 (finally nil))))";
+      "(defn f [] (if true 1 (throw nil)))";
       "(def x (. obj method))";
       "(def x (.method obj))";
       "(def x (new Thing))";
@@ -373,7 +377,7 @@ let rejected_forms () =
     ];
   List.iter
     (fun form -> ignore (definitions ("(def x '" ^ form ^ ")")))
-    [ "(new Thing)"; "(.method obj)"; "(cast String x)"; "(raw-code \"x\")" ];
+    [ "(new Thing)"; "(.method obj)"; "(cast String x)"; "(raw-code \"x\")"; "(try)"; "(throw)" ];
   let source = "(def x 42)" in
   Alcotest.(check (result string string))
     "runner source-map guard" (Error "--source-map is supported only for js")

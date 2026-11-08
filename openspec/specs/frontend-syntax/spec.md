@@ -6,6 +6,57 @@ Describe the current parser, AST metadata, macro expansion, and namespace macro 
 
 ## Requirements
 
+### Requirement: Синтаксис try SHALL задавать тело и завершающие секции
+
+JS/Java SHALL принимать `(try body... (catch error handler...)? (finally cleanup...)?)`. Тело и каждая указанная секция SHALL быть непустыми. SHALL присутствовать хотя бы одна секция, максимум один `catch` перед максимум одним `finally`. После начала секций обычные выражения тела SHALL NOT допускаться.
+
+#### Scenario: Допустимые сочетания
+- **WHEN** компилируются `(try 1 (catch e 2))`, `(try 1 (finally nil))` и `(try 1 (catch e 2) (finally nil))`
+- **THEN** все формы принимаются JS/Java
+
+#### Scenario: Пустые тела и отсутствие секций
+- **WHEN** компилируются `(try)`, `(try 1)`, `(try (catch e 2))`, `(try 1 (catch e))` или `(try 1 (finally))`
+- **THEN** компиляция отклоняет некорректную структуру с указанием `try` и причины
+
+#### Scenario: Порядок и повторение секций
+- **WHEN** форма содержит два `catch`, два `finally`, `catch` после `finally` либо обычное выражение после секции
+- **THEN** компиляция JS/Java отклоняет форму до исполнения
+
+### Requirement: Catch SHALL связывать простой символ ошибки
+
+Имя в `(catch error handler...)` SHALL быть простым неквалифицированным символом, не literal и не collection. Binding SHALL быть доступен только в обработчике и затенять внешнее одноимённое имя. Тело `try` и `finally` SHALL сохранять доступ к внешнему окружению, без доступа к binding ошибки из этого `catch`.
+
+#### Scenario: Локальное затенение
+- **WHEN** внешний binding `e` равен `"outer"`, а вложенный `try` ловит ошибку через `(catch e e)`
+- **THEN** обработчик получает исходную ошибку
+- **AND** последующее выражение и `finally` видят внешний `e`, равный `"outer"`
+
+#### Scenario: Вложенный let в обработчике
+- **WHEN** handler с catch binding e возвращает `(let [e "inner"] e)`
+- **THEN** JS/Java compilation успешна и результат равен "inner"
+- **WHEN** такой let является непоследней формой handler
+- **THEN** последующие обращения к e, включая rethrow, получают исходную пойманную ошибку
+
+#### Scenario: Соседние области и closure
+- **WHEN** handler содержит два соседних let с одинаковым локальным именем и возвращает callback, захватывающий catch binding
+- **THEN** объявления не конфликтуют на JS/Java, а вызов callback после выхода из handler получает исходную ошибку
+
+#### Scenario: Недопустимое имя
+- **WHEN** вместо имени ошибки указаны `nil`, `false`, `true`, число, строка, keyword, `ns/e` или destructuring pattern
+- **THEN** JS/Java compilation отклоняет форму с указанием недопустимого binding
+
+### Requirement: Throw SHALL принимать одно выражение
+
+Специальная форма `throw` SHALL иметь ровно один аргумент-выражение. Неверная арность SHALL отклоняться при компиляции JS/Java. Цитированные `try` и `throw` SHALL оставаться данными согласно существующей семантике quote, без исполнения и проверки структуры этих специальных форм.
+
+#### Scenario: Арность throw
+- **WHEN** компилируются `(throw)` или `(throw e extra)`
+- **THEN** компиляция отклоняет неверную арность с указанием `throw`
+
+#### Scenario: Цитированные специальные формы
+- **WHEN** компилируются `'(try)` и `'(throw)`
+- **THEN** получаются данные, а не ошибка структуры или исполняемый перехват/выбрасывание
+
 ### Requirement: The parser SHALL produce s-expressions with source metadata
 
 The parser SHALL read source text into atoms and lists while preserving line/column metadata on parsed nodes.

@@ -3,6 +3,8 @@ open Frontend
 let unsupported_expression_forms =
   [
     "raw-code";
+    "try";
+    "throw";
     ".";
     "new";
     "set!";

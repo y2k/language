@@ -47,6 +47,21 @@ let invalid_sexpr ((SAtom (meta, _) | SList (meta, _, _)) as code) =
 let rec compile_expr code = at_form code (compile_expr_inner code)
 
 and compile_expr_inner = function
+  | SList (_, _, [ SAtom (_, "throw"); value ]) -> concat [ text "(() => { throw "; compile_expr value; text "; })()" ]
+  | SList (_, _, [ SAtom (_, "compiler/js-member"); receiver; SAtom (_, member) ]) ->
+      concat [ compile_expr receiver; text "."; text (Symbol_munge.munge member) ]
+  | SList (_, _, SAtom (_, "compiler/js-call") :: callee :: receiver :: args) ->
+      (* Reach intrinsic apply without a shadowable global or the callee's own apply property. *)
+      concat
+        [
+          text "[].map.apply.call(";
+          compile_expr callee;
+          text ", ";
+          compile_expr receiver;
+          text ", [";
+          join ", " (List.map compile_expr args);
+          text "])";
+        ]
   | SList (_, _, [ SAtom (_, "compiler/ns"); SAtom (_, current_namespace); SList (_, _, requires); _ ]) ->
       let parse_pair = function
         | SList (_, _, [ SAtom (_, left); SAtom (_, right) ]) -> (left, right)
@@ -83,15 +98,30 @@ and compile_expr_inner = function
   | SList (_, _, SAtom (_, "raw-code") :: _) as code -> Raw_code.error code "not allowed in an expression"
   | SList (_, _, SAtom (_, "instance?") :: _) -> failwith "instance? is supported only on the Java target"
   | SList (_, _, [ SAtom (_, "cast"); _; value ]) -> compile_expr value
-  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
-      concat
-        [
-          text (if meta.private_ then "" else "export ");
-          text "const ";
-          text (Symbol_munge.munge name);
-          text " = ";
-          compile_expr value;
-        ]
+  | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) -> (
+      let publish value =
+        concat
+          [
+            text (if meta.private_ then "" else "export ");
+            text "const ";
+            text (Symbol_munge.munge name);
+            text " = ";
+            compile_expr value;
+          ]
+      in
+      match value with
+      | SList (_, _, SAtom (_, ("do" | "let*")) :: _) ->
+          let saved = Gensym.run (fun () -> Gensym.gensym meta) in
+          let name = match saved with SAtom (_, name) -> name | _ -> assert false in
+          let assign expr = concat [ text name; text " = "; compile_expr expr; text ";" ] in
+          concat
+            [
+              text ("let " ^ name ^ ";\n");
+              join "\n" (compile_body ~last:assign ~empty:[] [ value ]);
+              text "\n";
+              publish saved;
+            ]
+      | _ -> publish value)
   | SList (_, _, SAtom (_, "export-default") :: items) ->
       let error () = failwith "export-default: expected one or more key/value pairs" in
       let rec compile_properties = function
@@ -159,15 +189,42 @@ and compile_let code bindings body =
   concat
     [ text "(() => {\n"; join "\n" (compile_bindings bindings @ compile_returning_body ~empty:[] body); text "\n})()" ]
 
-and compile_returning_body ~empty = function
+and compile_returning_body ~empty body =
+  compile_body ~last:(fun expr -> concat [ text "return "; compile_expr expr; text ";" ]) ~empty body
+
+and compile_body ~last ~empty = function
   | [] -> empty
-  | [ expr ] -> [ concat [ text "return "; compile_expr expr; text ";" ] ]
-  | expr :: rest -> compile_statement expr :: compile_returning_body ~empty rest
+  | [ SList (_, _, SAtom (_, "do") :: body) ] -> compile_body ~last ~empty body
+  | [ SList (_, _, SAtom (_, "let*") :: SList (_, _, []) :: body) ] ->
+      [ concat [ text "{\n"; join "\n" (compile_body ~last ~empty body); text "\n}" ] ]
+  | [ expr ] -> [ last expr ]
+  | expr :: rest -> compile_statement expr :: compile_body ~last ~empty rest
 
 and compile_statement code = at_form code (compile_statement_inner code)
 
 and compile_statement_inner = function
+  | SList (_, _, [ SAtom (_, "throw"); value ]) -> concat [ text "throw "; compile_expr value; text ";" ]
+  | SList (_, _, SAtom (_, "try") :: items) ->
+      let parsed = Exception_forms.parse items in
+      let handler =
+        match parsed.handler with
+        | None -> []
+        | Some (SAtom (_, name), body) ->
+            [
+              text (" catch (" ^ Symbol_munge.munge name ^ ") {\n");
+              join "\n" (List.map compile_statement body);
+              text "\n}";
+            ]
+        | Some _ -> assert false
+      in
+      let cleanup =
+        match parsed.cleanup with
+        | None -> []
+        | Some body -> [ text " finally {\n"; join "\n" (List.map compile_statement body); text "\n}" ]
+      in
+      concat ([ text "try {\n"; join "\n" (List.map compile_statement parsed.body); text "\n}" ] @ handler @ cleanup)
   | SList (_, _, SAtom (_, "raw-code") :: _) as code -> text (Raw_code.payload code)
+  | SList (_, _, SAtom (_, "do") :: body) -> join "\n" (List.map compile_statement body)
   | SList (_, _, SAtom (_, "let*") :: SList (_, _, []) :: body) ->
       concat [ text "{\n"; join "\n" (List.map compile_statement body); text "\n}" ]
   | SList (_, _, [ SAtom (_, "let*"); SAtom (_, name); value ]) ->
@@ -218,7 +275,7 @@ let compile ?source ?source_file sexprs =
            let fragment =
              match sexpr with
              | SList (_, _, SAtom (_, "raw-code") :: _) -> text (Raw_code.payload sexpr)
-             | _ -> concat [ compile_expr sexpr; text ";" ]
+             | _ -> compile_statement sexpr
            in
            fun writer -> Source_map.with_origin writer (Some meta.loc) (fun () -> fragment writer))
          sexprs

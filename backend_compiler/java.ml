@@ -78,6 +78,7 @@ let rec compile_quote = function
   | SList (_, _, items) -> "list(" ^ String.concat ", " (List.map compile_quote items) ^ ")"
 
 let rec compile_expr ctx = function
+  | SList (_, _, [ SAtom (_, "throw"); value ]) -> "throw_value(" ^ compile_expr ctx value ^ ")"
   | SAtom (meta, name) -> compile_atom ctx meta name
   | SList (meta, _, SAtom (_, "do") :: body) ->
       let lambda_meta = { meta with type_annotation = Some "java.util.function.Supplier<Object>" } in
@@ -183,6 +184,26 @@ let rec compile_expr ctx = function
 
 and compile_discard ctx expr =
   match expr with
+  | SList (_, _, SAtom (_, "try") :: items) ->
+      let parsed = Exception_forms.parse items in
+      let body ctx forms = String.concat "\n" (compile_body ctx ~last:compile_discard ~empty:[] forms) in
+      let handler =
+        match parsed.handler with
+        | None -> ""
+        | Some (SAtom (_, name), forms) ->
+            " catch (Exception " ^ java_local_name name ^ ") {\n"
+            ^ body { ctx with locals = StringSet.add name ctx.locals } forms
+            ^ "\n}"
+        | Some _ -> assert false
+      in
+      let cleanup = match parsed.cleanup with None -> "" | Some forms -> " finally {\n" ^ body ctx forms ^ "\n}" in
+      "try {\n" ^ body ctx parsed.body ^ "\n}" ^ handler ^ cleanup
+  | SList (_, _, SAtom (_, "let*") :: SList (_, _, []) :: body) ->
+      "{\n" ^ String.concat "\n" (compile_body ctx ~last:compile_discard ~empty:[] body) ^ "\n}"
+  | SList (_, _, SAtom (_, "do") :: body) -> String.concat "\n" (compile_body ctx ~last:compile_discard ~empty:[] body)
+  | SList (_, _, [ SAtom (_, "if"); condition; then_; else_ ]) ->
+      "if (truthy(" ^ compile_expr ctx condition ^ ")) {\n" ^ compile_discard ctx then_ ^ "\n} else {\n"
+      ^ compile_discard ctx else_ ^ "\n}"
   | SList (_, _, SAtom (_, "raw-code") :: _) -> Raw_code.payload expr
   | SList (meta, _, SAtom (_, "instance?") :: _) ->
       let value = compile_expr ctx expr in
@@ -191,6 +212,9 @@ and compile_discard ctx expr =
 
 and compile_body ctx ~last ~empty = function
   | [] -> empty
+  | [ SList (_, _, SAtom (_, "do") :: body) ] -> compile_body ctx ~last ~empty body
+  | [ SList (_, _, SAtom (_, "let*") :: SList (_, _, []) :: body) ] ->
+      [ "{\n" ^ String.concat "\n" (compile_body ctx ~last ~empty body) ^ "\n}" ]
   | [ expr ] -> [ last ctx expr ]
   | expr :: rest ->
       let statement = compile_discard ctx expr in
@@ -234,12 +258,12 @@ let compile_statement ctx = function
       in
       [ visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ " = " ^ value ^ ";" ]
   | SList (meta, _, [ SAtom (_, "def"); SAtom (_, name); value ]) ->
-      [
-        visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ ";";
-        "static {";
-        java_local_name name ^ " = " ^ compile_expr { ctx with locals = StringSet.empty } value ^ ";";
-        "}";
-      ]
+      let exception_name = java_local_name (Gensym.gensym_string meta) in
+      [ visibility meta ^ " static Object " ^ Symbol_munge.munge name ^ ";"; "static {"; "try {" ]
+      @ compile_body { ctx with locals = StringSet.empty }
+          ~last:(fun ctx expr -> java_local_name name ^ " = " ^ compile_expr ctx expr ^ ";")
+          ~empty:[] [ value ]
+      @ [ "} catch (Exception " ^ exception_name ^ ") {"; "throw sneaky_throw(" ^ exception_name ^ ");"; "}"; "}" ]
   | sexpr -> invalid_sexpr __LOC__ sexpr
 
 let collect_top_fns sexprs =
@@ -337,7 +361,7 @@ let compile_ns (ctx : ctx) gen_class = function
 
 let compile sexprs =
   Gensym.run (fun () ->
-      let lowered = Lowering_expression_to_statement.lower sexprs in
+      let lowered = Lowering_expression_to_statement.lower ~java:true sexprs in
       let gen_class = List.find_map parse_gen_class lowered in
       let top_fns = collect_top_fns lowered in
       let ctx = { top_fns; locals = StringSet.empty; requires = StringMap.empty; helper_class = "user" } in

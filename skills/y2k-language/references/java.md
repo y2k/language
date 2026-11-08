@@ -25,6 +25,16 @@ Use with the common language and library contracts in `../SKILL.md`.
 
 Here `make-text` returns `Object`; `^java.lang.String` explicitly casts its result before binding `text`, allowing the `.concat` call.
 
+Results carried out of complex `let`/`do`/`if`/`try` expressions may have Java type `Object`, even when a binding inside them has a more specific inferred type. For host interop, annotate the receiving binding or cast the whole result:
+
+```clojure
+(let [^String text (let [x (new String "a")] x)]
+  (.concat text "b"))
+;; Returns "ab". Alternatively: (.concat (cast String (let [...] ...)) "b").
+```
+
+Code relying on an inner binding's inferred type escaping its scope may need this explicit hint or cast. Metadata such as `^String (let ...)` is not a general expression cast; type hints are supported on bindings and parameters, with separate annotations for lambdas.
+
 - `(instance? TYPE value)` is a Java-only special form, not a first-class function. `TYPE` is a static class/interface symbol, imported or fully qualified (for example, `(instance? java.util.List xs)`). It emits native `instanceof`, evaluates `value` exactly once even when its result is discarded, and returns a boolean: subclasses/interface implementations match; `nil` and unrelated objects do not. Primitive values are boxed (`(instance? Integer 42)` is true). It does not narrow the value's static type; use `cast` or a type hint for subsequent interop. Invalid arity, literal/expression type operands, and primitive type names are rejected during generation; unknown or inaccessible classes fail in `javac`. Dynamic Class values, parameterized types, and special array-type syntax are outside the contract. JS compilation and eval execution explicitly reject this form; eval does not evaluate its arguments.
 - Annotate a lambda with `^java.util.function.Function` (or another compatible value-returning interface) for Java callbacks. Use `^void:java.lang.Runnable` or `^void:java.util.function.Consumer` for void-returning interfaces. The `void:` prefix requires a nonempty target type. Exceptions are rethrown through the runtime bridge.
 
@@ -83,6 +93,33 @@ The generated source is `entry.java`. After the application's build compiles it 
 - `filter`, `keep`, and `run!` do not promise eval's argument diagnostics.
 - `sort-by` compares strings in UTF-16 order without locale; ASCII ordering is portable. Regex uses `java.util.regex.Pattern`, subject to the shared regex contract. Outside the portable regex subset, empty-match advancement uses one UTF-16 code unit.
 - `println` and `eprintln` return null.
+
+## Synchronous exceptions
+
+`(try body... (catch error handler...) (finally cleanup...))` uses native Java
+statements. At least one section is required; see the common syntax rules.
+The handler binds the original `java.lang.Exception`, including checked
+exceptions. `Error` bypasses catch but still runs cleanup. Use `.getMessage`
+or host logging on the caught object, and `(throw error)` to rethrow it:
+
+```clojure
+(try (Class/forName "no.such.Class")
+     (catch error (.getMessage error)))
+```
+
+For host stack logging, `(.printStackTrace error)` is a void call: place it
+before the handler's final value. Discarded try and final try in a
+`^void:java.lang.Runnable` callback may end in a host void call. A value-returning
+body still needs a value. Checked exceptions pass through the existing
+callback/gen-class/static-initialization bridges without replacing their identity;
+uncaught class-initialization failures retain Java's native wrapping rules.
+
+Cleanup's value is ignored. A cleanup exception replaces any earlier result or
+exception, with no automatic cause or suppressed exception; its own catch cannot
+intercept it. `(throw expression)` evaluates its operand once and accepts a
+`Throwable`; null/non-Throwable values follow Java's NPE/cast behavior.
+Generated throw calls runtime `throw_value`, backed by `sneaky_throw`. Update the
+compiler and Java runtime together. Try needs no Supplier or helper callback.
 
 ## Raw host code
 

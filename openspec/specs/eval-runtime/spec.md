@@ -6,6 +6,26 @@ Describe the current interpreter target, runtime values, core eval forms, and ev
 
 ## Requirements
 
+### Requirement: Eval SHALL явно отклонять try и throw
+
+При достижении `try` или `throw` eval SHALL выдавать `Eval_error`, называющий форму и поддержку только JS/Java. Тело, обработчик, очистка и аргумент неподдерживаемой формы SHALL NOT вычисляться. Это SHALL NOT вводить представление пойманных исключений или их обработку в eval. Цитированные формы и корректные формы в недостигнутых ветвях SHALL сохранять существующее поведение.
+
+#### Scenario: Try не исполняет секции
+- **WHEN** eval достигает `(try (reset! state 1) (catch e (reset! state 2)) (finally (reset! state 3)))`
+- **THEN** возникает явная ошибка неподдерживаемой формы `try`, а state не меняется
+
+#### Scenario: Throw не исполняет аргумент
+- **WHEN** eval достигает `(throw (reset! state 1))`
+- **THEN** возникает явная ошибка неподдерживаемой формы `throw`, а state не меняется
+
+#### Scenario: Недостигнутая форма
+- **WHEN** eval исполняет `(if false (try 1 (finally nil)) "ok")` либо `(if false (throw nil) "ok")`
+- **THEN** результат равен `"ok"`
+
+#### Scenario: Цитирование
+- **WHEN** eval читает `'(try)` или `'(throw)`
+- **THEN** результатом являются данные, а не исполнение специальной формы
+
 ### Requirement: Eval SHALL отличать nil от текстового значения во всех операциях
 
 Eval SHALL считать `nil` равным только `nil`, в том числе при структурном сравнении коллекций и поиске ключей hash map. Операции `not` и `assert` SHALL использовать ту же истинность, что и `if`. `get` и `get-in` SHALL распространять отсутствие данных как `nil`, а строку `"nil"` обрабатывать как обычный скаляр. Преобразование `nil` в текст через `str` SHALL давать `nil`, в том числе внутри коллекций.

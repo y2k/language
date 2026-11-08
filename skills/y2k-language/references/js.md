@@ -31,6 +31,27 @@ The example requires a host with `Response`, such as a current Node or a Fetch-c
 - `sort-by` compares strings in UTF-16 order without locale; ASCII ordering is portable. Regex uses native `RegExp`, subject to the shared regex contract. Outside the portable regex subset, empty-match advancement uses one UTF-16 code unit.
 - `println` / `eprintln` use `console.log` / `console.error` and return undefined.
 
+## Synchronous exceptions
+
+Use `(try body... (catch error handler...) (finally cleanup...))` with either
+section optional, but at least one present; see the common syntax rules.
+The handler receives the original thrown value, including `false`, `null`,
+strings, and objects. `(throw error)` preserves it when rethrowing.
+
+For host `Error` objects, `(get error "message")` reads the message and
+`(console/error error)` logs the object with the host's stack formatting:
+
+```clojure
+(try (.parse JSON "invalid")
+     (catch error (console/error error) (get error "message")))
+```
+
+Cleanup runs on synchronous exit, even after a handler error. Its error replaces
+any prior result/error; the same try's catch does not catch its cleanup error.
+A returned Promise is an ordinary result: cleanup has already run before later
+resolution/rejection, and the catch does not observe that rejection. Handle it
+through the Promise's own callbacks; try does not await it.
+
 ## Raw host code
 
 `(raw-code "text")` is a **special form**, not a function or user macro. Use a single source string literal as its argument. Payload extraction rejects non-literal operands that remain after lowering; it does not guarantee rejection of expressions folded into literals. The parser decodes ordinary string escapes once; the compiler inserts that decoded text unchanged, without escaping, identifier munging, interpolation, parentheses, `return`, an extra `;`, or a wrapper. Supply any required host terminators yourself. An empty string inserts no code.

@@ -310,6 +310,34 @@ let call_chain () =
 
 let transformed_cases =
   [
+    ( "lowered try body",
+      {|(ns demo)
+(defn fail []
+  (str "before"
+       (try
+         (.parse JSON "invalid")
+         (finally nil))))
+(fail)|},
+      5,
+      10 );
+    ( "lifted if condition",
+      {|(ns demo)
+(defn fail []
+  (str "before"
+       (if (.parse JSON "invalid") "yes" "no")))
+(fail)|},
+      4,
+      12 );
+    ( "lifted if selected branch",
+      {|(ns demo)
+(defn fail []
+  (str "before"
+       (if true
+         (.parse JSON "invalid")
+         "unused")))
+(fail)|},
+      5,
+      10 );
     ("thread first", {|(ns demo)
 (defn fail []
   (-> JSON

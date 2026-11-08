@@ -12,6 +12,7 @@ Use with the common language and library contracts in `../SKILL.md`.
 - `cast` ignores its type and returns the value; Java/JS host constructors and methods are not interpreted.
 - Eval-only library functions such as `slurp` and `assert` are outside the cross-platform library. Do not assume they exist in compiled applications.
 - Eval rejects a reached raw-code form as supported only on JS/Java, without evaluating its arguments (even malformed ones). Quoted raw-code remains data, and an unselected `if` branch is not reached: `(if false (raw-code "...") "ok")` returns `"ok"` on eval.
+- Reached `try` and `throw` raise `Eval_error` naming the form and JS/Java-only support, before evaluating any body, handler, cleanup, or operand. `(if false (throw nil) "ok")` returns `"ok"`; `'(try)` and `'(throw)` remain data. Eval provides no exception-handling API.
 
 ## Values, equality, and collections
 

@@ -184,6 +184,27 @@ return new Widget(value.toString());
 }|}
     java
 
+let generated_java =
+  let normalize source =
+    let output = Buffer.create (String.length source) in
+    let rec copy i =
+      if i < String.length source then
+        if i + 3 <= String.length source && String.sub source i 3 = "G__" then (
+          Buffer.add_string output "G__";
+          let j = ref (i + 3) in
+          while !j < String.length source && source.[!j] >= '0' && source.[!j] <= '9' do
+            incr j
+          done;
+          copy !j)
+        else (
+          Buffer.add_char output source.[i];
+          copy (i + 1))
+    in
+    copy 0;
+    Buffer.contents output
+  in
+  Alcotest.testable Format.pp_print_string (fun a b -> normalize a = normalize b)
+
 let typed_lambda_interop () =
   let java =
     compile
@@ -194,8 +215,7 @@ let typed_lambda_interop () =
         (fn [value] (str value "!"))))
 |}
   in
-  Alcotest.(check string)
-    "generated java"
+  Alcotest.check generated_java "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
 public static Object test() throws Exception {
@@ -217,8 +237,7 @@ let typed_runnable_interop () =
   ^void:java.lang.Runnable
   (fn [] (str "run")))
 |} in
-  Alcotest.(check string)
-    "generated java"
+  Alcotest.check generated_java "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
 public static Object test() throws Exception {
@@ -240,8 +259,7 @@ let typed_consumer_interop () =
   ^void:java.util.function.Consumer
   (fn [value] (.add xs value)))
 |} in
-  Alcotest.(check string)
-    "generated java"
+  Alcotest.check generated_java "generated java"
     {|import static y2k.language.language_runtime.*;
 public final class user {
 public static Object test(Object xs) throws Exception {

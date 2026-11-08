@@ -86,6 +86,56 @@ User forms are expanded internally; do not write compiler-generated `compiler/*`
 
 Target-only forms: `raw-code` is supported on JS/Java; `export-default` on JS; `instance?` and `gen-class` on Java. Their contracts and examples are in the target references selected above.
 
+### Synchronous exceptions (JS/Java only)
+
+```clojure
+(try
+  body...
+  (catch error handler...)
+  (finally cleanup...))
+(throw error)
+```
+
+Body and each present section must be nonempty. Supply at least one section:
+one `catch`, one `finally`, or `catch` followed by `finally`. Ordinary body
+expressions precede all sections. The catch binding is a simple unqualified
+symbol (not a literal or destructuring pattern), visible only in its handler.
+Nested `let` shadowing stays local; the body, cleanup, and following expressions
+retain their outer bindings. Closures can capture the caught value.
+
+`try` returns the last body value on success or the last handler value on recovery,
+preserving actual `nil` and `false`. It works in value and discarded positions.
+Cleanup runs once on normal or exceptional exit, including a handler failure;
+its value is discarded. A cleanup error replaces the previous result/error,
+without adding a cause or suppressed exception. Earlier effects remain performed.
+
+`throw` takes exactly one expression, evaluates it once, and throws the original
+value: any JS value, or a Java `Throwable`. Java catches `Exception`, not `Error`.
+Use host APIs for constructing, inspecting, and logging errors; rethrow with
+`(throw error)` to retain identity. JS protection is synchronous and does not
+await a returned Promise. See the target reference for host examples.
+
+Eval and FEX do not support executable `try`/`throw`; quoted forms remain data.
+These names are reserved in call position on compiled targets. Generated `try`
+uses native statements at its execution site, including function bodies and
+definition initializers, rather than a function wrapper for its result.
+
+Protect each resource immediately after successfully opening it. Nest cleanup
+so an inner close failure still runs the outer close; `with-open` is not provided.
+With application-defined opening/processing/closing functions:
+
+```clojure
+(let [first (open-first)]
+  (try
+    (let [second (open-second)]
+      (try (process first second)
+           (finally (close-second second))))
+    (finally (close-first first))))
+```
+
+An `open-second` failure closes only `first`. A processing failure skips later
+success-only actions; place publication/finalization after successful processing.
+
 ### Destructuring
 
 - Sequential: `[first second]`; extra items are ignored, missing leaf values become `nil`.

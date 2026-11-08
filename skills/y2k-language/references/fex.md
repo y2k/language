@@ -22,6 +22,10 @@ The builtin references are:
 
 Other targets' standard libraries are not an implicit FEX builtin API. Host forms (`raw-code`, `.`, `new`, `set!`, `cast`, `instance?`, `gen-class`, `export-default`), host imports, and string requires are rejected. This includes method/constructor shorthand and typed parameters expanding to `cast`. Top-level expressions and nested `def` are rejected.
 
+Executable `try` and `throw` are rejected as unsupported expressions, including
+inside an unselected branch. Quoted `'(try)` and `'(throw)` remain data; FEX does
+not implement the JS/Java exception API.
+
 ### Quote and strings
 
 Quote follows the existing compiled targets after frontend desugaring: atoms become strings, lists become calls to builtin `list`. Thus `'nil` is the string `nil`, while literal `nil` is a typed nil. `'[1]` quotes the already-expanded `(list 1)` and produces the strings `list` and `1`. This is not Clojure quote. Quoted host forms are data.
