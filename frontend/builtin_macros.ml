@@ -3,48 +3,6 @@ open Ast
 let atom meta value = SAtom (meta, value)
 let string_atom meta value = atom meta ("\"" ^ value ^ "\"")
 
-let rec and_expr meta = function
-  | [] -> atom meta "true"
-  | [ value ] -> value
-  | value :: rest ->
-      let name = Gensym.gensym meta in
-      SList
-        ( meta,
-          Paren,
-          [
-            atom meta "let*";
-            SList (meta, Paren, [ name; value ]);
-            SList (meta, Paren, [ atom meta "if"; name; and_expr meta rest; name ]);
-          ] )
-
-let rec or_expr meta = function
-  | [] -> atom meta "nil"
-  | [ value ] -> value
-  | value :: rest ->
-      let name = Gensym.gensym meta in
-      SList
-        ( meta,
-          Paren,
-          [
-            atom meta "let*";
-            SList (meta, Paren, [ name; value ]);
-            SList (meta, Paren, [ atom meta "if"; name; name; or_expr meta rest ]);
-          ] )
-
-let and_macro = function SList (meta, Paren, SAtom (_, "and") :: items) -> Some (and_expr meta items) | _ -> None
-let or_macro = function SList (meta, Paren, SAtom (_, "or") :: items) -> Some (or_expr meta items) | _ -> None
-
-(* ponytail: Reuse if for short-circuiting; each condition occurs only once. *)
-let cond_macro = function
-  | SList (meta, Paren, SAtom (_, "cond") :: clauses) ->
-      let rec expand = function
-        | [] -> atom meta "nil"
-        | condition :: result :: rest -> SList (meta, Paren, [ atom meta "if"; condition; result; expand rest ])
-        | [ _ ] -> failwith "cond: expected test/result pairs"
-      in
-      Some (expand clauses)
-  | _ -> None
-
 let case_macro = function
   | SList (meta, Paren, SAtom (_, "case") :: value :: clauses) ->
       let name = Gensym.gensym meta in
@@ -97,28 +55,6 @@ let if_let_macro = function
       Some (if_let_expr meta bindings_meta bindings then_ else_)
   | SList (_, Paren, SAtom (_, "if-let") :: _) ->
       if_let_error "expected non-empty [name value ...], then branch, and optional else branch"
-  | _ -> None
-
-let with_open_macro = function
-  | SList (meta, Paren, SAtom (_, "with-open") :: SList (bindings_meta, Bracket, bindings) :: body) ->
-      let form items = SList (meta, Paren, items) in
-      let rec expand = function
-        | [] -> if body = [] then atom meta "nil" else form (atom meta "do" :: body)
-        | (SAtom (_, symbol) as name) :: value :: rest when is_binding_symbol name && not (String.contains symbol '/')
-          ->
-            let close =
-              form [ atom meta ".close"; form [ atom meta "cast"; atom meta "java.lang.AutoCloseable"; name ] ]
-            in
-            form
-              [
-                atom meta "let";
-                SList (bindings_meta, Bracket, [ name; value ]);
-                form [ atom meta "try"; expand rest; form [ atom meta "finally"; close ] ];
-              ]
-        | _ -> failwith "with-open: expected simple symbol/value pairs"
-      in
-      Some (expand bindings)
-  | SList (_, Paren, SAtom (_, "with-open") :: _) -> failwith "with-open: expected a binding vector"
   | _ -> None
 
 let keyword_lookup_macro = function
@@ -276,12 +212,8 @@ let thread_last_macro = thread_macro "->>" (fun fn args value -> (fn :: args) @ 
 
 let builtin_macros =
   [
-    and_macro;
-    or_macro;
-    cond_macro;
     case_macro;
     if_let_macro;
-    with_open_macro;
     thread_first_macro;
     thread_last_macro;
     private_def_macro;

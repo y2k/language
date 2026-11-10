@@ -1,5 +1,5 @@
 let compile input =
-  match Frontend.parse_and_desugar input with
+  match Backend_eval.Pipeline.parse_and_desugar input with
   | Ok sexprs -> Backend_compiler.Java.compile sexprs
   | Error message -> Alcotest.fail message
 

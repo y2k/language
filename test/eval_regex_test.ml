@@ -3,9 +3,9 @@ module Stdlib_eval = Backend_eval.Eval_stdlib
 open Backend_eval.Eval_types
 
 let eval source =
-  match Frontend.parse_and_desugar source with
+  match Backend_eval.Pipeline.parse_and_desugar source with
   | Error message -> Alcotest.fail message
-  | Ok forms -> List.hd (List.rev (Eval.eval_all forms))
+  | Ok forms -> List.hd (List.rev (Eval.eval_all ~context:(Backend_eval.Pipeline.create_context ()) forms))
 
 (* Only compare expected scalar results; never structurally compare a compiled matcher. *)
 let check source expected =

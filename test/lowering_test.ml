@@ -1,7 +1,7 @@
 open Frontend
 
 let lower ?(java = false) input =
-  match Frontend.parse_and_desugar input with
+  match Backend_eval.Pipeline.parse_and_desugar input with
   | Ok sexprs -> Gensym.run (fun () -> Backend_compiler.Lowering_expression_to_statement.lower ~java sexprs)
   | Error message -> Alcotest.fail message
 
@@ -21,7 +21,9 @@ let function_patterns_are_normalized () =
 
 let instance_check () =
   let input = "(instance? (do String) value)" in
-  let parsed = match Frontend.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e in
+  let parsed =
+    match Backend_eval.Pipeline.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e
+  in
   Alcotest.(check bool) "preserves type expression and metadata" true (parsed = lower input);
   match lower "(do (instance? Object (effect)) nil)" with
   | [
@@ -46,7 +48,9 @@ let instance_check () =
 
 let raw_code_preservation () =
   let input = {|(defn test [] (raw-code "a();") (raw-code "b();") nil)|} in
-  let parsed = match Frontend.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e in
+  let parsed =
+    match Backend_eval.Pipeline.parse_and_desugar input with Ok forms -> forms | Error e -> Alcotest.fail e
+  in
   Alcotest.(check bool) "no generated bindings for raw instructions" true (lower input = parsed);
   List.iter
     (fun source -> ignore (lower source))
@@ -105,7 +109,7 @@ let statement_if_generation () =
   in
   List.iter
     (fun source ->
-      let forms = match Frontend.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
+      let forms = match Backend_eval.Pipeline.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
       List.iter
         (fun (target, code, wrapper) ->
           Alcotest.(check bool) (target ^ " native if: " ^ source) true (contains code "if (");
@@ -245,7 +249,7 @@ let exception_generation java () =
   in
   List.iter
     (fun source ->
-      let forms = match Frontend.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
+      let forms = match Backend_eval.Pipeline.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
       let code = if java then Backend_compiler.Java.compile forms else Backend_compiler.Js.compile forms in
       Alcotest.(check bool) ("native try: " ^ source) true (contains code "try {");
       Alcotest.(check bool) ("no wrapper: " ^ source) false (contains code (if java then "Supplier" else "})()")))
@@ -269,7 +273,7 @@ let throw_try_generation () =
   in
   List.iter
     (fun (source, arrows) ->
-      let forms = match Frontend.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
+      let forms = match Backend_eval.Pipeline.parse_and_desugar source with Ok x -> x | Error e -> Alcotest.fail e in
       let js = Backend_compiler.Js.compile forms in
       Alcotest.(check int) "one native JS try" 1 (count js "try {");
       Alcotest.(check int) "only actual function and optional value-throw wrapper" arrows (count js "=>");

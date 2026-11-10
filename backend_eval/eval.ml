@@ -6,12 +6,15 @@ type context = {
   requires : (string * (string * string) list) list ref;
   current_namespace : string ref;
   env : env;
+  parse_source : string -> (sexpr list, string) result;
 }
 
 type package_file = { package_source : string }
 type _ Effect.t += Read_package_files : string * string -> package_file list Effect.t
 
-let create_context ?(env = []) () = { namespaces = ref []; requires = ref []; current_namespace = ref "user"; env }
+let create_context ?(env = []) ?(parse_source = fun source -> Frontend.parse_and_desugar source) () =
+  { namespaces = ref []; requires = ref []; current_namespace = ref "user"; env; parse_source }
+
 let with_env context env = { context with env }
 let is_string name = String.length name >= 2 && name.[0] = '"' && name.[String.length name - 1] = '"'
 let string_value value = String.sub value 1 (String.length value - 2)
@@ -138,6 +141,7 @@ let value_text = function
   | Closure _ -> "function"
   | Atom _ -> "atom"
   | Regex _ -> "regex"
+  | Syntax _ -> "#<syntax>"
 
 let rec eval ?(context = create_context ()) = function
   | SAtom (_, name) -> find context name
@@ -191,7 +195,7 @@ and load_dep context = function
 
 and load_package_file context file =
   let current_namespace = !(context.current_namespace) in
-  match Frontend.parse_and_desugar file.package_source with
+  match context.parse_source file.package_source with
   | Ok sexprs ->
       Fun.protect
         ~finally:(fun () -> context.current_namespace := current_namespace)

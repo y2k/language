@@ -1,5 +1,5 @@
 let compile source =
-  match Frontend.parse_and_desugar source with
+  match Backend_eval.Pipeline.parse_and_desugar source with
   | Ok forms -> Backend_compiler.Java.compile forms
   | Error message -> Alcotest.fail message
 

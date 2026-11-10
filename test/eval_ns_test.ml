@@ -1,10 +1,10 @@
 let eval input =
-  match Frontend.parse_and_desugar input with
-  | Ok sexprs -> Backend_eval.Eval.eval_all sexprs
+  match Backend_eval.Pipeline.parse_and_desugar input with
+  | Ok sexprs -> Backend_eval.Eval.eval_all ~context:(Backend_eval.Pipeline.create_context ()) sexprs
   | Error message -> Alcotest.fail message
 
 let eval_with_context context input =
-  match Frontend.parse_and_desugar input with
+  match Backend_eval.Pipeline.parse_and_desugar input with
   | Ok sexprs -> Backend_eval.Eval.eval_all ~context sexprs
   | Error message -> Alcotest.fail message
 
@@ -36,7 +36,7 @@ let lookup_uses_only_current_namespace () =
       ignore (eval {|(compiler/ns "a" () ()) (def x 1) (compiler/ns "b" () ()) x|}))
 
 let context_keeps_current_namespace () =
-  let context = Backend_eval.Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   ignore (eval_with_context context {|(compiler/ns "a" () ()) (def x 1)|});
   match List.rev (eval_with_context context {|x|}) with
   | Backend_eval.Eval.Int value :: _ -> Alcotest.(check int) "result" 1 value

@@ -12,6 +12,7 @@ type value =
   | Closure of closure
   | Atom of value ref
   | Regex of Re.re
+  | Syntax of sexpr
 
 and closure = User of sexpr list * sexpr list * env * string | Native of builtin_fn
 and builtin_fn = (value -> value list -> value) -> value list -> value

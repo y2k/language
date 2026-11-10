@@ -1,11 +1,11 @@
 let parse source =
-  match Frontend.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
+  match Backend_eval.Pipeline.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
 
 let unsupported_targets () =
   let message = "instance? is supported only on the Java target" in
   Alcotest.check_raises "JS diagnostic" (Failure message) (fun () ->
       ignore (Backend_compiler.Js.compile (parse "(defn test [value] (instance? String value))")));
-  let context = Backend_eval.Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   let eval source = Backend_eval.Eval.eval_all ~context (parse source) in
   ignore (eval "(def counter (atom 0))");
   Alcotest.check_raises "eval diagnostic" (Backend_eval.Eval.Eval_error message) (fun () ->

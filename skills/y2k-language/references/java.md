@@ -125,6 +125,7 @@ compiler and Java runtime together. Try needs no Supplier or helper callback.
 
 Java supports `(with-open [name resource ...] body...)`. Bindings are simple
 unqualified symbols, optionally type-hinted; destructuring is unsupported.
+The macro is bundled as an internal language definition and needs no import.
 Initializers run once, left to right, and can use earlier bindings. Resources
 close once in reverse order, including on exceptions. If an initializer fails,
 previous resources close and the body does not run.

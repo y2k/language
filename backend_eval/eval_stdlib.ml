@@ -230,6 +230,7 @@ let rec to_string = function
   | Closure _ -> "#<function>"
   | Atom _ -> "#<atom>"
   | Regex _ -> "#<regex>"
+  | Syntax _ -> "#<syntax>"
 
 let str _ args = String (String.concat "" (List.map to_string args))
 

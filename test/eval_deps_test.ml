@@ -1,4 +1,5 @@
 module Eval = Backend_eval.Eval
+module Pipeline = Backend_eval.Pipeline
 
 let package_file source = { Eval.package_source = source }
 
@@ -28,9 +29,11 @@ let xml_package =
                "</" tag ">"))))
     (str node)))|}
 
-let eval_with_loader loader input =
-  match Frontend.parse_and_desugar input with
-  | Ok sexprs -> Eval.with_package_loader loader (fun () -> Eval.eval_all sexprs)
+let eval_with_loader ?extensions loader input =
+  match Pipeline.parse_and_desugar ?extensions input with
+  | Ok sexprs ->
+      let context = Pipeline.create_context ?extensions () in
+      Eval.with_package_loader loader (fun () -> Eval.eval_all ~context sexprs)
   | Error message -> Alcotest.fail message
 
 let last_string loader input =
@@ -55,6 +58,51 @@ let loads_nested_deps () =
   in
   Alcotest.(check string) "result" "nested" (last_string loader {|(deps {:a "0.1.0"}) from-a|})
 
+let extensions_in_nested_deps () =
+  let creations = ref 0 in
+  let extension () =
+    incr creations;
+    let count = ref 0 in
+    [
+      (function
+      | Frontend.SList (meta, Paren, [ SAtom (_, "next") ]) ->
+          incr count;
+          Some (Frontend.SAtom (meta, string_of_int !count))
+      | _ -> None);
+    ]
+  in
+  let extensions = [ extension ] in
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [
+          package_file {|(ns a) (def first (next)) (deps {:b "0.1.0"}) (def second (next))|};
+          package_file {|(ns a) (def third (next))|};
+        ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def first (next)) (def second (next))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let context = Pipeline.create_context ~extensions ~env:[ ("seed", Eval.String "seed") ] () in
+  Alcotest.(check int) "context creation does not instantiate extensions" 0 !creations;
+  let source =
+    {|(ns app)
+      (def local (next))
+      (let [] (deps {:a "0.1.0"}))
+      (def after (next))
+      (str seed ":" local ":" after ":" a/first ":" a/second ":" a/third ":" b/first ":" b/second)|}
+  in
+  let forms =
+    match Pipeline.parse_and_desugar ~extensions source with
+    | Ok forms -> forms
+    | Error message -> Alcotest.fail message
+  in
+  let values = Eval.with_package_loader loader (fun () -> Eval.eval_all ~context forms) in
+  (match List.rev values with
+  | Eval.String result :: _ ->
+      Alcotest.(check string) "isolated file state and restored namespaces" "seed:1:2:1:2:1:1:2" result
+  | _ -> Alcotest.fail "expected string result");
+  Alcotest.(check int) "main and three package files" 4 !creations
+
 let loads_at_form_position () =
   let loader package version =
     match (package, version) with
@@ -64,6 +112,88 @@ let loads_at_form_position () =
   Alcotest.check_raises "before deps" (Eval.Eval_error "symbol not found: answer") (fun () ->
       ignore (eval_with_loader loader {|answer (deps {:make "0.1.0"})|}));
   Alcotest.(check string) "after deps" "42" (last_string loader {|(def local "before") (deps {:make "0.1.0"}) answer|})
+
+let language_cond_in_nested_deps () =
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [
+          package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (cond false 0 true b/answer))|};
+          package_file {|(ns a) (def next (cond true (+ answer 1)))|};
+        ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def answer (cond false 1 :else 42))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let source = {|(ns app) (def before 7) (deps {:a "0.1.0"}) (str before ":" a/answer ":" a/next)|} in
+  Alcotest.(check string) "default extension and namespaces" "7:42:43" (last_string loader source);
+  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: cond") (fun () ->
+      ignore (eval_with_loader ~extensions:[] loader source));
+  Alcotest.(check string) "independent default after disabled call" "7:42:43" (last_string loader source)
+
+let language_and_in_nested_deps () =
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [ package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (and true b/answer))|} ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def expand-and 0) (def gensym 0) (def answer (and true 42))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let source = {|(ns app) (deps {:a "0.1.0"}) (str (and true a/answer))|} in
+  Alcotest.(check string) "language and in both packages" "42" (last_string loader source);
+  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: and") (fun () ->
+      ignore (eval_with_loader ~extensions:[] loader source));
+  Alcotest.(check string) "independent default after disabled call" "42" (last_string loader source)
+
+let language_or_in_nested_deps () =
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [ package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (or nil b/answer))|} ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def expand-or 0) (def gensym 0) (def answer (or false 42))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let source = {|(ns app) (deps {:a "0.1.0"}) (str (or false a/answer))|} in
+  Alcotest.(check string) "language or in both packages" "42" (last_string loader source);
+  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: or") (fun () ->
+      ignore (eval_with_loader ~extensions:[] loader source));
+  Alcotest.(check string) "independent default after disabled call" "42" (last_string loader source)
+
+let language_with_open_in_nested_deps () =
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [ package_file {|(ns a) (deps {:b "0.1.0"}) (defn work [] (with-open [r (source)] (b/work)))|} ]
+    | "b", "0.1.0" ->
+        [ package_file {|(ns b) (defn work [] (with-open [r (source)] 42))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let parse ?extensions source =
+    match Pipeline.parse_and_desugar ?extensions source with
+    | Ok forms -> forms
+    | Error message -> Alcotest.fail message
+  in
+  let check ?extensions enabled =
+    let context = Pipeline.create_context ?extensions () in
+    Eval.with_package_loader loader (fun () ->
+        ignore (Eval.eval_all ~context (parse ?extensions {|(ns app) (deps {:a "0.1.0"})|})));
+    List.iter
+      (fun (name, result) ->
+        let expected =
+          if enabled then
+            "(let [r (source)] (try (do " ^ result ^ ") (finally (.close (cast java.lang.AutoCloseable r)))))"
+          else "(with-open (list r (source)) " ^ result ^ ")"
+        in
+        match Eval.find context name with
+        | Eval.Closure (User (_, body, _, _)) ->
+            Alcotest.(check (list string)) name
+              (List.map Frontend.show_sexpr (parse ~extensions:[] expected))
+              (List.map Frontend.show_sexpr body)
+        | _ -> Alcotest.fail "expected unevaluated resource function")
+      [ ("a/work", "(b/work)"); ("b/work", "42") ]
+  in
+  check true;
+  check ~extensions:[] false;
+  check true
 
 let qualified_lookup_uses_alias_after_deps () =
   let loader package version =
@@ -127,6 +257,11 @@ let () =
         [
           Alcotest.test_case "loads package def" `Quick loads_package_def;
           Alcotest.test_case "loads nested deps" `Quick loads_nested_deps;
+          Alcotest.test_case "extensions in nested deps" `Quick extensions_in_nested_deps;
+          Alcotest.test_case "language cond in nested deps" `Quick language_cond_in_nested_deps;
+          Alcotest.test_case "language and in nested deps" `Quick language_and_in_nested_deps;
+          Alcotest.test_case "language or in nested deps" `Quick language_or_in_nested_deps;
+          Alcotest.test_case "language with-open in nested deps" `Quick language_with_open_in_nested_deps;
           Alcotest.test_case "loads at form position" `Quick loads_at_form_position;
           Alcotest.test_case "qualified lookup uses alias after deps" `Quick qualified_lookup_uses_alias_after_deps;
           Alcotest.test_case "renders xml manifest package" `Quick renders_xml_manifest_package;

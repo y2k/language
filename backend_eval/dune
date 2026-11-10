@@ -2,3 +2,9 @@
  (name backend_eval)
  (public_name language.backend_eval)
  (libraries language.frontend re))
+
+(rule
+ (target builtin_macro_source.ml)
+ (deps macros/cond.clj macros/and.clj macros/or.clj macros/with_open.clj)
+ (action
+  (write-file %{target} "let definitions = [\n(\"cond\", \"expand-cond\", {clj|%{read:macros/cond.clj}|clj});\n(\"and\", \"expand-and\", {clj|%{read:macros/and.clj}|clj});\n(\"or\", \"expand-or\", {clj|%{read:macros/or.clj}|clj});\n(\"with-open\", \"expand-with-open\", {clj|%{read:macros/with_open.clj}|clj});\n]")))

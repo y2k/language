@@ -2,8 +2,8 @@ module Eval = Backend_eval.Eval
 module Stdlib_eval = Backend_eval.Eval_stdlib
 open Backend_eval.Eval_types
 
-let eval ?(context = Eval.create_context ()) source =
-  match Frontend.parse_and_desugar source with
+let eval ?(context = Backend_eval.Pipeline.create_context ()) source =
+  match Backend_eval.Pipeline.parse_and_desugar source with
   | Error message -> Alcotest.fail message
   | Ok forms -> (
       match List.rev (Eval.eval_all ~context forms) with value :: _ -> value | [] -> Alcotest.fail "expected a result")
@@ -319,7 +319,7 @@ let callbacks_are_only_called_when_needed () =
     ]
 
 let swap_failure_preserves_callback_effects () =
-  let context = Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   ignore (eval ~context "(def cell (atom 1)) (def effects (atom 0))");
   Alcotest.check_raises "callback failure" (Eval_error "assertion failed") (fun () ->
       ignore (eval ~context "(swap! cell (fn [x] (reset! cell 9) (reset! effects 1) (assert false)))"));
@@ -331,7 +331,7 @@ let swap_failure_preserves_callback_effects () =
   Alcotest.check value "arguments evaluated eagerly" (Int 3) (eval ~context "(deref effects)")
 
 let traversal_failure_preserves_callback_effects operation () =
-  let context = Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   ignore (eval ~context "(def effects (atom \"\"))");
   Alcotest.check_raises (operation ^ " preserves callback error") (Eval_error "assertion failed") (fun () ->
       ignore

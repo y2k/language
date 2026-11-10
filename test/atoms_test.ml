@@ -14,7 +14,7 @@ let invalid_references = [ "nil"; "42"; "[1 2]"; "{:value 1}" ]
 let invalid_operations = [ "(deref value)"; "(reset! value 9)"; "(swap! value (fn [x] 9))" ]
 
 let eval context input =
-  match Frontend.parse_and_desugar input with
+  match Backend_eval.Pipeline.parse_and_desugar input with
   | Ok forms -> Backend_eval.Eval.eval_all ~context forms
   | Error message -> Alcotest.fail message
 
@@ -29,7 +29,7 @@ let expect_eval_error context input =
   | _ -> Alcotest.failf "expected eval error: %s" input
 
 let eval_atoms () =
-  let context = Backend_eval.Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   List.iter (expect_eval_error context) arity_errors;
   List.iter
     (fun value ->

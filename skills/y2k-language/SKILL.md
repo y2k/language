@@ -84,6 +84,8 @@ In signatures, `...` denotes repetition, not source syntax.
 
 User forms are expanded internally; do not write compiler-generated `compiler/*`, `let*`, `fn*`, or `set!` as an application API. Use Atom for mutable state. Reader shorthand `@cell`, `#(...)`, sets, syntax-quote, custom `defmacro`, `loop`/`recur`, and Clojure destructuring directives are not supported application syntax.
 
+`cond`, `and`, `or` and `with-open` are internal language-defined macros bundled with the compiler and available automatically, without imports. Their compile-time definitions, internal helpers (`gensym`, syntax inspection/construction and macro errors) and `Syntax` values are not application APIs. Resource execution through `with-open` is Java-only.
+
 Target-only forms: `raw-code` is supported on JS/Java; `export-default` on JS; `instance?` and `gen-class` on Java. Their contracts and examples are in the target references selected above.
 
 ### Synchronous exceptions (JS/Java only)

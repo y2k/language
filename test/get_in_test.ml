@@ -13,9 +13,11 @@ let eval_errors () =
   List.iter
     (fun expression ->
       let forms =
-        match Frontend.parse_and_desugar expression with Ok forms -> forms | Error message -> Alcotest.fail message
+        match Backend_eval.Pipeline.parse_and_desugar expression with
+        | Ok forms -> forms
+        | Error message -> Alcotest.fail message
       in
-      match Backend_eval.Eval.eval_all forms with
+      match Backend_eval.Eval.eval_all ~context:(Backend_eval.Pipeline.create_context ()) forms with
       | exception Backend_eval.Eval.Eval_error _ -> ()
       | _ -> Alcotest.failf "expected runtime error: %s" expression)
     invalid_expressions

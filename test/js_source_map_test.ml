@@ -144,6 +144,32 @@ let check_failure (status, _, error) kind position =
 let failing_function = "(ns demo)\n(defn fail []\n  (.parse JSON \"invalid-json\"))\n(fail)"
 let precise_function () = check_failure (execute (compile_cli failing_function)) "SyntaxError" "user.clj:3:3"
 
+let language_cond_origins () =
+  List.iter
+    (fun (source, position) -> check_failure (execute (compile_cli source)) "SyntaxError" position)
+    [
+      ( "(ns demo)\n(defn fail []\n  (cond\n    false nil\n    true (.parse JSON \"invalid\")))\n(fail)",
+        "user.clj:5:10" );
+      ( "(ns demo)\n(defn fail []\n  (cond\n    (.parse JSON \"invalid\") 42\n    :else nil))\n(fail)",
+        "user.clj:4:5" );
+    ]
+
+let language_and_origins () =
+  List.iter
+    (fun (source, position) -> check_failure (execute (compile_cli source)) "SyntaxError" position)
+    [
+      ( "(ns demo)\n(defn fail []\n  (and\n    (.parse JSON \"invalid\")\n    42))\n(fail)", "user.clj:4:5" );
+      ( "(ns demo)\n(defn fail []\n  (and\n    true\n    (.parse JSON \"invalid\")))\n(fail)", "user.clj:5:5" );
+    ]
+
+let language_or_origins () =
+  List.iter
+    (fun (source, position) -> check_failure (execute (compile_cli source)) "SyntaxError" position)
+    [
+      ( "(ns demo)\n(defn fail []\n  (or\n    (.parse JSON \"invalid\")\n    42))\n(fail)", "user.clj:4:5" );
+      ( "(ns demo)\n(defn fail []\n  (or\n    false\n    (.parse JSON \"invalid\")))\n(fail)", "user.clj:5:5" );
+    ]
+
 let direct_call () =
   check_failure (execute (compile_cli "(ns demo)\n  (.parse JSON \"invalid-json\")")) "SyntaxError" "user.clj:2:3"
 
@@ -437,6 +463,9 @@ let () =
       ( "CLI",
         [
           Alcotest.test_case "function maps to failing expression" `Quick precise_function;
+          Alcotest.test_case "language cond preserves source positions" `Quick language_cond_origins;
+          Alcotest.test_case "language and preserves source positions" `Quick language_and_origins;
+          Alcotest.test_case "language or preserves source positions" `Quick language_or_origins;
           Alcotest.test_case "direct call maps to its start" `Quick direct_call;
           Alcotest.test_case "reject eval source map" `Quick (unsupported_target "eval");
           Alcotest.test_case "reject Java source map" `Quick (unsupported_target "java");

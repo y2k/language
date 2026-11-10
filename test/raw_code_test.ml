@@ -1,5 +1,5 @@
 let parse source =
-  match Frontend.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
+  match Backend_eval.Pipeline.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
 
 let contains text part =
   let length = String.length part in
@@ -79,7 +79,7 @@ let java_generation () =
 
 let eval_rejection () =
   let message = "raw-code is supported only on the JS and Java targets" in
-  let context = Backend_eval.Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   let eval source = Backend_eval.Eval.eval_all ~context (parse source) in
   ignore (eval "(def counter (atom 0))");
   List.iter
@@ -106,7 +106,7 @@ let eval_rejection () =
     (Language_main.Runner.run ~target:"eval" {|(raw-code "x")|} = Error message)
 
 let eval_exception_rejection () =
-  let context = Backend_eval.Eval.create_context () in
+  let context = Backend_eval.Pipeline.create_context () in
   let eval source = Backend_eval.Eval.eval_all ~context (parse source) in
   ignore (eval "(def counter (atom 0))");
   List.iter

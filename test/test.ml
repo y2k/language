@@ -46,7 +46,9 @@ let ensure_runtime_js () = write_file "language_runtime.js" (read_file (Sys.gete
 let run_js path =
   let input = compiler_input path in
   let forms =
-    match Frontend.parse_and_desugar input with Ok forms -> forms | Error message -> Alcotest.fail message
+    match Backend_eval.Pipeline.parse_and_desugar input with
+    | Ok forms -> forms
+    | Error message -> Alcotest.fail message
   in
   let namespace =
     List.find_map
