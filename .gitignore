@@ -13,3 +13,5 @@ _build/
 /opencode.json
 /tasks
 playground.clj
+/docs/
+/wayfinder/

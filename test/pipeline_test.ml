@@ -1,5 +1,5 @@
 open Frontend
-module Pipeline = Backend_eval.Pipeline
+module Pipeline = Macros.Pipeline
 
 let parse ?extensions source =
   match Pipeline.parse_and_desugar ?extensions source with Ok forms -> forms | Error message -> Alcotest.fail message

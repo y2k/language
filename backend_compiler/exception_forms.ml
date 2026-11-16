@@ -14,7 +14,7 @@ let parse items =
     | SList (_, _, SAtom (_, "catch") :: args) :: rest -> (
         if handler <> None || cleanup <> None then error "catch must occur once, before finally";
         match args with
-        | (SAtom (_, name) as binding) :: forms when is_binding_symbol binding && not (String.contains name '/') ->
+        | (SAtom (_, name) as binding) :: forms when Macros.Builtin_macros.is_binding_symbol binding && not (String.contains name '/') ->
             nonempty "catch body" forms;
             sections body (Some (binding, forms)) cleanup rest
         | _ -> error "catch requires a simple symbol binding and a nonempty body")

@@ -1,4 +1,4 @@
-open Ast
+open Frontend
 
 let atom meta value = SAtom (meta, value)
 let string_atom meta value = atom meta ("\"" ^ value ^ "\"")
@@ -230,3 +230,5 @@ let builtin_macros =
     let_macro;
     list_macro;
   ]
+
+let () = Frontend.Desugar.default_macros := builtin_macros

@@ -1,5 +1,5 @@
 let parse source =
-  match Backend_eval.Pipeline.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
+  match Macros.Pipeline.parse_and_desugar source with Ok forms -> forms | Error message -> Alcotest.fail message
 
 let definitions source = Backend_compiler.Fex.definitions (parse source)
 let records source = match definitions source with [ (_, records) ] -> records | _ -> Alcotest.fail "expected one RHS"

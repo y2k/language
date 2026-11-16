@@ -1,14 +1,14 @@
 open Frontend
 open Backend_eval.Eval_types
 module Eval = Backend_eval.Eval
-module Macros = Backend_eval.Language_macros
+module Language_macros = Macros.Language_macros
 
 let call_meta = { loc = { line = 2; column = 3 }; type_annotation = None; private_ = false }
 let source_meta = { loc = { line = 5; column = 7 }; type_annotation = Some "Runnable"; private_ = true }
 
 let mixed_tree_preserves_metadata () =
   let source = SList (source_meta, Bracket, [ SAtom (source_meta, "x") ]) in
-  let result = Macros.to_sexpr call_meta (List [ Symbol "if"; Bool true; Syntax source; Nil ]) in
+  let result = Language_macros.to_sexpr call_meta (List [ Symbol "if"; Bool true; Syntax source; Nil ]) in
   let expected =
     SList (call_meta, Paren, [ SAtom (call_meta, "if"); SAtom (call_meta, "true"); source; SAtom (call_meta, "nil") ])
   in
@@ -20,16 +20,16 @@ let mixed_tree_preserves_metadata () =
 let scalar_categories () =
   List.iter
     (fun value ->
-      let form = Macros.to_sexpr call_meta value in
+      let form = Language_macros.to_sexpr call_meta value in
       Alcotest.(check bool) "literal value and constructor preserved" true (Eval.eval form = value))
     [ Nil; Bool false; Bool true; Int 1; Float 1.; Float 0.125; String "nil"; String "false"; String "a\"b\\c\nd" ];
-  Alcotest.(check bool) "symbol stays a symbol" true (Eval.quote (Macros.to_sexpr call_meta (Symbol "if")) = Symbol "if")
+  Alcotest.(check bool) "symbol stays a symbol" true (Eval.quote (Language_macros.to_sexpr call_meta (Symbol "if")) = Symbol "if")
 
 let parse_one source =
   match Frontend.parse_string source with Ok [ form ] -> form | _ -> Alcotest.fail "expected one parsed form"
 
 let language_cond () =
-  let macros = Macros.create () in
+  let macros = Language_macros.create () in
   List.iter
     (fun (source, expected) ->
       match List.find_map (fun macro -> macro (parse_one source)) macros with
@@ -43,8 +43,8 @@ let language_cond () =
     [ "(cond true)"; "(cond true 1 false)"; "(cond :else 1 true)" ]
 
 let cond_definition_diagnostics () =
-  let _, entry, source = List.find (fun (name, _, _) -> name = "cond") Backend_eval.Builtin_macro_source.definitions in
-  let macros = Macros.create_from [ ("choose", entry, source) ] () in
+  let _, entry, source = List.find (fun (name, _, _) -> name = "cond") Macros.Builtin_macro_source.definitions in
+  let macros = Language_macros.create_from [ ("choose", entry, source) ] () in
   let expand source = Option.get (List.find_map (fun macro -> macro (parse_one source)) macros) in
   List.iter (fun (source, expected) ->
     Alcotest.(check bool) source true (Eval.eval (expand source) = expected))
@@ -62,7 +62,7 @@ let custom_handler () =
           (list (gensym) (syntax-list-at v (syntax-children v)))
           (macro-error "expected symbol"))
         v))))|} in
-  let macros = Macros.create_from [ ("probe", "expand-probe", source) ] () in
+  let macros = Language_macros.create_from [ ("probe", "expand-probe", source) ] () in
   fun form -> List.find_map (fun macro -> macro form) macros
 
 let custom_definition () =
@@ -103,7 +103,7 @@ let definition_state_isolation () =
   let definitions = [ ("tick", "expand-tick", {|(def counter (atom 0))
     (def expand-tick (fn [args] (swap! counter (fn [n] (+ n 1)))))|}) ] in
   let instance () =
-    let macros = Macros.create_from definitions () in
+    let macros = Language_macros.create_from definitions () in
     fun () -> Eval.eval (Option.get (List.find_map (fun macro -> macro (parse_one "(tick)")) macros)) in
   let first = instance () in
   let second = instance () in
@@ -112,7 +112,7 @@ let definition_state_isolation () =
 
 let language_and () =
   Gensym.run (fun () ->
-      let macros = Macros.create () in
+      let macros = Language_macros.create () in
       let expand source =
         match List.find_map (fun macro -> macro source) macros with
         | Some form -> form
@@ -136,7 +136,7 @@ let language_and () =
 
 let language_or () =
   Gensym.run (fun () ->
-      let macros = Macros.create () in
+      let macros = Language_macros.create () in
       let expand source =
         match List.find_map (fun macro -> macro source) macros with
         | Some form -> form
@@ -162,7 +162,7 @@ let language_or () =
         [ call_meta; { call_meta with loc = { line = 10; column = 8 } } ])
 
 let with_open_handler () =
-  let macros = Macros.create () in
+  let macros = Language_macros.create () in
   fun source ->
     match List.find_map (fun macro -> macro source) macros with
     | Some form -> form
@@ -230,11 +230,11 @@ let with_open_runtime_isolation () =
   let definitions = String.concat " " (List.map (fun name -> "(def " ^ name ^ " 99)") names) in
   let source = definitions ^ " (defn task [] (with-open [r (source)] 42)) (with-open [] 7)" in
   let eval context source =
-    match Backend_eval.Pipeline.parse_and_desugar source with
+    match Macros.Pipeline.parse_and_desugar source with
     | Ok forms -> Eval.eval_all ~context forms
     | Error message -> Alcotest.fail message
   in
-  let context = Backend_eval.Pipeline.create_context () in
+  let context = Macros.Pipeline.create_context () in
   Alcotest.(check bool) "bootstrap leaves runtime empty" true (!(context.namespaces) = []);
   let results = eval context source in
   Alcotest.(check bool) "user helpers cannot replace compile-time helpers" true (List.hd (List.rev results) = Int 7);
@@ -246,17 +246,17 @@ let with_open_runtime_isolation () =
   | _ -> Alcotest.fail "expected only user namespace");
   Alcotest.check_raises "user macro-error cannot suppress diagnostics" (Failure "with-open: expected a binding vector")
     (fun () -> ignore (eval context (definitions ^ " (with-open)")));
-  let other = Backend_eval.Pipeline.create_context () in
+  let other = Macros.Pipeline.create_context () in
   Alcotest.(check bool) "independent file" true (eval other "(with-open [] 42)" = [ Int 42 ]);
   Alcotest.(check bool) "previous definitions and helpers absent" true (!(other.namespaces) = [])
 
 let boolean_macro_runtime_isolation macro () =
-  let context = Backend_eval.Pipeline.create_context () in
+  let context = Macros.Pipeline.create_context () in
   let internal_name = "expand-" ^ macro in
   let condition = if macro = "and" then "true" else "false" in
   let source = Printf.sprintf "(def %s 99) (def gensym 7) (%s %s 42)" internal_name macro condition in
   let forms =
-    match Backend_eval.Pipeline.parse_and_desugar source with
+    match Macros.Pipeline.parse_and_desugar source with
     | Ok forms -> forms
     | Error message -> Alcotest.fail message
   in
@@ -264,7 +264,7 @@ let boolean_macro_runtime_isolation macro () =
     (Eval.eval_all ~context forms = [ Int 99; Int 7; Int 42 ]);
   Alcotest.(check bool) "only user names in runtime" true
     (!(context.namespaces) = [ ("user", [ ("gensym", Int 7); (internal_name, Int 99) ]) ]);
-  let other = Backend_eval.Pipeline.create_context () in
+  let other = Macros.Pipeline.create_context () in
   ignore (Eval.eval_all ~context:other forms);
   Alcotest.(check bool) "new runtime starts without internal helpers" true
     (!(other.namespaces) = !(context.namespaces))
@@ -272,7 +272,7 @@ let boolean_macro_runtime_isolation macro () =
 let shared_gensym () =
   let source = "(and (or false (and true 3)) (case (and true 7) 7 (and true 42) 0)) (and true 9) (or (or nil false) (and true 11))" in
   let forms =
-    match Backend_eval.Pipeline.parse_and_desugar source with
+    match Macros.Pipeline.parse_and_desugar source with
     | Ok forms -> forms
     | Error message -> Alcotest.fail message
   in
@@ -288,9 +288,9 @@ let shared_gensym () =
   Alcotest.(check bool) "references resolve to their own binding" true (Eval.eval_all forms = [ Int 42; Int 9; Int 11 ])
 
 let runtime_isolation () =
-  let context = Backend_eval.Pipeline.create_context () in
+  let context = Macros.Pipeline.create_context () in
   let eval source =
-    match Backend_eval.Pipeline.parse_and_desugar source with
+    match Macros.Pipeline.parse_and_desugar source with
     | Ok forms -> Eval.eval_all ~context forms
     | Error message -> Alcotest.fail message
   in
@@ -300,9 +300,9 @@ let runtime_isolation () =
   Alcotest.(check bool)
     "only user definitions in runtime" true
     (!(context.namespaces) = [ ("user", [ ("expand-cond", Int 99) ]) ]);
-  let other_context = Backend_eval.Pipeline.create_context () in
+  let other_context = Macros.Pipeline.create_context () in
   let forms =
-    match Backend_eval.Pipeline.parse_and_desugar "(cond true 42)" with
+    match Macros.Pipeline.parse_and_desugar "(cond true 42)" with
     | Ok forms -> forms
     | Error message -> Alcotest.fail message
   in

@@ -2,10 +2,10 @@ open Ast
 
 type macro = sexpr -> sexpr option
 
-let builtin_macros = Builtin_macros.builtin_macros
 let apply_macros macros sexpr = List.find_map (fun macro -> macro sexpr) macros
+let default_macros : macro list ref = ref []
 
-let desugar ?(macros = builtin_macros) sexprs =
+let desugar ?(macros = !default_macros) sexprs =
   let rec desugar_one sexpr =
     match sexpr with SList (_, Paren, SAtom (_, "raw-code") :: _) -> sexpr | _ -> desugar_macros sexpr
   and desugar_macros sexpr =

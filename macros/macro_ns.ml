@@ -1,4 +1,4 @@
-open Ast
+open Frontend
 
 let atom meta value = SAtom (meta, value)
 let string_atom meta value = atom meta ("\"" ^ value ^ "\"")

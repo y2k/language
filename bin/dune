@@ -1,7 +1,7 @@
 (library
  (name language_main)
  (modules runner)
- (libraries language.frontend language.backend_eval language.backend_compiler))
+ (libraries language.frontend language.backend_eval language.backend_compiler language.macros))
 
 (executable
  (public_name language)

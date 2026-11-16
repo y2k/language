@@ -1,5 +1,5 @@
 module Eval = Backend_eval.Eval
-module Pipeline = Backend_eval.Pipeline
+module Pipeline = Macros.Pipeline
 
 let package_file source = { Eval.package_source = source }
 

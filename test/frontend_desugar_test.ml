@@ -1,7 +1,7 @@
 open Frontend
 
 let parse_one input =
-  match Backend_eval.Pipeline.parse_and_desugar input with
+  match Macros.Pipeline.parse_and_desugar input with
   | Ok [ sexpr ] -> sexpr
   | Ok sexprs -> Alcotest.failf "expected one sexpr, got %d" (List.length sexprs)
   | Error message -> Alcotest.fail message

@@ -1,5 +1,5 @@
 open Frontend
-open Eval_types
+open Backend_eval.Eval_types
 
 let rec to_sexpr meta = function
   | Syntax source -> source
@@ -9,16 +9,16 @@ let rec to_sexpr meta = function
   | Bool value -> SAtom (meta, string_of_bool value)
   | Int value -> SAtom (meta, string_of_int value)
   | Float value ->
-      let text = Eval_stdlib.float_text value in
+      let text = Backend_eval.Eval_stdlib.float_text value in
       (* Printing may omit the decimal point; code must retain the float category. *)
       SAtom (meta, if Option.is_some (int_of_string_opt text) then text ^ ".0" else text)
   | String value -> SAtom (meta, "\"" ^ value ^ "\"")
-  | value -> raise (Eval_error ("macro result is not syntax: " ^ Eval.value_text value))
+  | value -> raise (Eval_error ("macro result is not syntax: " ^ Backend_eval.Eval.value_text value))
 
 (* Definitions are (form name, entry point, embedded source), in bootstrap order. *)
 let create_from definitions () =
-  let context = Eval.create_context () in
-  let native name fn = ignore (Eval.define context name (Closure (Native fn))) in
+  let context = Backend_eval.Eval.create_context () in
+  let native name fn = ignore (Backend_eval.Eval.define context name (Closure (Native fn))) in
   native "syntax-vector?" (fun _ -> function
     | [ Syntax (SList (_, Bracket, _)) ] -> Bool true
     | [ _ ] -> Bool false
@@ -28,7 +28,7 @@ let create_from definitions () =
     | _ -> raise (Eval_error "syntax-children expects a syntax list"));
   native "syntax-simple-symbol?" (fun _ -> function
     | [ Syntax (SAtom (_, name) as source) ] ->
-        Bool (Frontend.is_binding_symbol source && not (String.contains name '/'))
+        Bool (Builtin_macros.is_binding_symbol source && not (String.contains name '/'))
     | [ _ ] -> Bool false
     | _ -> raise (Eval_error "syntax-simple-symbol? expects one value"));
   native "syntax-list-at" (fun _ -> function
@@ -45,19 +45,19 @@ let create_from definitions () =
     | _ -> raise (Eval_error "macro-error expects a string"));
   let forms =
     match
-      Frontend.parse_and_desugar
+      Frontend.parse_and_desugar ~macros:Builtin_macros.builtin_macros
         (String.concat "\n" (List.map (fun (_, _, source) -> source) definitions))
     with
     | Ok forms -> forms
     | Error message -> raise (Eval_error message)
   in
-  ignore (Eval.eval_all ~context forms);
-  let expanders = List.map (fun (name, entry, _) -> (name, Eval.find context entry)) definitions in
+  ignore (Backend_eval.Eval.eval_all ~context forms);
+  let expanders = List.map (fun (name, entry, _) -> (name, Backend_eval.Eval.find context entry)) definitions in
   let apply meta expand clauses =
     (* Bind at each call, but allocate a fresh name only when the macro asks. *)
-    ignore (Eval.define context "gensym" (Closure (Native (fun _ _ -> Symbol (Gensym.gensym_string meta)))));
+    ignore (Backend_eval.Eval.define context "gensym" (Closure (Native (fun _ _ -> Symbol (Gensym.gensym_string meta)))));
     let arguments = List (List.map (fun source -> Syntax source) clauses) in
-    Some (to_sexpr meta (Eval.apply_value context expand [ arguments ]))
+    Some (to_sexpr meta (Backend_eval.Eval.apply_value context expand [ arguments ]))
   in
   [
     (function
