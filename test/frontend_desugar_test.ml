@@ -240,6 +240,16 @@ let if_let_sequential () =
 let if_let_without_else () =
   check_desugar "if-let without else" "(if-let [value (source)] value)" "(let* (value (source)) (if value value nil))"
 
+let threading_steps () =
+  List.iter
+    (fun (input, expected) -> check_desugar input input expected)
+    [
+      ("(-> x (f a) g)", "(g (f x a))");
+      ("(->> x (f a) g)", "(g (f a x))");
+      ("(-> x [f a])", "((list f a) x)");
+      ("(-> x)", "x");
+    ]
+
 let check_if_let_failure input message =
   Alcotest.check_raises input (Failure ("if-let: " ^ message)) (fun () -> ignore (parse_one input))
 
@@ -254,6 +264,7 @@ let if_let_rejects_non_symbol_names () =
       "(if-let [nil value] ok)";
       "(if-let [true value] ok)";
       "(if-let [false value] ok)";
+      "(if-let [a/b value] ok)";
     ]
 
 let if_let_rejects_malformed_forms () =
@@ -301,5 +312,6 @@ let () =
           Alcotest.test_case "if-let without else" `Quick if_let_without_else;
           Alcotest.test_case "if-let rejects non-symbol names" `Quick if_let_rejects_non_symbol_names;
           Alcotest.test_case "if-let rejects malformed forms" `Quick if_let_rejects_malformed_forms;
+          Alcotest.test_case "threading steps" `Quick threading_steps;
         ] );
     ]

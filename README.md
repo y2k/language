@@ -36,6 +36,16 @@ Set the existing `LY2K_PACKAGES_DIR` environment variable before building.
 Edit the sources in `prelude/`, not the package copies.
 Both test commands also run this build step.
 
+`cond`, `and`, `or`, `with-open`, `case`, `if-let`, `->` and `->>` are not built
+into the executable. On their first use in a source file the compiler loads
+their definitions from `$LY2K_PACKAGES_DIR/prelude/1.0.0/macro/prelude.clj`.
+The file lives in the packages repository (`y2k/packages`); this repository has no copy and
+`make build` does not install it. Programs that use these macros, and
+`make test`, require the file; without it, expansion fails with an error naming
+`LY2K_PACKAGES_DIR` or the expected path. Update the packages checkout together
+with the compiler: a prelude file without a definition the compiler expects
+fails expansion with an error naming the missing definition.
+
 ## Docker
 
 The image targets `linux/amd64`. Docker on ARM hosts needs amd64 emulation.
@@ -50,13 +60,29 @@ docker build --platform linux/amd64 -t y2khub/language:latest .
 The multi-stage Dockerfile builds and runs `make test` for eval, JS and Java
 with OCaml 5.3, Node.js 24 and JDK 25 in its builder stage. The final
 `debian:bookworm-slim` image receives only the executable. No local toolchain
-installation is needed; a failing test stops the Docker build.
+installation is needed; a failing test stops the Docker build. For the tests,
+the builder stage downloads `prelude/1.0.0/macro/prelude.clj` from the
+`y2k/packages` repository at the commit pinned by `ARG PACKAGES_REF`, so the
+build needs access to GitHub. Update `PACKAGES_REF` to test against a newer
+prelude.
 
 The container reads stdin and defaults to `eval`:
 
 ```sh
 printf '(str "Hello, " "world!")\n' | docker run --rm --platform linux/amd64 -i y2khub/language:latest
 # Prints: Hello, world!
+```
+
+The image contains no packages. Programs that use `cond`, `and`, `or`,
+`with-open`, `case`, `if-let`, `->` or `->>` need a packages directory with
+`prelude/1.0.0/macro/prelude.clj`: mount it and point `LY2K_PACKAGES_DIR` at
+the mount. Without it, such programs fail with an error naming
+`LY2K_PACKAGES_DIR`.
+
+```sh
+printf '(cond false 1 true 42)\n' | docker run --rm --platform linux/amd64 -i \
+  -v "$LY2K_PACKAGES_DIR:/packages:ro" -e LY2K_PACKAGES_DIR=/packages y2khub/language:latest
+# Prints: 42
 ```
 
 Select a target by passing the usual CLI arguments:

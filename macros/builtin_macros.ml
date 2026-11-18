@@ -3,21 +3,6 @@ open Frontend
 let atom meta value = SAtom (meta, value)
 let string_atom meta value = atom meta ("\"" ^ value ^ "\"")
 
-let case_macro = function
-  | SList (meta, Paren, SAtom (_, "case") :: value :: clauses) ->
-      let name = Gensym.gensym meta in
-      let rec expand = function
-        | [] -> atom meta "nil"
-        | [ fallback ] -> fallback
-        | matching :: result :: rest ->
-            SList
-              ( meta,
-                Paren,
-                [ atom meta "if"; SList (meta, Paren, [ atom meta "="; name; matching ]); result; expand rest ] )
-      in
-      Some (SList (meta, Paren, [ atom meta "let*"; SList (meta, Paren, [ name; value ]); expand clauses ]))
-  | _ -> None
-
 let is_keyword name = String.length name > 1 && String.starts_with ~prefix:":" name
 
 let is_binding_symbol = function
@@ -27,35 +12,6 @@ let is_binding_symbol = function
         (is_string || is_keyword name || name = "nil" || name = "true" || name = "false"
         || Option.is_some (float_of_string_opt name))
   | SList _ -> false
-
-let if_let_error message = failwith ("if-let: " ^ message)
-
-(* ponytail: Bind directly; add a closure only if else bindings need a scope contract. *)
-let if_let_expr meta bindings_meta bindings then_ else_ =
-  let rec expand = function
-    | [] -> then_
-    | (SAtom _ as name) :: value :: rest when is_binding_symbol name ->
-        SList
-          ( meta,
-            Paren,
-            [
-              atom meta "let*";
-              SList (bindings_meta, Paren, [ name; value ]);
-              SList (meta, Paren, [ atom meta "if"; name; expand rest; else_ ]);
-            ] )
-    | _ :: _ :: _ -> if_let_error "binding names must be symbols"
-    | _ -> if_let_error "bindings must be name/value pairs"
-  in
-  match bindings with [] -> if_let_error "binding vector must not be empty" | _ -> expand bindings
-
-let if_let_macro = function
-  | SList (meta, Paren, [ SAtom (_, "if-let"); SList (bindings_meta, Bracket, bindings); then_ ]) ->
-      Some (if_let_expr meta bindings_meta bindings then_ (atom meta "nil"))
-  | SList (meta, Paren, [ SAtom (_, "if-let"); SList (bindings_meta, Bracket, bindings); then_; else_ ]) ->
-      Some (if_let_expr meta bindings_meta bindings then_ else_)
-  | SList (_, Paren, SAtom (_, "if-let") :: _) ->
-      if_let_error "expected non-empty [name value ...], then branch, and optional else branch"
-  | _ -> None
 
 let keyword_lookup_macro = function
   | SList (meta, Paren, [ SAtom (key_meta, name); collection ]) when is_keyword name ->
@@ -196,26 +152,8 @@ let gen_class_macro = function
              ] ))
   | _ -> None
 
-let thread_macro name insert = function
-  | SList (_, _, SAtom (_, macro_name) :: value :: steps) when macro_name = name ->
-      Some
-        (List.fold_left
-           (fun value -> function
-             | SList (meta, bracket, fn :: args) -> SList (meta, bracket, insert fn args value)
-             | SAtom (meta, _) as fn -> SList (meta, Paren, insert fn [] value)
-             | step -> step)
-           value steps)
-  | _ -> None
-
-let thread_first_macro = thread_macro "->" (fun fn args value -> fn :: value :: args)
-let thread_last_macro = thread_macro "->>" (fun fn args value -> (fn :: args) @ [ value ])
-
 let builtin_macros =
   [
-    case_macro;
-    if_let_macro;
-    thread_first_macro;
-    thread_last_macro;
     private_def_macro;
     private_defn_macro;
     defn_macro;

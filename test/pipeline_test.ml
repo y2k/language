@@ -6,21 +6,21 @@ let parse ?extensions source =
 
 let check_forms label expected forms = Alcotest.(check (list string)) label expected (List.map show_sexpr forms)
 
-let thread () =
+let alias () =
   [
     (function
-    | SList (meta, Paren, SAtom (_, "thread") :: args) -> Some (SList (meta, Paren, SAtom (meta, "->") :: args))
+    | SList (meta, Paren, SAtom (_, "alias") :: args) -> Some (SList (meta, Paren, SAtom (meta, "let") :: args))
     | _ -> None);
   ]
 
 let expands_to_builtin () =
-  check_forms "recursive expansion" [ "(+ 42 1)" ] (parse ~extensions:[ thread ] "(thread 42 (+ 1))")
+  check_forms "recursive expansion" [ "(let* (x 42) x)" ] (parse ~extensions:[ alias ] "(alias [x 42] x)")
 
 let configurations_are_independent () =
-  let source = "(thread 42 (+ 1)) (-> 7 (+ 2))" in
-  check_forms "enabled" [ "(+ 42 1)"; "(+ 7 2)" ] (parse ~extensions:[ thread ] source);
-  check_forms "disabled" [ "(thread 42 (+ 1))"; "(+ 7 2)" ] (parse ~extensions:[] source);
-  check_forms "default" [ "(thread 42 (+ 1))"; "(+ 7 2)" ] (parse source)
+  let source = "(alias [x 42] x) (let [y 7] y)" in
+  check_forms "enabled" [ "(let* (x 42) x)"; "(let* (y 7) y)" ] (parse ~extensions:[ alias ] source);
+  check_forms "disabled" [ "(alias (list x 42) x)"; "(let* (y 7) y)" ] (parse ~extensions:[] source);
+  check_forms "default" [ "(alias (list x 42) x)"; "(let* (y 7) y)" ] (parse source)
 
 let preserves_handler_order () =
   let handler result = function
@@ -31,19 +31,19 @@ let preserves_handler_order () =
   check_forms "extensions before builtins, first match wins" [ "1" ] (parse ~extensions "(-> 42 (+ 1))")
 
 let language_cond_configuration () =
-  let source = "(cond false 1 true 42) (-> 7 (+ 2))" in
-  let expanded = [ "(if false 1 (if true 42 nil))"; "(+ 7 2)" ] in
+  let source = "(cond false 1 true 42) (let [y 7] y)" in
+  let expanded = [ "(if false 1 (if true 42 nil))"; "(let* (y 7) y)" ] in
   check_forms "default language extension" expanded (parse source);
-  check_forms "disabled without fallback" [ "(cond false 1 true 42)"; "(+ 7 2)" ] (parse ~extensions:[] source);
+  check_forms "disabled without fallback" [ "(cond false 1 true 42)"; "(let* (y 7) y)" ] (parse ~extensions:[] source);
   check_forms "default remains enabled" expanded (parse source)
 
 let language_and_configuration () =
-  let source = "(and) (and 42) (case 1 1 7 0)" in
+  let source = "(and) (and 42) (let [x 7] x)" in
   let forms = parse source in
   check_forms "default and" [ "true"; "42" ] (List.filteri (fun i _ -> i < 2) forms);
   let disabled = parse ~extensions:[] source in
   check_forms "disabled without fallback" [ "(and)"; "(and 42)" ] (List.filteri (fun i _ -> i < 2) disabled);
-  Alcotest.(check bool) "remaining case still expands" true
+  Alcotest.(check bool) "remaining let still expands" true
     (Backend_eval.Eval.eval (List.nth disabled 2) = Backend_eval.Eval.Int 7);
   (match Frontend.parse_and_desugar "(and true 42)" with
   | Ok forms -> check_forms "frontend has no fallback" [ "(and true 42)" ] forms
@@ -83,9 +83,21 @@ let language_with_open_configuration () =
   (match Frontend.parse_and_desugar source with
   | Ok forms -> check_forms "frontend has no fallback" [ "(with-open (list))" ] forms
   | Error message -> Alcotest.fail message);
-  Alcotest.(check bool) "case remains available" true
-    (Backend_eval.Eval.eval_all (parse ~extensions:[] "(case 1 1 7 0)") = [ Backend_eval.Eval.Int 7 ]);
+  Alcotest.(check bool) "let remains available" true
+    (Backend_eval.Eval.eval_all (parse ~extensions:[] "(let [x 7] x)") = [ Backend_eval.Eval.Int 7 ]);
   check_forms "default restored" [ "nil" ] (parse source)
+
+let language_moved_forms_configuration () =
+  let source = "(case 1 1 7 0) (if-let [x 1] x) (-> 7 (+ 2)) (->> 7 (- 2))" in
+  let unexpanded = [ "(case 1 1 7 0)"; "(if-let (list x 1) x)"; "(-> 7 (+ 2))"; "(->> 7 (- 2))" ] in
+  Alcotest.(check bool) "default language extension" true
+    (Backend_eval.Eval.eval_all (parse source)
+    = Backend_eval.Eval.[ Int 7; Int 1; Int 9; Int (-5) ]);
+  check_forms "disabled without fallback" unexpanded (parse ~extensions:[] source);
+  (match Frontend.parse_and_desugar source with
+  | Ok forms -> check_forms "frontend has no fallback" unexpanded forms
+  | Error message -> Alcotest.fail message);
+  check_forms "default restored" [ "(+ 7 2)" ] (parse "(-> 7 (+ 2))")
 
 let fresh_factory_per_source () =
   let creations = ref 0 in
@@ -119,5 +131,7 @@ let () =
           Alcotest.test_case "language or configuration" `Quick language_or_configuration;
           Alcotest.test_case "with-open expansion" `Quick with_open_expansion;
           Alcotest.test_case "language with-open configuration" `Quick language_with_open_configuration;
+          Alcotest.test_case "language case, if-let and threading configuration" `Quick
+            language_moved_forms_configuration;
         ] );
     ]

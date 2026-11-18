@@ -135,12 +135,13 @@ let language_and_in_nested_deps () =
     match (package, version) with
     | "a", "0.1.0" ->
         [ package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (and true b/answer))|} ]
-    | "b", "0.1.0" -> [ package_file {|(ns b) (def expand-and 0) (def gensym 0) (def answer (and true 42))|} ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def and 0) (def gensym 0) (def answer (and true 42))|} ]
     | _ -> Alcotest.failf "unexpected package %s %s" package version
   in
   let source = {|(ns app) (deps {:a "0.1.0"}) (str (and true a/answer))|} in
   Alcotest.(check string) "language and in both packages" "42" (last_string loader source);
-  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: and") (fun () ->
+  Alcotest.check_raises "nested package has no fallback"
+    (Eval.Eval_error "first list item is not a function at line 1, column 48: and evaluated to integer 0") (fun () ->
       ignore (eval_with_loader ~extensions:[] loader source));
   Alcotest.(check string) "independent default after disabled call" "42" (last_string loader source)
 
@@ -149,12 +150,27 @@ let language_or_in_nested_deps () =
     match (package, version) with
     | "a", "0.1.0" ->
         [ package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (or nil b/answer))|} ]
-    | "b", "0.1.0" -> [ package_file {|(ns b) (def expand-or 0) (def gensym 0) (def answer (or false 42))|} ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def or 0) (def gensym 0) (def answer (or false 42))|} ]
     | _ -> Alcotest.failf "unexpected package %s %s" package version
   in
   let source = {|(ns app) (deps {:a "0.1.0"}) (str (or false a/answer))|} in
   Alcotest.(check string) "language or in both packages" "42" (last_string loader source);
-  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: or") (fun () ->
+  Alcotest.check_raises "nested package has no fallback"
+    (Eval.Eval_error "first list item is not a function at line 1, column 47: or evaluated to integer 0") (fun () ->
+      ignore (eval_with_loader ~extensions:[] loader source));
+  Alcotest.(check string) "independent default after disabled call" "42" (last_string loader source)
+
+let language_moved_forms_in_nested_deps () =
+  let loader package version =
+    match (package, version) with
+    | "a", "0.1.0" ->
+        [ package_file {|(ns a) (deps {:b "0.1.0"}) (def answer (if-let [v b/answer] (-> v (+ 1)) 0))|} ]
+    | "b", "0.1.0" -> [ package_file {|(ns b) (def answer (case 2 1 0 2 (->> 40 (+ 1)) 0))|} ]
+    | _ -> Alcotest.failf "unexpected package %s %s" package version
+  in
+  let source = {|(ns app) (deps {:a "0.1.0"}) (str a/answer)|} in
+  Alcotest.(check string) "language forms in both packages" "42" (last_string loader source);
+  Alcotest.check_raises "nested package has no fallback" (Eval.Eval_error "symbol not found: case") (fun () ->
       ignore (eval_with_loader ~extensions:[] loader source));
   Alcotest.(check string) "independent default after disabled call" "42" (last_string loader source)
 
@@ -262,6 +278,8 @@ let () =
           Alcotest.test_case "language and in nested deps" `Quick language_and_in_nested_deps;
           Alcotest.test_case "language or in nested deps" `Quick language_or_in_nested_deps;
           Alcotest.test_case "language with-open in nested deps" `Quick language_with_open_in_nested_deps;
+          Alcotest.test_case "language case, if-let and threading in nested deps" `Quick
+            language_moved_forms_in_nested_deps;
           Alcotest.test_case "loads at form position" `Quick loads_at_form_position;
           Alcotest.test_case "qualified lookup uses alias after deps" `Quick qualified_lookup_uses_alias_after_deps;
           Alcotest.test_case "renders xml manifest package" `Quick renders_xml_manifest_package;

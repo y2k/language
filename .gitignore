@@ -15,3 +15,4 @@ _build/
 playground.clj
 /docs/
 /wayfinder/
+/.claude/

@@ -13,11 +13,17 @@ WORKDIR /home/opam/language
 RUN opam update \
     && opam install -y 'dune>=3.23' angstrom re.1.13.2 alcotest
 
+ARG PACKAGES_REF=f9043f40fb96d24e5b4a6eb6642fef31ed32fde0
+RUN mkdir -p /tmp/language-packages/prelude/1.0.0/macro
+ADD --chown=opam:opam https://raw.githubusercontent.com/y2k/packages/${PACKAGES_REF}/prelude/1.0.0/macro/prelude.clj /tmp/language-packages/prelude/1.0.0/macro/prelude.clj
+
 COPY --chown=opam:opam dune dune-project Makefile ./
 COPY --chown=opam:opam frontend/ frontend/
+COPY --chown=opam:opam macros/ macros/
 COPY --chown=opam:opam backend_eval/ backend_eval/
 COPY --chown=opam:opam backend_compiler/ backend_compiler/
 COPY --chown=opam:opam bin/ bin/
+COPY --chown=opam:opam fex_unpack/ fex_unpack/
 COPY --chown=opam:opam prelude/ prelude/
 COPY --chown=opam:opam test/ test/
 ENV LANG=C.UTF-8

@@ -10,4 +10,6 @@
       (source_tree samples)
       ../bin/main.exe
      ../prelude/language_runtime.js
-     ../prelude/language_runtime.java))
+     ../prelude/language_runtime.java
+     (env_var LY2K_PACKAGES_DIR)
+     %{env:LY2K_PACKAGES_DIR=}/prelude/1.0.0/macro/prelude.clj))

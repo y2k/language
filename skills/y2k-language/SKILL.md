@@ -75,16 +75,16 @@ In signatures, `...` denotes repetition, not source syntax.
 | `(or expr...)` | Returns the first truthy value; otherwise the last falsey value. Empty form returns `nil`. |
 | `(cond test result ...)` | First truthy test wins. Conditions and selected result are evaluated only as needed. No match or no clauses gives `nil`. Requires complete pairs even after an always-true clause. `:else` is an ordinary truthy string at its position. |
 | `(case value match result ... fallback)` | Evaluates `value` once, compares matches sequentially with binary `=`, selects the first equal match. Final unpaired form is fallback; no fallback and no match gives `nil`. Match forms are expressions, not Clojure grouped constants. |
-| `(if-let [name expr ...] then else)` | Nonempty vector of symbol/value pairs, checked left to right. Stops on the first falsey value. Later bindings see earlier ones; `then` sees all. Optional `else` defaults to `nil`; do not rely on bindings being available in `else`. No destructuring here. |
-| `(-> value step...)` | Inserts value as the first argument of each step; a bare function name is a step too. |
-| `(->> value step...)` | Inserts value as the last argument of each step. |
+| `(if-let [name expr ...] then else)` | Nonempty vector of simple unqualified symbol/value pairs (`a/b` is rejected), checked left to right. Stops on the first falsey value. Later bindings see earlier ones; `then` sees all. Optional `else` defaults to `nil`; do not rely on bindings being available in `else`. No destructuring here. |
+| `(-> value step...)` | Inserts value as the first argument of each parenthesized step; any other step, such as a bare function name, is called with the value as `(step value)`. |
+| `(->> value step...)` | Inserts value as the last argument of each parenthesized step; any other step is called as `(step value)`. |
 | `(:key dic)` | Shorthand for `(get dic :key)` (also equivalent to `(get dic "key")`); use either form for map lookup. Exactly one collection argument; no default-value overload. |
 | `(cast TYPE value)` | Evaluates value once. Transparent in `eval` and JS; a Java cast in Java. |
 | `(ns app.main (:require [dep.core :as dep]))` | Namespace declaration and alias. Use one namespace at the beginning of a compiled file. Each `:require` clause accepts **one or more** vectors, e.g. `(:require [alpha.core :as a] [beta.core :as b])`; separate clauses are equivalent and preserve dependency order. Empty `(:require)` is an error. Use `dep/function` for a qualified call. Resolution/loading is target-specific. |
 
 User forms are expanded internally; do not write compiler-generated `compiler/*`, `let*`, `fn*`, or `set!` as an application API. Use Atom for mutable state. Reader shorthand `@cell`, `#(...)`, sets, syntax-quote, custom `defmacro`, `loop`/`recur`, and Clojure destructuring directives are not supported application syntax.
 
-`cond`, `and`, `or` and `with-open` are internal language-defined macros bundled with the compiler and available automatically, without imports. Their compile-time definitions, internal helpers (`gensym`, syntax inspection/construction and macro errors) and `Syntax` values are not application APIs. Resource execution through `with-open` is Java-only.
+`cond`, `and`, `or`, `with-open`, `case`, `if-let`, `->` and `->>` are internal language-defined macros available automatically, without imports. On their first use in each source file the compiler loads their definitions from `$LY2K_PACKAGES_DIR/prelude/1.0.0/macro/prelude.clj`; if `LY2K_PACKAGES_DIR` is unset or empty, or the file is missing or invalid, expansion fails before the program runs. Programs that do not use these macros need neither. Their compile-time definitions, internal helpers (`gensym`, syntax inspection/construction and macro errors) and `Syntax` values are not application APIs. Resource execution through `with-open` is Java-only.
 
 Target-only forms: `raw-code` is supported on JS/Java; `export-default` on JS; `instance?` and `gen-class` on Java. Their contracts and examples are in the target references selected above.
 

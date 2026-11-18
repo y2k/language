@@ -355,7 +355,7 @@ Macro expansion SHALL transform recognized syntactic forms before backend execut
 
 ### Requirement: Макрос `if-let` SHALL последовательно проверять символьные bindings
 
-Встроенный макрос `(if-let [name expression ...] then else?)` SHALL принимать непустой bracket-вектор из пар `name` и `expression`, где каждый `name` является symbol, и одну обязательную форму `then` с не более чем одной формой `else`. Макрос SHALL вычислять binding expressions слева направо не более одного раза. Каждый следующий `expression` SHALL видеть предыдущие bindings. При первом значении, ложном по существующей семантике `if`, макрос SHALL прекратить вычисление оставшихся expressions и вычислить `else`; если `else` отсутствует, результат SHALL быть `nil`. `then` SHALL вычисляться только после truthy-результата всех bindings и SHALL видеть их все. Доступность bindings в `else` не входит в контракт, и программа SHALL NOT полагаться на неё.
+Встроенный макрос `(if-let [name expression ...] then else?)` SHALL принимать непустой bracket-вектор из пар `name` и `expression`, где каждый `name` является простым неквалифицированным symbol, и одну обязательную форму `then` с не более чем одной формой `else`. Макрос SHALL вычислять binding expressions слева направо не более одного раза. Каждый следующий `expression` SHALL видеть предыдущие bindings. При первом значении, ложном по существующей семантике `if`, макрос SHALL прекратить вычисление оставшихся expressions и вычислить `else`; если `else` отсутствует, результат SHALL быть `nil`. `then` SHALL вычисляться только после truthy-результата всех bindings и SHALL видеть их все. Доступность bindings в `else` не входит в контракт, и программа SHALL NOT полагаться на неё.
 
 #### Scenario: Вычислить зависимые bindings последовательно
 - **WHEN** вход содержит `(if-let [user (find-user) id (get user "id")] id "missing")` и оба binding expressions возвращают truthy-значения
@@ -378,7 +378,7 @@ Macro expansion SHALL transform recognized syntactic forms before backend execut
 - **THEN** программа не получает гарантии доступности ни одного имени, объявленного в binding-векторе `if-let`
 
 #### Scenario: Отклонить несимвольное имя
-- **WHEN** binding name является collection, string, number, keyword, `nil`, `true` или `false`
+- **WHEN** binding name является collection, string, number, keyword, `nil`, `true`, `false` или квалифицированным symbol, например `a/b`
 - **THEN** macro expansion отклоняет форму
 
 #### Scenario: Отклонить malformed форму

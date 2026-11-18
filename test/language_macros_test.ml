@@ -43,8 +43,8 @@ let language_cond () =
     [ "(cond true)"; "(cond true 1 false)"; "(cond :else 1 true)" ]
 
 let cond_definition_diagnostics () =
-  let _, entry, source = List.find (fun (name, _, _) -> name = "cond") Macros.Builtin_macro_source.definitions in
-  let macros = Language_macros.create_from [ ("choose", entry, source) ] () in
+  let source = Language_macros.read_prelude () ^ "\n(def choose cond)" in
+  let macros = Language_macros.create_from [ "choose" ] source () in
   let expand source = Option.get (List.find_map (fun macro -> macro (parse_one source)) macros) in
   List.iter (fun (source, expected) ->
     Alcotest.(check bool) source true (Eval.eval (expand source) = expected))
@@ -55,14 +55,14 @@ let cond_definition_diagnostics () =
     [ "(choose true)"; "(choose true 42 (reset! must-not-run 1))" ]
 
 let custom_handler () =
-  let source = {|(def expand-probe (fn [args]
+  let source = {|(def probe (fn [args]
     (let [v (get args 0)]
       (if (syntax-vector? v)
         (if (syntax-simple-symbol? (get (syntax-children v) 0))
           (list (gensym) (syntax-list-at v (syntax-children v)))
           (macro-error "expected symbol"))
         v))))|} in
-  let macros = Language_macros.create_from [ ("probe", "expand-probe", source) ] () in
+  let macros = Language_macros.create_from [ "probe" ] source () in
   fun form -> List.find_map (fun macro -> macro form) macros
 
 let custom_definition () =
@@ -100,15 +100,21 @@ let custom_call_context () =
       (List.length (List.sort_uniq String.compare [ first; second; Gensym.gensym_string call_meta ])))
 
 let definition_state_isolation () =
-  let definitions = [ ("tick", "expand-tick", {|(def counter (atom 0))
-    (def expand-tick (fn [args] (swap! counter (fn [n] (+ n 1)))))|}) ] in
+  let source = {|(def counter (atom 0))
+    (def tick (fn [args] (swap! counter (fn [n] (+ n 1)))))|} in
   let instance () =
-    let macros = Language_macros.create_from definitions () in
+    let macros = Language_macros.create_from [ "tick" ] source () in
     fun () -> Eval.eval (Option.get (List.find_map (fun macro -> macro (parse_one "(tick)")) macros)) in
   let first = instance () in
   let second = instance () in
   Alcotest.(check bool) "instances own their state" true
     (first () = Int 1 && first () = Int 2 && second () = Int 1 && first () = Int 3)
+
+let recursion_by_form_name () =
+  let source = {|(def cond (fn [clauses] (if (= clauses (list)) 0 (+ 1 (cond (drop 1 clauses))))))|} in
+  let macros = Language_macros.create_from [ "cond" ] source () in
+  Alcotest.(check bool) "recursive call stays a compile-time function call" true
+    (Eval.eval (Option.get (List.find_map (fun macro -> macro (parse_one "(cond a b c)")) macros)) = Int 3)
 
 let language_and () =
   Gensym.run (fun () ->
@@ -207,6 +213,24 @@ let language_with_open () =
     [ call_meta; { call_meta with loc = { line = 12; column = 9 } } ];
   Alcotest.(check bool) "input vector unchanged" true (vector = SList (vector_meta, Bracket, [ name; initial_value ]))
 
+let language_if_let_metadata () =
+  let macros = Language_macros.create () in
+  let expand form = Option.get (List.find_map (fun macro -> macro form) macros) in
+  let vector_meta = { source_meta with loc = { line = 3; column = 4 }; type_annotation = None } in
+  let name = SAtom (source_meta, "v") in
+  let value = parse_one "(source)" in
+  let then_ = parse_one "(use v)" in
+  let vector = SList (vector_meta, Bracket, [ name; value ]) in
+  match expand (SList (call_meta, Paren, [ SAtom (call_meta, "if-let"); vector; then_ ])) with
+  | SList (meta, Paren,
+      [ SAtom (let_meta, "let*"); SList (pair_meta, Paren, [ n; v ]);
+        SList (if_meta, Paren, [ SAtom (head_meta, "if"); test; t; SAtom (else_meta, "nil") ]) ]) ->
+      Alcotest.(check bool) "binding list inherits vector metadata" true (pair_meta = vector_meta);
+      Alcotest.(check bool) "generated nodes use call metadata" true
+        (List.for_all (( = ) call_meta) [ meta; let_meta; if_meta; head_meta; else_meta ]);
+      Alcotest.(check bool) "source nodes reused intact" true (n == name && v == value && test == name && t == then_)
+  | form -> Alcotest.failf "expected let*/if expansion, got %s" (Frontend.show_sexpr form)
+
 let with_open_diagnostics () =
   let expand = with_open_handler () in
   List.iter
@@ -224,7 +248,7 @@ let with_open_diagnostics () =
 
 let with_open_runtime_isolation () =
   let names =
-    [ "expand-with-open"; "expand-with-open-bindings"; "syntax-vector?"; "syntax-children";
+    [ "with-open"; "with-open-bindings"; "syntax-vector?"; "syntax-children";
       "syntax-simple-symbol?"; "syntax-list-at"; "macro-error" ]
   in
   let definitions = String.concat " " (List.map (fun name -> "(def " ^ name ^ " 99)") names) in
@@ -252,7 +276,7 @@ let with_open_runtime_isolation () =
 
 let boolean_macro_runtime_isolation macro () =
   let context = Macros.Pipeline.create_context () in
-  let internal_name = "expand-" ^ macro in
+  let internal_name = macro in
   let condition = if macro = "and" then "true" else "false" in
   let source = Printf.sprintf "(def %s 99) (def gensym 7) (%s %s 42)" internal_name macro condition in
   let forms =
@@ -284,7 +308,7 @@ let shared_gensym () =
   in
   let names = List.concat_map bindings forms in
   Alcotest.(check int) "all generated bindings visited" 10 (List.length names);
-  Alcotest.(check int) "fresh across language and OCaml macros" 10 (List.length (List.sort_uniq String.compare names));
+  Alcotest.(check int) "fresh across language macros" 10 (List.length (List.sort_uniq String.compare names));
   Alcotest.(check bool) "references resolve to their own binding" true (Eval.eval_all forms = [ Int 42; Int 9; Int 11 ])
 
 let runtime_isolation () =
@@ -295,11 +319,11 @@ let runtime_isolation () =
     | Error message -> Alcotest.fail message
   in
   Alcotest.(check bool) "bootstrap leaves runtime empty" true (!(context.namespaces) = []);
-  let result = eval "(def expand-cond 99) (cond false 1 true expand-cond)" in
+  let result = eval "(def cond 99) (cond false 1 true cond)" in
   Alcotest.(check bool) "user binding cannot replace macro" true (result = [ Int 99; Int 99 ]);
   Alcotest.(check bool)
     "only user definitions in runtime" true
-    (!(context.namespaces) = [ ("user", [ ("expand-cond", Int 99) ]) ]);
+    (!(context.namespaces) = [ ("user", [ ("cond", Int 99) ]) ]);
   let other_context = Macros.Pipeline.create_context () in
   let forms =
     match Macros.Pipeline.parse_and_desugar "(cond true 42)" with
@@ -311,6 +335,65 @@ let runtime_isolation () =
     (Eval.eval_all ~context:other_context forms = [ Int 42 ]);
   Alcotest.(check bool) "internal and previous user names absent" true (!(other_context.namespaces) = [])
 
+let prelude_path dir = List.fold_left Filename.concat dir [ "prelude"; "1.0.0"; "macro"; "prelude.clj" ]
+
+let with_packages_dir dir f =
+  let original = Sys.getenv "LY2K_PACKAGES_DIR" in
+  Unix.putenv "LY2K_PACKAGES_DIR" dir;
+  Fun.protect ~finally:(fun () -> Unix.putenv "LY2K_PACKAGES_DIR" original) f
+
+let expand_with macros source = List.find_map (fun macro -> macro (parse_one source)) macros
+
+let contains text part =
+  let rec loop i =
+    i + String.length part <= String.length text && (String.sub text i (String.length part) = part || loop (i + 1))
+  in
+  loop 0
+
+let without_packages_dir () =
+  let env =
+    Array.of_list
+      (List.filter
+         (fun entry -> not (String.starts_with ~prefix:"LY2K_PACKAGES_DIR=" entry))
+         (Array.to_list (Unix.environment ())))
+  in
+  let run source =
+    let program = "../bin/main.exe" in
+    let ((stdout, stdin, stderr) as channels) = Unix.open_process_args_full program [| program |] env in
+    output_string stdin source;
+    close_out stdin;
+    let output = In_channel.input_all stdout in
+    let error = In_channel.input_all stderr in
+    (Unix.close_process_full channels, output, error)
+  in
+  Alcotest.(check bool) "program without builtin macros runs" true (run {|(str "a" "b")|} = (Unix.WEXITED 0, "ab\n", ""));
+  let status, _, error = run "(cond false 1 true 42)" in
+  Alcotest.(check bool) "builtin macro fails naming the variable" true
+    (status <> Unix.WEXITED 0 && contains error "LY2K_PACKAGES_DIR")
+
+let missing_prelude_file () =
+  let dir = Filename.temp_dir ~temp_dir:(Sys.getcwd ()) "packages" "" in
+  with_packages_dir dir (fun () ->
+      let macros = Language_macros.create () in
+      Alcotest.check_raises "error names the expected path"
+        (Eval_error ("cannot load builtin macros: " ^ prelude_path dir ^ ": No such file or directory"))
+        (fun () -> ignore (expand_with macros "(cond true 1)")))
+
+let incomplete_prelude_file content missing () =
+  let dir = Filename.temp_dir ~temp_dir:(Sys.getcwd ()) "packages" "" in
+  ignore
+    (List.fold_left
+       (fun parent name ->
+         let path = Filename.concat parent name in
+         Sys.mkdir path 0o755;
+         path)
+       dir [ "prelude"; "1.0.0"; "macro" ]);
+  Out_channel.with_open_text (prelude_path dir) (fun channel -> output_string channel content);
+  with_packages_dir dir (fun () ->
+      let macros = Language_macros.create () in
+      Alcotest.check_raises "missing definition fails on first expansion" (Eval_error ("symbol not found: " ^ missing))
+        (fun () -> ignore (expand_with macros "(cond)")))
+
 let () =
   Alcotest.run "language macros"
     [
@@ -319,16 +402,30 @@ let () =
           Alcotest.test_case "mixed tree metadata" `Quick mixed_tree_preserves_metadata;
           Alcotest.test_case "scalar categories" `Quick scalar_categories;
         ] );
+      ( "prelude file",
+        [ Alcotest.test_case "without packages dir" `Quick without_packages_dir;
+          Alcotest.test_case "missing file" `Quick missing_prelude_file;
+          Alcotest.test_case "missing definition" `Quick
+            (incomplete_prelude_file
+               {|(def cond (fn [clauses] nil)) (def and (fn [clauses] true)) (def or (fn [clauses] nil))|}
+               "with-open");
+          Alcotest.test_case "file without new definitions" `Quick
+            (incomplete_prelude_file
+               {|(def cond (fn [clauses] nil)) (def and (fn [clauses] true)) (def or (fn [clauses] nil))
+                 (def with-open (fn [args] nil))|}
+               "case") ] );
       ( "definitions",
         [ Alcotest.test_case "arbitrary name and helpers" `Quick custom_definition;
           Alcotest.test_case "call context" `Quick custom_call_context;
-          Alcotest.test_case "state isolation" `Quick definition_state_isolation ] );
+          Alcotest.test_case "state isolation" `Quick definition_state_isolation;
+          Alcotest.test_case "recursion by form name" `Quick recursion_by_form_name ] );
       ( "or", [ Alcotest.test_case "language definition and metadata" `Quick language_or;
                  Alcotest.test_case "runtime isolation" `Quick (boolean_macro_runtime_isolation "or") ] );
       ( "with-open",
         [ Alcotest.test_case "structure and source metadata" `Quick language_with_open;
           Alcotest.test_case "form diagnostics" `Quick with_open_diagnostics;
           Alcotest.test_case "runtime isolation" `Quick with_open_runtime_isolation ] );
+      ( "if-let", [ Alcotest.test_case "binding list metadata" `Quick language_if_let_metadata ] );
       ( "and",
         [ Alcotest.test_case "language definition and metadata" `Quick language_and;
           Alcotest.test_case "shared gensym" `Quick shared_gensym;
